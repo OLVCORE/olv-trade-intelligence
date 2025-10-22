@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     .limit(10);
 
   let sent = 0;
-  for (const j of jobs || []) {
+  for (const j of (jobs || []) as any[]) {
     const since =
       j.cadence === 'weekly'
         ? new Date(Date.now() - 7 * 864e5).toISOString()
