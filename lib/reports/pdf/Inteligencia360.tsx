@@ -88,10 +88,10 @@ export default function Inteligencia360PDF({
             <Text style={styles.h2}>Decisores</Text>
             {(data.decisionMakers?.length
               ? data.decisionMakers
-              : [{ name: 'Sem dados coletados' }]
+              : [{ name: 'Sem dados coletados', title: undefined, contacts: [], source: '' }]
             )
               .slice(0, 50)
-              .map((d, i) => (
+              .map((d: any, i: number) => (
                 <View key={i} style={styles.row}>
                   <Text style={[styles.cell, { flex: 2 }]}>{d.name}</Text>
                   <Text style={styles.cell}>{d.title || '—'}</Text>
