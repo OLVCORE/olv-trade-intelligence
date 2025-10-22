@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       metas: art.metas,
       scripts: art.scripts,
       links: art.links,
-    }).map((it) => ({
+    }).map((it: any) => ({
       ...it,
       source: 'heuristic',
       latency_ms: art.latency,
