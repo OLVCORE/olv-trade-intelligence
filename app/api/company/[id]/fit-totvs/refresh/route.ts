@@ -51,11 +51,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       operation: 'fit-totvs',
       status: 'ok',
       latency_ms: latency,
-      meta: { run_id: runId, areas: results.map((r) => ({ area: r.area, fit: r.fit })) },
+      meta: { run_id: runId, areas: results.map((r: any) => ({ area: r.area, fit: r.fit })) },
     });
 
     return NextResponse.json(
-      { ok: true, run_id: runId, areas: results.map((r) => ({ area: r.area, fit: r.fit })) },
+      { ok: true, run_id: runId, areas: results.map((r: any) => ({ area: r.area, fit: r.fit })) },
       { status: 200 }
     );
   } catch (e: any) {

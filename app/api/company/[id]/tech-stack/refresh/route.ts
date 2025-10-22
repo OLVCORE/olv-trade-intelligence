@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // OPCIONAL: BuiltWith (se chave existir)
     const bw = await fetchBuiltWith(domain);
     if (bw && !('error' in bw) && bw.json?.Results?.length) {
-      const seen = new Set(items.map((i) => i.tech_name.toLowerCase()));
+      const seen = new Set(items.map((i: any) => i.tech_name.toLowerCase()));
       const fromBw = (bw.json.Results[0].Result?.Paths || [])
         .flatMap((p: any) => p.Technologies || [])
         .map((t: any) => ({
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Inserir sinais (se houver) - tenant_id preenchido automaticamente
     if (items.length) {
       const { insert } = db();
-      const payload = items.map((i) => ({ company_id: company.id, ...i }));
+      const payload = items.map((i: any) => ({ company_id: company.id, ...i }));
       const { error } = await insert('tech_signals', payload);
       if (error) throw error;
     }

@@ -32,10 +32,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
               .in(
                 'lead_id',
                 (await supabaseAdmin.from('leads').select('id').eq('company_id', params.id)).data?.map(
-                  (l) => l.id
+                  (l: any) => l.id
                 ) || []
               )
-          ).data?.map((t) => t.id) || []
+          ).data?.map((t: any) => t.id) || []
         ),
     ]);
 
@@ -84,11 +84,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       operation: 'maturity',
       status: 'ok',
       latency_ms: latency,
-      meta: { run_id: runId, pillars: results.map((r) => ({ pillar: r.pillar, score: r.score })) },
+      meta: { run_id: runId, pillars: results.map((r: any) => ({ pillar: r.pillar, score: r.score })) },
     });
 
-    const scores = results.reduce((acc, r) => ({ ...acc, [r.pillar]: r.score }), {});
-    const recosCount = results.reduce((sum, r) => sum + r.recommendations.length, 0);
+    const scores = results.reduce((acc: any, r: any) => ({ ...acc, [r.pillar]: r.score }), {});
+    const recosCount = results.reduce((sum: any, r: any) => sum + r.recommendations.length, 0);
 
     return NextResponse.json({ ok: true, run_id: runId, scores, recosCount }, { status: 200 });
   } catch (e: any) {
