@@ -25,7 +25,7 @@ export async function GET(
 
   // Para cada thread, buscar última mensagem
   const threadsWithLastMessage = await Promise.all(
-    (data || []).map(async (thread) => {
+    (data || []).map(async (thread: any) => {
       const { data: lastMsg } = await supabaseAdmin
         .from('messages')
         .select('*')
