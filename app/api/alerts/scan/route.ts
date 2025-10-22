@@ -5,6 +5,8 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   if (req.headers.get('x-alerts-secret') !== process.env.ALERTS_SCAN_SECRET) {
     return new Response('Forbidden', { status: 403 });

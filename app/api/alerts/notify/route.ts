@@ -6,6 +6,8 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import nodemailer from 'nodemailer';
 
+export const dynamic = 'force-dynamic';
+
 async function sendEmail(to: string, subject: string, text: string) {
   const tx = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
