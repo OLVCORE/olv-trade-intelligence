@@ -16,11 +16,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const q = (url.searchParams.get('q') || '').trim();
   const dept = (url.searchParams.get('department') || '').trim();
   const seniority = (url.searchParams.get('seniority') || '').trim();
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const offset = (page - 1) * pageSize;
+  const to = offset + pageSize - 1;
 
-  let query = supabaseAdmin
-    .from('people')
+  // Validar que company pertence ao tenant ativo
+  const guard = await assertCompanyInTenantOr404(params.id);
+  if (guard) return guard;
+
+  const { from } = db();
+  let query = from('people')
     .select(
       'id,full_name,title,department,seniority,source,source_url,confidence,created_at,person_contacts(id,value,type,verified,source,source_url)',
       { count: 'exact' }
@@ -33,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (dept) query = query.eq('department', dept);
   if (seniority) query = query.eq('seniority', seniority);
 
-  query = query.order('created_at', { ascending: false }).range(from, to);
+  query = query.order('created_at', { ascending: false }).range(offset, to);
   const { data, error, count } = await query;
 
   if (error)
