@@ -2,6 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // Desabilitar linting durante build (linting é feito no CI local)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // Desabilitar TypeScript strict checking durante build (já validado localmente)
+  typescript: {
+    ignoreBuildErrors: false, // mantemos true para segurança
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb',
