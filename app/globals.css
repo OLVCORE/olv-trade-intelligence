@@ -58,3 +58,34 @@
   }
 }
 
+/* --- OLV Galáxia Layer --- */
+:root {
+  --olv-card: rgba(255, 255, 255, 0.06);
+  --olv-stroke: rgba(255, 255, 255, 0.08);
+}
+
+.dark:root {
+  --olv-card: rgba(15, 23, 42, 0.35);
+  --olv-stroke: rgba(148, 163, 184, 0.08);
+}
+
+.olvg-glass {
+  background: var(--olv-card);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border: 1px solid var(--olv-stroke);
+}
+
+.olvg-gradient-text {
+  background: linear-gradient(
+    90deg,
+    #94a3b8 0%,
+    #fff 20%,
+    #22d3ee 55%,
+    #6366f1 85%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+

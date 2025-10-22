@@ -1,81 +1,123 @@
 /**
  * Dashboard Page - Página principal da aplicação
+ * Design: OLV Galáxia Premium
  */
 'use client';
 import SearchHub from '@/components/SearchHub';
 import { useCompany } from '@/lib/state/company';
 import Link from 'next/link';
+import { GlassPanel } from '@/components/olvg/GlassPanel';
+import { GradientText } from '@/components/olvg/GradientText';
+import {
+  Building2,
+  TrendingUp,
+  FileText,
+  Target,
+  AlertCircle,
+  BarChart3,
+} from 'lucide-react';
+
+const modules = [
+  {
+    href: '/companies',
+    icon: Building2,
+    title: 'Empresas',
+    desc: 'Visualize, filtre e gerencie empresas',
+    active: true,
+  },
+  {
+    href: '/playbooks',
+    icon: Target,
+    title: 'Playbooks',
+    desc: 'SDR automatizado e sequências',
+    active: true,
+  },
+  {
+    href: '/reports',
+    icon: FileText,
+    title: 'Relatórios',
+    desc: 'PDFs com inteligência 360°',
+    active: true,
+  },
+  {
+    href: '/analytics',
+    icon: BarChart3,
+    title: 'Analytics',
+    desc: 'Dashboards e métricas em tempo real',
+    active: true,
+  },
+  {
+    href: '/alerts',
+    icon: AlertCircle,
+    title: 'Alertas',
+    desc: 'Watchers e notificações automáticas',
+    active: true,
+  },
+];
 
 export default function DashboardPage() {
   const companyId = useCompany((s) => s.companyId);
 
   return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Busque empresas por CNPJ ou Website. Os dados são enriquecidos automaticamente.
+    <div className="space-y-8">
+      <GlassPanel className="relative overflow-hidden p-8">
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-olv-accent/20 blur-3xl" />
+        <h1 className="text-2xl font-semibold text-slate-100 md:text-3xl">
+          Bem-vindo ao <GradientText>OLV Intelligent Prospect</GradientText>
+        </h1>
+        <p className="mt-2 max-w-2xl text-slate-300">
+          Prospecção de alto desempenho com enriquecimento real, fit explicável e
+          SDR integrado.
         </p>
-      </div>
-
-      <div className="border rounded-lg p-6 bg-card">
-        <h2 className="text-lg font-medium mb-4">🔍 SearchHub</h2>
-        <SearchHub />
-      </div>
-
-      {!companyId && (
-        <div className="border rounded-lg p-6 bg-muted/30">
-          <p className="text-sm text-muted-foreground text-center">
-            💡 Nenhuma empresa selecionada. Use o SearchHub acima para buscar e selecionar uma
-            empresa.
-          </p>
+        <div className="mt-6">
+          <SearchHub />
         </div>
-      )}
+      </GlassPanel>
 
-      <div className="border rounded-lg p-6 bg-card">
-        <h2 className="text-lg font-medium mb-4">🚀 Navegação Rápida</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Link
-            href="/companies"
-            className="border rounded p-4 bg-background hover:bg-accent transition-colors"
-          >
-            <h3 className="font-medium mb-2">📋 Lista de Empresas</h3>
-            <p className="text-xs text-muted-foreground">
-              Visualize, filtre e gerencie empresas cadastradas
-            </p>
-          </Link>
-          <div className="border rounded p-4 bg-background opacity-50">
-            <h3 className="font-medium mb-2">📊 Enriquecimento</h3>
-            <p className="text-xs text-muted-foreground">
-              Visualize dados enriquecidos (Ciclo 3)
-            </p>
-          </div>
-          <div className="border rounded p-4 bg-background opacity-50">
-            <h3 className="font-medium mb-2">📄 Relatórios</h3>
-            <p className="text-xs text-muted-foreground">Gere relatórios PDF (Ciclo 4)</p>
-          </div>
-          <div className="border rounded p-4 bg-background opacity-50">
-            <h3 className="font-medium mb-2">🎨 Canvas</h3>
-            <p className="text-xs text-muted-foreground">
-              Visualização colaborativa (Ciclo 5)
-            </p>
-          </div>
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-slate-100">
+          🚀 Módulos Disponíveis
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((mod) => {
+            const Icon = mod.icon;
+            return (
+              <Link key={mod.href} href={mod.href}>
+                <GlassPanel className="group p-6 transition-all hover:scale-[1.02] hover:shadow-neon">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="rounded-xl bg-gradient-to-br from-olv-accent/20 to-olv-primary/20 p-2">
+                      <Icon size={20} className="text-olv-accent" />
+                    </div>
+                    <h3 className="font-semibold text-slate-100">{mod.title}</h3>
+                  </div>
+                  <p className="text-sm text-slate-400">{mod.desc}</p>
+                </GlassPanel>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
       {companyId && (
-        <div className="border rounded-lg p-6 bg-card">
-          <h2 className="text-lg font-medium mb-4">✅ Empresa Ativa</h2>
-          <p className="text-sm text-muted-foreground">
-            Você pode navegar pelos módulos acima ou{' '}
-            <Link href="/companies" className="underline text-primary">
-              visualizar todas as empresas
-            </Link>
-            .
-          </p>
-        </div>
+        <GlassPanel className="p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-green-500/20 p-2">
+              <TrendingUp size={20} className="text-green-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-100">Empresa Ativa</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Navegue pelos módulos ou{' '}
+                <Link href="/companies" className="text-olv-accent underline">
+                  visualize todas as empresas
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+        </GlassPanel>
       )}
-    </main>
+    </div>
   );
 }
 
