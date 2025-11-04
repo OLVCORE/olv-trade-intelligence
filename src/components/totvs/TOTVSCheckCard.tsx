@@ -35,7 +35,8 @@ import {
   Circle,
   LayoutDashboard,
   Users,
-  Globe
+  Globe,
+  UserCircle
 } from 'lucide-react';
 
 interface TOTVSCheckCardProps {
