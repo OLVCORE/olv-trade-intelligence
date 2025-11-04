@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap } from 'lucide-react';
+import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ArrowLeft, Home } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { performFullSEOAnalysis } from '@/services/seoAnalysis';
@@ -234,6 +234,18 @@ export function KeywordsSEOTabEnhanced({
 
   return (
     <div className="space-y-4">
+      {/* 🔄 NAVEGAÇÃO - VOLTAR/INÍCIO */}
+      {(digitalPresence || seoData || intelligenceReport) && (
+        <div className="flex gap-2 p-2 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-700">
+          <Button onClick={() => { setDigitalPresence(null); setSeoData(null); setCompetitiveAnalysis(null); setIntelligenceReport(null); setDiscoveredDomain(null); setWebsiteOptions([]); }} variant="outline" size="sm" className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Voltar
+          </Button>
+          <Button onClick={() => { setDigitalPresence(null); setSeoData(null); setCompetitiveAnalysis(null); setIntelligenceReport(null); setDiscoveredDomain(null); setWebsiteOptions([]); }} variant="ghost" size="sm" className="gap-2">
+            <Home className="w-4 h-4" /> Início
+          </Button>
+        </div>
+      )}
+      
       {/* Header */}
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="flex items-center justify-between">
