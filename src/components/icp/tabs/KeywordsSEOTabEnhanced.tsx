@@ -470,6 +470,148 @@ export function KeywordsSEOTabEnhanced({
             </div>
           </div>
         )}
+        
+        {/* 🧠 RELATÓRIO DE INTELIGÊNCIA (IA) */}
+        {intelligenceReport && (
+          <div className="mt-4 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950 dark:to-blue-950 border-4 border-indigo-500 dark:border-indigo-600 rounded-2xl shadow-2xl">
+            <h4 className="text-2xl font-black mb-6 flex items-center gap-3 text-indigo-900 dark:text-indigo-100">
+              <Sparkles className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              🧠 Relatório de Inteligência (IA)
+            </h4>
+            
+            {/* SCORES */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-white dark:bg-slate-950 rounded-xl border-3 border-slate-500 dark:border-slate-600">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Digital Health Score</p>
+                <p className="text-4xl font-black text-indigo-700 dark:text-indigo-300">{intelligenceReport.digitalHealthScore}/100</p>
+              </div>
+              <div className="p-4 bg-white dark:bg-slate-950 rounded-xl border-3 border-slate-500 dark:border-slate-600">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">Google Compliance</p>
+                <p className="text-4xl font-black text-indigo-700 dark:text-indigo-300">{intelligenceReport.googleCompliance.score}%</p>
+              </div>
+            </div>
+
+            {/* GOOGLE COMPLIANCE ISSUES */}
+            {intelligenceReport.googleCompliance.issues.length > 0 && (
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-700 rounded-lg">
+                <p className="text-sm font-bold text-red-900 dark:text-red-200 mb-3 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  🚨 Issues de Compliance Google:
+                </p>
+                <ul className="space-y-1 text-sm text-red-800 dark:text-red-300">
+                  {intelligenceReport.googleCompliance.issues.map((issue, idx) => (
+                    <li key={idx}>{issue}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* RECOMENDAÇÕES GOOGLE */}
+            {intelligenceReport.googleCompliance.recommendations.length > 0 && (
+              <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg">
+                <p className="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-3 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  💡 Recomendações:
+                </p>
+                <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
+                  {intelligenceReport.googleCompliance.recommendations.map((rec, idx) => (
+                    <li key={idx}>{rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* ANÁLISE DE REDES SOCIAIS */}
+            <div className="mb-6">
+              <p className="text-base font-bold text-indigo-900 dark:text-indigo-100 mb-3 flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                📱 Análise de Redes Sociais:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {intelligenceReport.socialMediaAnalysis.platforms.map((platform, idx) => (
+                  <div key={idx} className="p-3 bg-white dark:bg-slate-900 rounded-lg border-2 border-indigo-300 dark:border-indigo-700">
+                    <p className="font-bold text-sm text-indigo-900 dark:text-indigo-100 mb-2">
+                      {platform.platform === 'linkedin' && '🔵 LinkedIn'}
+                      {platform.platform === 'instagram' && '🟣 Instagram'}
+                      {platform.platform === 'facebook' && '🔵 Facebook'}
+                      {platform.platform === 'twitter' && '🐦 Twitter'}
+                    </p>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 mb-2">
+                      {platform.bio || platform.about || 'Bio não disponível'}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      📝 {platform.recentPosts.length} posts analisados
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <Badge className={`
+                  ${intelligenceReport.socialMediaAnalysis.overallPresence === 'excellent' ? 'bg-green-600' : ''}
+                  ${intelligenceReport.socialMediaAnalysis.overallPresence === 'good' ? 'bg-blue-600' : ''}
+                  ${intelligenceReport.socialMediaAnalysis.overallPresence === 'poor' ? 'bg-yellow-600' : ''}
+                  ${intelligenceReport.socialMediaAnalysis.overallPresence === 'absent' ? 'bg-red-600' : ''}
+                  text-white
+                `}>
+                  Presença: {intelligenceReport.socialMediaAnalysis.overallPresence.toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+
+            {/* AI INSIGHTS */}
+            <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border-3 border-indigo-400 dark:border-indigo-600">
+              <p className="text-lg font-black text-indigo-900 dark:text-indigo-100 mb-4 flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-indigo-600" />
+                🤖 Insights da IA (GPT-4o-mini):
+              </p>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-bold text-indigo-800 dark:text-indigo-200">Modelo de Negócio:</span>
+                  <p className="text-slate-800 dark:text-slate-200">{intelligenceReport.aiInsights.businessModel}</p>
+                </div>
+                <div>
+                  <span className="font-bold text-indigo-800 dark:text-indigo-200">Público-Alvo:</span>
+                  <p className="text-slate-800 dark:text-slate-200">{intelligenceReport.aiInsights.targetAudience}</p>
+                </div>
+                <div>
+                  <span className="font-bold text-indigo-800 dark:text-indigo-200">Posição no Mercado:</span>
+                  <p className="text-slate-800 dark:text-slate-200">{intelligenceReport.aiInsights.marketPosition}</p>
+                </div>
+                {intelligenceReport.aiInsights.keyProducts.length > 0 && (
+                  <div>
+                    <span className="font-bold text-indigo-800 dark:text-indigo-200">Produtos/Serviços:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {intelligenceReport.aiInsights.keyProducts.map((prod, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">{prod}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {intelligenceReport.aiInsights.opportunities.length > 0 && (
+                  <div>
+                    <span className="font-bold text-green-700 dark:text-green-300">✅ Oportunidades TOTVS:</span>
+                    <ul className="text-xs text-green-800 dark:text-green-200 mt-1 space-y-1 list-disc list-inside">
+                      {intelligenceReport.aiInsights.opportunities.map((opp, idx) => (
+                        <li key={idx}>{opp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* EXECUTIVE SUMMARY */}
+            <div className="mt-6 p-5 bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-indigo-900 dark:to-blue-900 rounded-xl border-3 border-indigo-500 dark:border-indigo-600">
+              <p className="text-base font-black text-indigo-900 dark:text-indigo-100 mb-3 flex items-center gap-2">
+                <BarChart3 className="w-6 h-6" />
+                📋 Resumo Executivo:
+              </p>
+              <p className="text-base text-indigo-900 dark:text-indigo-100 leading-relaxed font-medium">
+                {intelligenceReport.executiveSummary}
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Loader */}
