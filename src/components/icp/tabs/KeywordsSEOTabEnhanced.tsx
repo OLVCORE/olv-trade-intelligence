@@ -520,28 +520,51 @@ export function KeywordsSEOTabEnhanced({
           {/* 🔥 INTELIGÊNCIA COMPETITIVA DUPLA */}
           {competitiveAnalysis && (
             <>
-              {/* Summary Card */}
-              <Card className="p-6 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-primary/30">
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  Inteligência Competitiva Dupla
+              {/* 🔥 RESUMO EXECUTIVO - DESIGN PREMIUM ALTO CONTRASTE */}
+              <Card className="p-8 bg-gradient-to-br from-white via-blue-50 to-white dark:from-slate-900 dark:via-blue-950 dark:to-slate-900 border-4 border-blue-500 dark:border-blue-600 shadow-2xl">
+                <h4 className="text-3xl font-black mb-8 flex items-center gap-3 text-slate-900 dark:text-white">
+                  <Sparkles className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                  💎 Inteligência Competitiva Dupla
                 </h4>
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <span className="text-xs text-muted-foreground">Total Analisadas</span>
-                    <p className="text-2xl font-bold">{competitiveAnalysis.summary.totalAnalyzed}</p>
+                <div className="grid grid-cols-4 gap-6">
+                  {/* TOTAL ANALISADAS - ALTO CONTRASTE! */}
+                  <div className="p-6 bg-white dark:bg-slate-950 rounded-2xl border-4 border-slate-500 dark:border-slate-600 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-7 h-7 text-blue-700 dark:text-blue-400" />
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">Total</span>
+                    </div>
+                    <p className="text-6xl font-black text-slate-900 dark:text-white mb-2 leading-none">{competitiveAnalysis.summary.totalAnalyzed}</p>
+                    <p className="text-base text-slate-700 dark:text-slate-300 font-bold">analisadas</p>
                   </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Oportunidades Venda TOTVS</span>
-                    <p className="text-2xl font-bold text-green-600">{competitiveAnalysis.summary.vendaTotvsCount}</p>
+                  
+                  {/* VENDA TOTVS - VERDE FORTE */}
+                  <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-950 rounded-2xl border-4 border-green-600 dark:border-green-500 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-7 h-7 text-green-900 dark:text-green-300" />
+                      <span className="text-sm font-black text-green-900 dark:text-green-100 uppercase tracking-wider">Venda</span>
+                    </div>
+                    <p className="text-6xl font-black text-green-800 dark:text-green-300 mb-2 leading-none">{competitiveAnalysis.summary.vendaTotvsCount}</p>
+                    <p className="text-base text-green-900 dark:text-green-200 font-bold">TOTVS</p>
                   </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Oportunidades Parceria</span>
-                    <p className="text-2xl font-bold text-blue-600">{competitiveAnalysis.summary.parceriaCount}</p>
+                  
+                  {/* PARCERIA - AZUL FORTE */}
+                  <div className="p-6 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-950 rounded-2xl border-4 border-blue-600 dark:border-blue-500 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-7 h-7 text-blue-900 dark:text-blue-300" />
+                      <span className="text-sm font-black text-blue-900 dark:text-blue-100 uppercase tracking-wider">Parceria</span>
+                    </div>
+                    <p className="text-6xl font-black text-blue-800 dark:text-blue-300 mb-2 leading-none">{competitiveAnalysis.summary.parceriaCount}</p>
+                    <p className="text-base text-blue-900 dark:text-blue-200 font-bold">oportunidades</p>
                   </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Revenue Estimado</span>
-                    <p className="text-lg font-bold text-primary">{competitiveAnalysis.summary.estimatedRevenue}</p>
+                  
+                  {/* REVENUE - ROXO FORTE */}
+                  <div className="p-6 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-950 rounded-2xl border-4 border-purple-600 dark:border-purple-500 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-7 h-7 text-purple-900 dark:text-purple-300" />
+                      <span className="text-sm font-black text-purple-900 dark:text-purple-100 uppercase tracking-wider">Revenue</span>
+                    </div>
+                    <p className="text-3xl font-black text-purple-800 dark:text-purple-300 mb-2 leading-tight">{competitiveAnalysis.summary.estimatedRevenue}</p>
+                    <p className="text-base text-purple-900 dark:text-purple-200 font-bold">ARR potencial</p>
                   </div>
                 </div>
               </Card>
