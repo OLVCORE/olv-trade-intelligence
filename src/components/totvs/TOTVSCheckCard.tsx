@@ -152,51 +152,10 @@ export default function TOTVSCheckCard({
     refetch();
   };
 
-  // ESTADO INICIAL
-  if (!enabled && !data) {
-    return (
-      <Card className="p-6">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Search className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">
-            Verificação TOTVS
-          </h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Verificar se a empresa é cliente TOTVS
-          </p>
-          <Button onClick={handleVerify}>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Verificar Agora
-          </Button>
-        </div>
-      </Card>
-    );
-  }
+  // ✅ SEMPRE MOSTRAR AS 8 ABAS (mesmo sem STC)
+  // Se não tem dados do STC, mostrar apenas as outras abas funcionando
 
-  // LOADING
-  if (isLoading) {
-    return (
-      <Card className="p-6">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground mb-2">
-            Buscando evidências em múltiplas fontes...
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Isso pode levar 20-30 segundos
-          </p>
-        </div>
-      </Card>
-    );
-  }
-
-  if (!data) {
-    return null;
-  }
-
-  const evidences = data.evidences || [];
+  const evidences = data?.evidences || [];
   const tripleMatches = evidences.filter((e: any) => e.match_type === 'triple');
   const doubleMatches = evidences.filter((e: any) => e.match_type === 'double');
   
@@ -260,17 +219,50 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 2: DETECÇÃO TOTVS (CONTEÚDO ATUAL - MANTIDO) */}
+        {/* ABA 2: DETECÇÃO TOTVS */}
         <TabsContent value="detection" className="mt-0 overflow-y-auto">
-          {/* HEADER */}
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                {data.status === 'go' && <CheckCircle className="w-5 h-5 text-green-600" />}
-                {data.status === 'revisar' && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
-                {data.status === 'no-go' && <XCircle className="w-5 h-5 text-red-600" />}
+          {/* SE NÃO TEM DADOS DO STC, MOSTRAR BOTÃO VERIFICAR */}
+          {!data || !enabled ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
+                <Search className="w-10 h-10 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">
                 Verificação TOTVS
               </h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                Verifica se a empresa já é cliente TOTVS através de 40+ portais de vagas, documentos financeiros e evidências públicas.
+              </p>
+              <Button onClick={handleVerify} size="lg" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Verificar Agora
+                  </>
+                )}
+              </Button>
+              {isLoading && (
+                <p className="text-xs text-muted-foreground mt-4">
+                  Buscando evidências em múltiplas fontes... (20-30s)
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* HEADER */}
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    {data.status === 'go' && <CheckCircle className="w-5 h-5 text-green-600" />}
+                    {data.status === 'revisar' && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
+                    {data.status === 'no-go' && <XCircle className="w-5 h-5 text-red-600" />}
+                    Verificação TOTVS
+                  </h3>
               <div className="flex items-center gap-2 mt-1">
                 {data.from_cache ? (
                   <Badge variant="outline" className="text-xs">
@@ -520,13 +512,15 @@ export default function TOTVSCheckCard({
             </div>
           )}
 
-          {/* METODOLOGIA */}
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-muted-foreground">
-              Fontes consultadas: {data.methodology?.searched_sources} | 
-              Queries executadas: {data.methodology?.total_queries}
-            </p>
-          </div>
+              {/* METODOLOGIA */}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Fontes consultadas: {data.methodology?.searched_sources} | 
+                  Queries executadas: {data.methodology?.total_queries}
+                </p>
+              </div>
+            </>
+          )}
         </TabsContent>
 
         {/* ABA 3: COMPETITORS (NOVA) */}
