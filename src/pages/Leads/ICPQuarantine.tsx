@@ -162,10 +162,12 @@ export default function ICPQuarantine() {
       return result;
     },
     onSuccess: () => {
-      toast.success('✅ Receita Federal atualizada - Score recalculado', {
-        description: 'Campos UF, Setor e Porte foram atualizados'
+      toast.success('✅ Receita Federal atualizada!', {
+        description: 'Campos UF, Município e Porte atualizados via BrasilAPI'
       });
+      // Forçar atualização IMEDIATA dos dados
       queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+      refetch(); // Refetch manual para atualizar cards
     },
     onError: (error: any) => {
       toast.error('Erro ao enriquecer com Receita Federal', {
@@ -224,23 +226,25 @@ export default function ICPQuarantine() {
       
       if (successCount === 2) {
         // Sucesso parcial (Receita + 360°)
-        toast.success('✅ Análise Completa concluída!', {
-          description: '✅ Receita Federal | ✅ Intelligence 360° | ⚠️ Apollo (requer deploy)',
+        toast.success('✅ Análise Completa 2/3 concluída!', {
+          description: '✅ Receita (BrasilAPI) | ✅ Scores 360° | ⚠️ Apollo (CORS)',
           duration: 5000,
         });
       } else if (successCount > 0) {
         toast.warning(`⚠️ Análise parcial (${successCount}/3)`, {
-          description: results.errors.slice(0, 2).join(' | '),
+          description: 'Alguns enriquecimentos falharam - veja logs',
           duration: 7000,
         });
       } else {
         toast.error('❌ Análise falhou', {
-          description: results.errors.slice(0, 2).join(' | '),
+          description: 'Todos enriquecimentos falharam - veja console',
           duration: 10000,
         });
       }
       
+      // Forçar atualização IMEDIATA e AGRESSIVA
       queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+      setTimeout(() => refetch(), 500); // Refetch com delay para garantir
     },
     onError: (error: any) => {
       toast.dismiss('completo');
@@ -441,10 +445,12 @@ export default function ICPQuarantine() {
       return result;
     },
     onSuccess: () => {
-      toast.success('✅ Enriquecimento 360° concluído com sucesso!', {
-        description: 'Todos os dados foram atualizados e o score foi recalculado'
+      toast.success('✅ Enriquecimento 360° concluído!', {
+        description: 'Scores calculados: Presença Digital, Maturidade e Saúde'
       });
+      // Forçar atualização IMEDIATA dos dados
       queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+      refetch(); // Refetch manual para atualizar cards
     },
     onError: (error: any) => {
       toast.dismiss('360-progress');
