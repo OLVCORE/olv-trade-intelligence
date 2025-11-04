@@ -77,7 +77,7 @@ export default function TOTVSCheckCard({
   const [copiedTerms, setCopiedTerms] = useState<string | null>(null);
   
   // 🚨 SISTEMA DE SALVAMENTO POR ABA
-  const [activeTab, setActiveTab] = useState('executive');
+  const [activeTab, setActiveTab] = useState('keywords'); // 🔄 NOVA: Começa em Keywords!
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
   const queryClient = useQueryClient();
