@@ -548,16 +548,16 @@ export function KeywordsSEOTabEnhanced({
 
               {/* 💰 OPORTUNIDADES DE VENDA TOTVS */}
               {competitiveAnalysis.vendaTotvs.length > 0 && (
-                <Card className="p-6 border-2 border-green-200 bg-green-50/50">
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-green-600" />
+                <Card className="p-8 border-4 border-green-400 dark:border-green-600 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 shadow-lg">
+                  <h4 className="text-2xl font-black mb-4 flex items-center gap-3 text-green-800 dark:text-green-200">
+                    <Target className="w-8 h-8 text-green-700 dark:text-green-400" />
                     💰 Oportunidades de Venda TOTVS
-                    <Badge variant="default" className="bg-green-600">
+                    <Badge className="bg-green-700 dark:bg-green-600 text-white text-base px-4 py-1">
                       {competitiveAnalysis.vendaTotvs.length} empresas
                     </Badge>
                   </h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Empresas que usam <strong>concorrentes do TOTVS</strong> (SAP, Oracle, Microsoft, etc.) - Prospectar para migração!
+                  <p className="text-base text-green-800 dark:text-green-200 mb-6 font-semibold bg-white/60 dark:bg-black/30 p-3 rounded-lg border border-green-300 dark:border-green-700">
+                    🎯 Empresas que usam <strong className="text-green-900 dark:text-green-100">concorrentes do TOTVS</strong> (SAP, Oracle, Microsoft, etc.) → <strong className="text-red-700 dark:text-red-400">Prospectar para migração!</strong>
                   </p>
                   
                   <div className="space-y-3">
