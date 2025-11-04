@@ -11,6 +11,7 @@ import { analyzeSimilarCompanies, generateBattleCard } from '@/services/competit
 import type { CompanyIntelligence } from '@/services/competitiveIntelligence';
 import { discoverFullDigitalPresence, type DigitalPresence } from '@/services/websiteDiscovery';
 import { generateCompanyIntelligenceReport, type CompanyIntelligenceReport } from '@/services/socialMediaAnalyzer';
+import { searchOfficialWebsite, type WebsiteSearchResult } from '@/services/officialWebsiteSearch';
 
 interface KeywordsSEOTabProps {
   companyName?: string;
@@ -37,6 +38,7 @@ export function KeywordsSEOTabEnhanced({
   const [digitalPresence, setDigitalPresence] = useState<DigitalPresence | null>(null);
   const [discoveredDomain, setDiscoveredDomain] = useState<string | null>(null);
   const [intelligenceReport, setIntelligenceReport] = useState<CompanyIntelligenceReport | null>(null);
+  const [websiteOptions, setWebsiteOptions] = useState<WebsiteSearchResult[]>([]);
 
   // 🔥 Análise SEO completa
   const seoMutation = useMutation({
@@ -92,7 +94,39 @@ export function KeywordsSEOTabEnhanced({
     }
   });
 
-  // 🔥 WEBSITE DISCOVERY - USA TODAS AS FERRAMENTAS!
+  // 🔍 BUSCA OFICIAL - TOP 10 RESULTADOS
+  const officialSearchMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyName) throw new Error('Nome necessário');
+      return await searchOfficialWebsite(companyName);
+    },
+    onMutate: () => {
+      onLoading?.(true);
+      toast({
+        title: '🔍 Buscando TOP 10 websites...',
+        description: 'Query: "website oficial [empresa]"',
+      });
+    },
+    onSuccess: (results) => {
+      setWebsiteOptions(results);
+      onLoading?.(false);
+      toast({
+        title: '✅ TOP 10 encontrados!',
+        description: `${results.length} opções. Escolha o correto.`,
+      });
+    },
+    onError: (error) => {
+      onError?.((error as Error).message);
+      onLoading?.(false);
+      toast({
+        title: '❌ Erro',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 🔥 WEBSITE DISCOVERY AUTOMÁTICO - 8 FERRAMENTAS
   const discoveryMutation = useMutation({
     mutationFn: async () => {
       if (!companyName) throw new Error('Nome da empresa necessário');
@@ -225,23 +259,46 @@ export function KeywordsSEOTabEnhanced({
 
           {/* Botões de ação */}
           <div className="flex flex-col gap-2">
-            {/* 🚨 BOTÃO DISCOVERY - Aparece quando não tem domain */}
-            {!domain && !discoveredDomain && (
+            {/* 🎯 BOTÃO BUSCA OFICIAL TOP 10 - PRIORIDADE 1 */}
+            {!domain && !discoveredDomain && websiteOptions.length === 0 && (
+              <Button
+                onClick={() => officialSearchMutation.mutate()}
+                disabled={officialSearchMutation.isPending}
+                size="lg"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 gap-2 font-bold"
+              >
+                {officialSearchMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-5 w-5" />
+                    🔍 Buscar Website Oficial (TOP 10)
+                  </>
+                )}
+              </Button>
+            )}
+            
+            {/* 🔥 BOTÃO DISCOVERY AUTOMÁTICO - ALTERNATIVA */}
+            {!domain && !discoveredDomain && websiteOptions.length === 0 && (
               <Button
                 onClick={() => discoveryMutation.mutate()}
                 disabled={discoveryMutation.isPending}
-                size="lg"
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 gap-2"
+                size="sm"
+                variant="outline"
+                className="w-full gap-2"
               >
                 {discoveryMutation.isPending ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Descobrindo...
                   </>
                 ) : (
                   <>
-                    <Zap className="h-5 w-5" />
-                    🔍 Descobrir Presença Digital Completa
+                    <Zap className="h-4 w-4" />
+                    ou Descoberta Automática (8 ferramentas)
                   </>
                 )}
               </Button>
