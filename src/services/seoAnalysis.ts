@@ -205,11 +205,19 @@ export async function findCompaniesWithSimilarKeywords(
       const overlapScore = Math.round((score.sharedKeywords.size / Math.min(keywords.length, 5)) * 100);
       const avgRanking = Math.round(score.ranking.reduce((a, b) => a + b, 0) / score.ranking.length);
 
-      if (overlapScore >= 40) { // Mínimo 40% de overlap
+      // 🚫 FILTRAR domínios inválidos
+      const domainUrl = `https://${domain}`;
+      if (!isValidCompanyDomain(domainUrl)) {
+        console.log('[SEO] ⚠️ Domain rejeitado (portal/blog):', domain);
+        return; // SKIP
+      }
+
+      // ⚡ AUMENTAR threshold: 60% (não 40%)
+      if (overlapScore >= 60) { // Mínimo 60% de overlap (mais rigoroso!)
         results.push({
           name: domain.split('.')[0].toUpperCase(),
           domain,
-          website: `https://${domain}`,
+          website: domainUrl,
           overlapScore,
           sharedKeywords: Array.from(score.sharedKeywords),
           uniqueKeywords: [],
