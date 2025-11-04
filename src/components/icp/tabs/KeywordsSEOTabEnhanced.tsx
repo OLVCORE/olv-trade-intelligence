@@ -3,7 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ArrowLeft, Home, ChevronDown, ArrowUp, Edit } from 'lucide-react';
+import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ChevronDown, Edit } from 'lucide-react';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { performFullSEOAnalysis } from '@/services/seoAnalysis';
@@ -367,11 +368,6 @@ export function KeywordsSEOTabEnhanced({
     );
   }
 
-  // 🔥 SCROLL TO TOP
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // 🔍 Helper: Buscar CNAE do CNPJ
   const fetchCNAE = async (cnpj: string): Promise<string | null> => {
     try {
@@ -386,6 +382,18 @@ export function KeywordsSEOTabEnhanced({
     }
   };
 
+  // 🔄 RESET: Voltar ao estado inicial
+  const handleReset = () => {
+    setDigitalPresence(null);
+    setSeoData(null);
+    setCompetitiveAnalysis(null);
+    setIntelligenceReport(null);
+    setDiscoveredDomain(null);
+    setWebsiteOptions([]);
+    setSimilarCompaniesOptions([]);
+    setIsEditingWebsite(false);
+  };
+
   // 💾 SALVAR RELATÓRIO (REALMENTE SALVA!)
   const handleSaveReport = () => {
     const reportData = {
@@ -395,6 +403,7 @@ export function KeywordsSEOTabEnhanced({
       discoveredDomain,
       intelligenceReport,
       websiteOptions,
+      similarCompaniesOptions,
       savedAt: new Date().toISOString(),
     };
     
@@ -406,50 +415,29 @@ export function KeywordsSEOTabEnhanced({
     });
   };
 
+  const hasData = !!(digitalPresence || seoData || intelligenceReport);
+  const hasUnsaved = hasData; // TODO: track real unsaved changes
+
   return (
     <div className="space-y-4 relative">
-      {/* 🎯 BOTÃO FLUTUANTE - VOLTAR AO TOPO (fixo como WhatsApp) */}
-      {(digitalPresence || seoData || intelligenceReport) && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-50 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 animate-bounce hover:animate-none"
-          title="Voltar ao topo"
-          aria-label="Voltar ao topo"
-        >
-          <ArrowUp className="w-6 h-6" />
-        </button>
-      )}
-
-      {/* 🎯 NAVEGAÇÃO COMPLETA - VOLTAR/HOME/SALVAR/EDITAR */}
-      {(digitalPresence || seoData || intelligenceReport) && (
-        <div className="flex items-center justify-between gap-2 p-3 bg-gradient-to-r from-slate-100 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-lg border-2 border-slate-300 dark:border-slate-700 shadow-md">
-          {/* GRUPO ESQUERDO: Navegação */}
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => { setDigitalPresence(null); setSeoData(null); setCompetitiveAnalysis(null); setIntelligenceReport(null); setDiscoveredDomain(null); setWebsiteOptions([]); setSimilarCompaniesOptions([]); }} 
-              variant="outline" 
-              size="sm" 
-              className="gap-2 hover:bg-slate-200 dark:hover:bg-slate-800"
-            >
-              <ArrowLeft className="w-4 h-4" /> Voltar
-            </Button>
-            <Button 
-              onClick={() => { setDigitalPresence(null); setSeoData(null); setCompetitiveAnalysis(null); setIntelligenceReport(null); setDiscoveredDomain(null); setWebsiteOptions([]); setSimilarCompaniesOptions([]); }} 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2"
-            >
-              <Home className="w-4 h-4" /> Início
-            </Button>
-          </div>
-
-          {/* GRUPO DIREITO: Ações */}
-          <div className="flex gap-2">
-            {/* 📝 BOTÃO EDITAR WEBSITE - RESTAURADO */}
-            {(discoveredDomain || domain) && (
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE REUTILIZÁVEL */}
+      {hasData && (
+        <>
+          <FloatingNavigation
+            onBack={handleReset}
+            onHome={handleReset}
+            onSave={handleSaveReport}
+            showSaveButton={true}
+            saveDisabled={!seoData && !digitalPresence && !intelligenceReport}
+            hasUnsavedChanges={hasUnsaved}
+          />
+          
+          {/* 📝 BOTÃO EDITAR WEBSITE - FICA NA BARRA EXTRA */}
+          {(discoveredDomain || domain) && !isEditingWebsite && (
+            <div className="flex justify-end -mt-2">
               <Button
                 onClick={() => {
-                  setIsEditingWebsite(!isEditingWebsite);
+                  setIsEditingWebsite(true);
                   setEditedWebsite(discoveredDomain || domain || '');
                 }}
                 variant="outline"
@@ -458,19 +446,9 @@ export function KeywordsSEOTabEnhanced({
               >
                 <Edit className="w-4 h-4" /> Editar Website
               </Button>
-            )}
-
-            {/* 💾 BOTÃO SALVAR - ELEGANTE E PULSANTE (REPOSICIONADO) */}
-            <Button
-              onClick={handleSaveReport}
-              disabled={!seoData && !digitalPresence && !intelligenceReport}
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 font-bold shadow-lg hover:shadow-xl transition-all duration-300 animate-pulse hover:animate-none disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="w-4 h-4" /> Salvar Relatório
-            </Button>
-          </div>
-        </div>
+            </div>
+          )}
+        </>
       )}
       
       {/* Header */}
