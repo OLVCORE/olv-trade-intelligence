@@ -824,13 +824,22 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 8: KEYWORDS & SEO (NOVA) */}
+        {/* ABA 1: KEYWORDS & SEO (PRIMEIRA - WEBSITE DISCOVERY) */}
         <TabsContent value="keywords" className="mt-0 overflow-y-auto">
-          <KeywordsSEOTab
-            companyName={companyName}
-            domain={domain}
-            savedData={latestReport?.full_report?.keywords_seo_report}
-          />
+          <TabSaveWrapper
+            tabId="keywords"
+            tabName="Keywords & SEO"
+            hasUnsavedChanges={unsavedChanges.keywords}
+            onSave={() => saveTab('keywords')}
+            canSave={!!domain}
+            saveDisabledReason="Website/domain não disponível"
+          >
+            <KeywordsSEOTab
+              companyName={companyName}
+              domain={domain}
+              savedData={latestReport?.full_report?.keywords_seo_report}
+            />
+          </TabSaveWrapper>
         </TabsContent>
 
         {/* ABA 9: DECISORES & CONTATOS (NOVA - PHANTOMBUSTER) */}
