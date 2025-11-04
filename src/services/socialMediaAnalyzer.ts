@@ -286,12 +286,14 @@ export async function generateCompanyIntelligenceReport(
     socialPlatforms.push(facebook);
   }
 
-  // 3. Calcular presença geral
-  const activePlatforms = socialPlatforms.filter(p => p.recentPosts.length > 0).length;
+  // 3. Calcular presença geral (CORRIGIDO - verificar se TEM URL, não posts!)
+  const activePlatforms = socialPlatforms.length; // ✅ Se encontrou LinkedIn/Instagram/etc, conta!
   const overallPresence: 'excellent' | 'good' | 'poor' | 'absent' = 
     activePlatforms >= 3 ? 'excellent' :
     activePlatforms === 2 ? 'good' :
     activePlatforms === 1 ? 'poor' : 'absent';
+  
+  console.log('[INTELLIGENCE] 📊 Plataformas ativas:', activePlatforms, '→ Presença:', overallPresence);
 
   // 4. IA ANALISA TUDO (GPT-4o-mini)
   const aiAnalysis = await analyzeWithAI(companyName, health, socialPlatforms);
