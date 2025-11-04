@@ -172,6 +172,86 @@ export default function ICPQuarantine() {
     },
   });
 
+  // ⚡ NOVO: ANÁLISE COMPLETA 360° - TUDO EM 1 CLIQUE!
+  const enrichCompletoMutation = useMutation({
+    mutationFn: async (analysisId: string) => {
+      const results = {
+        receita: null as any,
+        apollo: null as any,
+        enrich360: null as any,
+        errors: [] as string[],
+      };
+
+      // 1️⃣ RECEITA FEDERAL
+      toast.loading('⚡ 1/3: Consultando Receita Federal...', { id: 'completo' });
+      try {
+        await enrichReceitaMutation.mutateAsync(analysisId);
+        results.receita = 'success';
+      } catch (error: any) {
+        results.errors.push(`Receita: ${error.message}`);
+        console.error('[COMPLETO] Receita falhou:', error);
+      }
+
+      // Delay entre chamadas
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 2️⃣ APOLLO DECISORES
+      toast.loading('⚡ 2/3: Buscando decisores no Apollo...', { id: 'completo' });
+      try {
+        await enrichApolloMutation.mutateAsync(analysisId);
+        results.apollo = 'success';
+      } catch (error: any) {
+        results.errors.push(`Apollo: ${error.message}`);
+        console.error('[COMPLETO] Apollo falhou:', error);
+      }
+
+      // Delay entre chamadas
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 3️⃣ INTELLIGENCE 360°
+      toast.loading('⚡ 3/3: Executando Intelligence 360°...', { id: 'completo' });
+      try {
+        await enrich360Mutation.mutateAsync(analysisId);
+        results.enrich360 = 'success';
+      } catch (error: any) {
+        results.errors.push(`360°: ${error.message}`);
+        console.error('[COMPLETO] 360° falhou:', error);
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      const successCount = [results.receita, results.apollo, results.enrich360].filter(r => r === 'success').length;
+      
+      toast.dismiss('completo');
+      
+      if (successCount === 3) {
+        toast.success('🎉 Análise Completa 360° CONCLUÍDA!', {
+          description: '✅ Receita Federal | ✅ Apollo Decisores | ✅ Intelligence 360°',
+          duration: 5000,
+        });
+      } else if (successCount > 0) {
+        toast.warning(`⚠️ Análise parcialmente concluída (${successCount}/3)`, {
+          description: results.errors.join(' | '),
+          duration: 7000,
+        });
+      } else {
+        toast.error('❌ Análise falhou completamente', {
+          description: results.errors.join(' | '),
+          duration: 10000,
+        });
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+    },
+    onError: (error: any) => {
+      toast.dismiss('completo');
+      toast.error('Erro na Análise Completa', {
+        description: error.message,
+      });
+    },
+  });
+
   const enrichApolloMutation = useMutation({
     mutationFn: async (analysisId: string) => {
       const { data: analysis } = await supabase
@@ -695,6 +775,11 @@ export default function ICPQuarantine() {
 
   const handleEnrich360 = async (id: string) => {
     return enrich360Mutation.mutateAsync(id);
+  };
+
+  // ⚡ NOVO: Handler para Análise Completa (3 em 1)
+  const handleEnrichCompleto = async (id: string) => {
+    return enrichCompletoMutation.mutateAsync(id);
   };
 
   const discoverCNPJMutation = useMutation({
@@ -1406,6 +1491,7 @@ export default function ICPQuarantine() {
                         onEnrichReceita={handleEnrichReceita}
                         onEnrichApollo={handleEnrichApollo}
                         onEnrich360={handleEnrich360}
+                        onEnrichCompleto={handleEnrichCompleto}
                         onEnrichTotvsCheck={handleEnrichTotvsCheck}
                         onDiscoverCNPJ={handleDiscoverCNPJ}
                         onOpenExecutiveReport={() => {

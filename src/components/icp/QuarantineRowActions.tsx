@@ -35,6 +35,7 @@ interface QuarantineRowActionsProps {
   onEnrichTotvsCheck?: (id: string) => Promise<void>;
   onDiscoverCNPJ?: (id: string) => void;
   onOpenExecutiveReport?: () => void;
+  onEnrichCompleto?: (id: string) => Promise<void>;
 }
 
 export function QuarantineRowActions({
@@ -51,6 +52,7 @@ export function QuarantineRowActions({
   onEnrichTotvsCheck,
   onDiscoverCNPJ,
   onOpenExecutiveReport,
+  onEnrichCompleto,
 }: QuarantineRowActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
@@ -268,7 +270,41 @@ export function QuarantineRowActions({
           </Tooltip>
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel>Enriquecimento</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-primary font-bold">⚡ Enriquecimento Inteligente</DropdownMenuLabel>
+
+          {/* NOVO: Análise Completa 360° - UNIFICADO! */}
+          {onEnrichCompleto && (
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem
+                  onClick={() => handleEnrich('Análise Completa 360°', onEnrichCompleto)}
+                  disabled={isEnriching || !company.cnpj}
+                  className="relative bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 hover:from-primary/40 hover:via-primary/30 hover:to-primary/40 border-l-4 border-primary font-bold cursor-pointer transition-all animate-pulse"
+                >
+                  {enrichingAction === 'Análise Completa 360°' ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin text-primary" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2 text-primary" />
+                  )}
+                  <span className="text-primary">Análise Completa 360°</span>
+                  <Sparkles className="h-3 w-3 ml-auto text-primary animate-pulse" />
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-sm bg-primary text-primary-foreground">
+                <p className="font-bold text-sm">⚡ SUPER ENRIQUECIMENTO - TUDO EM 1 CLIQUE!</p>
+                <p className="text-xs mt-2">Executa automaticamente:</p>
+                <ul className="text-xs mt-1 space-y-1 list-disc list-inside">
+                  <li>✅ Receita Federal (dados oficiais)</li>
+                  <li>✅ Apollo Decisores (C-Level + contatos)</li>
+                  <li>✅ Intelligence 360° (IA completa)</li>
+                </ul>
+                <p className="text-xs mt-2 italic">Economia: 3 cliques → 1 clique! 🚀</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Enriquecimentos Individuais</DropdownMenuLabel>
 
           {/* Descobrir CNPJ */}
           {!company.cnpj && onDiscoverCNPJ && (

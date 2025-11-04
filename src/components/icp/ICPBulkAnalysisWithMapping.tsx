@@ -852,11 +852,12 @@ export default function ICPBulkAnalysisWithMapping() {
         await supabase
           .from('icp_analysis_results')
           .update({
-            status: 'descartada',
+            status: 'descartado',
             motivo_descarte: 'Cliente TOTVS detectado',
             is_cliente_totvs: true,
-            totvs_check_date: new Date().toISOString(),
-            totvs_evidences: evidenciasTotvs,
+            totvs_products: evidenciasTotvs.map(e => e.fonte || 'TOTVS'),
+            analysis_data: { evidencias: evidenciasTotvs },
+            analyzed_at: new Date().toISOString(),
           })
           .eq('id', analysisId);
 
@@ -904,8 +905,10 @@ export default function ICPBulkAnalysisWithMapping() {
         .update({
           icp_score: icpResult.score,
           temperatura: icpResult.temperatura,
-          breakdown: icpResult.breakdown,
-          motivos: icpResult.motivos,
+          analysis_data: {
+            breakdown: icpResult.breakdown,
+            motivos: icpResult.motivos,
+          },
           analyzed_at: new Date().toISOString(),
           status: 'pendente',
         })
