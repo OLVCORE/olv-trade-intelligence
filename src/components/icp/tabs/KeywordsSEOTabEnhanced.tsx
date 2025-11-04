@@ -10,6 +10,7 @@ import type { KeywordData, SimilarCompanyBySEO } from '@/services/seoAnalysis';
 import { analyzeSimilarCompanies, generateBattleCard } from '@/services/competitiveIntelligence';
 import type { CompanyIntelligence } from '@/services/competitiveIntelligence';
 import { discoverFullDigitalPresence, type DigitalPresence } from '@/services/websiteDiscovery';
+import { generateCompanyIntelligenceReport, type CompanyIntelligenceReport } from '@/services/socialMediaAnalyzer';
 
 interface KeywordsSEOTabProps {
   companyName?: string;
@@ -35,6 +36,7 @@ export function KeywordsSEOTabEnhanced({
   const [competitiveAnalysis, setCompetitiveAnalysis] = useState<any>(null);
   const [digitalPresence, setDigitalPresence] = useState<DigitalPresence | null>(null);
   const [discoveredDomain, setDiscoveredDomain] = useState<string | null>(null);
+  const [intelligenceReport, setIntelligenceReport] = useState<CompanyIntelligenceReport | null>(null);
 
   // 🔥 Análise SEO completa
   const seoMutation = useMutation({
@@ -131,6 +133,55 @@ export function KeywordsSEOTabEnhanced({
       onLoading?.(false);
       toast({
         title: '❌ Erro na descoberta',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 🧠 ANÁLISE INTELIGENTE COMPLETA - IA lê TUDO!
+  const intelligenceMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyName) throw new Error('Nome da empresa necessário');
+      if (!digitalPresence?.website) throw new Error('Execute Website Discovery primeiro');
+      
+      return await generateCompanyIntelligenceReport(
+        companyName,
+        digitalPresence.website,
+        digitalPresence.linkedin,
+        digitalPresence.instagram,
+        digitalPresence.facebook
+      );
+    },
+    onMutate: () => {
+      onLoading?.(true);
+      toast({
+        title: '🧠 IA Analisando Presença Digital...',
+        description: 'Lendo conteúdo das redes sociais + verificando compliance Google',
+      });
+    },
+    onSuccess: (data) => {
+      setIntelligenceReport(data);
+      onLoading?.(false);
+      
+      toast({
+        title: '✅ Análise Inteligente Concluída!',
+        description: `Digital Health: ${data.digitalHealthScore}/100 | Google Compliance: ${data.googleCompliance.score}%`,
+      });
+
+      // 🚨 Notifica parent: dados completos para Executive Summary
+      onDataChange?.({ 
+        digitalPresence, 
+        seoData, 
+        competitiveAnalysis,
+        intelligenceReport: data 
+      });
+    },
+    onError: (error) => {
+      onError?.((error as Error).message);
+      onLoading?.(false);
+      toast({
+        title: '❌ Erro na análise inteligente',
         description: (error as Error).message,
         variant: 'destructive',
       });
