@@ -32,6 +32,9 @@ export function useSimilarCompanies(companyId: string | undefined) {
       return data || [];
     },
     enabled: !!companyId,
-    staleTime: 30000
+    staleTime: 1000 * 60 * 60 * 24, // ⚡ 24 HORAS (não reconsumir!)
+    gcTime: 1000 * 60 * 60 * 24,
+    refetchOnWindowFocus: false,     // ❌ NÃO refetch ao trocar aba!
+    refetchOnMount: false
   });
 }

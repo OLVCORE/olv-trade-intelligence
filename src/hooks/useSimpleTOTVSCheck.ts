@@ -75,9 +75,9 @@ export const useSimpleTOTVSCheck = ({
       return data;
     },
     enabled: enabled && (!!companyName || !!cnpj),
-    staleTime: 60 * 1000,      // 1 minuto (balanceado)
-    gcTime: 5 * 60 * 1000,     // 5 minutos
-    refetchOnMount: true,      // Verificar ao abrir
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 60 * 24, // ⚡ 24 HORAS (não reconsumir!)
+    gcTime: 1000 * 60 * 60 * 24,    // 24h em cache
+    refetchOnMount: false,           // ❌ NÃO refetch ao montar!
+    refetchOnWindowFocus: false,     // ❌ NÃO refetch ao trocar aba!
   });
 };

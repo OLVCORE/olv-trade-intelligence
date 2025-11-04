@@ -47,11 +47,11 @@ export function useCrossModuleData<T = any>(options: UseCrossModuleDataOptions) 
       return data?.data as T | null;
     },
     enabled: !!(companyId || accountStrategyId),
-    staleTime: 0,
-    gcTime: 5 * 60_000,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchOnMount: 'always',
+    staleTime: 1000 * 60 * 60, // ⚡ 1 HORA (não 0!)
+    gcTime: 1000 * 60 * 60 * 2, // 2h
+    refetchOnWindowFocus: false, // ❌ NÃO refetch ao trocar aba!
+    refetchOnReconnect: false,
+    refetchOnMount: false, // ❌ NÃO 'always'!
     retry: 1,
   });
 

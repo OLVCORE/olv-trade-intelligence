@@ -77,6 +77,9 @@ export function useCompetitorAnalysis(companyId: string | undefined) {
       return competitors;
     },
     enabled: !!companyId,
-    staleTime: 5 * 60 * 1000 // 5 minutos
+    staleTime: 1000 * 60 * 60 * 24, // ⚡ 24 HORAS (não reconsumir!)
+    gcTime: 1000 * 60 * 60 * 24,
+    refetchOnWindowFocus: false,     // ❌ NÃO refetch ao trocar aba!
+    refetchOnMount: false
   });
 }

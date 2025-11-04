@@ -62,7 +62,10 @@ export function useProductGaps({
       return data;
     },
     enabled: enabled && !!companyName,
-    staleTime: 1000 * 60 * 30, // 30 minutos
+    staleTime: 1000 * 60 * 60 * 24, // ⚡ 24 HORAS (cache longo)
+    gcTime: 1000 * 60 * 60 * 24,
+    refetchOnWindowFocus: false,     // ❌ NÃO refetch ao trocar aba!
+    refetchOnMount: false,           // ❌ NÃO refetch ao montar!
     retry: 2
   });
 }
