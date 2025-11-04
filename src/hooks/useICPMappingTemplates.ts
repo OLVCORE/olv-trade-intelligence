@@ -31,6 +31,11 @@ export function useICPMappingTemplates() {
         .order('criado_em', { ascending: false });
 
       if (error) {
+        // ✅ Se tabela não existir, retornar array vazio ao invés de error
+        if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          console.warn('[TEMPLATES] ⚠️ Tabela icp_mapping_templates não existe ainda. Retornando array vazio.');
+          return [];
+        }
         console.error('[TEMPLATES] Erro ao carregar:', error);
         throw error;
       }
@@ -43,16 +48,13 @@ export function useICPMappingTemplates() {
         mappings: item.mappings as unknown as ColumnMapping[],
       })) as MappingTemplate[];
     },
+    retry: 1, // Tentar apenas 1 vez para não spammar console
+    retryDelay: 1000,
   });
 
-  // Mostrar erro se houver
-  if (queryError) {
+  // Mostrar erro se houver (mas não para tabela inexistente)
+  if (queryError && queryError.message && !queryError.message.includes('relation')) {
     console.error('[TEMPLATES] Erro na query:', queryError);
-    toast({
-      title: 'Erro ao carregar templates',
-      description: 'Verifique as permissões de acesso aos templates.',
-      variant: 'destructive',
-    });
   }
 
   // Salvar novo template
