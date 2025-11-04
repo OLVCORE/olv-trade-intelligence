@@ -46,6 +46,7 @@ export function KeywordsSEOTabEnhanced({
   const [isEditingWebsite, setIsEditingWebsite] = useState(false);
   const [editedWebsite, setEditedWebsite] = useState('');
   const [similarCompaniesOptions, setSimilarCompaniesOptions] = useState<any[]>([]);
+  const [allWebsiteResults, setAllWebsiteResults] = useState<WebsiteSearchResult[]>([]);
 
   // 🔥 Análise SEO completa
   const seoMutation = useMutation({
@@ -205,14 +206,73 @@ export function KeywordsSEOTabEnhanced({
     },
   });
 
-  // 🔍 BUSCA OFICIAL - TOP 10 RESULTADOS
+  // 🔥 BUSCA INTELIGENTE ÚNICA - TUDO EM PARALELO
+  const smartDiscoveryMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyName) throw new Error('Nome necessário');
+      
+      // 🚀 PARALELO 1: Busca Google (TOP 20)
+      const googleResults = await searchOfficialWebsite(companyName);
+      
+      // 🚀 PARALELO 2: Discovery 8 Ferramentas
+      const digitalPresencePromise = discoverFullDigitalPresence(companyName, cnpj);
+      
+      const [presenca] = await Promise.all([digitalPresencePromise]);
+      
+      return { googleResults, presenca };
+    },
+    onMutate: () => {
+      setSimilarCompaniesOptions([]);
+      setAllWebsiteResults([]);
+      onLoading?.(true);
+      toast({
+        title: '🔍 Descoberta Inteligente em andamento...',
+        description: 'Buscando Google + 8 Ferramentas em paralelo',
+      });
+    },
+    onSuccess: ({ googleResults, presenca }) => {
+      console.log('[SMART] ✅ Google:', googleResults.length, '| Presença:', presenca.confidence);
+      
+      // 🔥 AUTO-SELECIONAR #1 do Google (mais assertivo)
+      if (googleResults.length > 0) {
+        const top1 = googleResults[0];
+        const cleanDomain = top1.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+        setDiscoveredDomain(cleanDomain);
+        setDigitalPresence({
+          ...presenca,
+          website: top1.url,
+        });
+        
+        toast({
+          title: '✅ Website #1 selecionado automaticamente!',
+          description: `${top1.title} | ${top1.confidence}% confiança`,
+          duration: 5000,
+        });
+      }
+      
+      // Mostrar TOP 20 como alternativas
+      setAllWebsiteResults(googleResults.slice(0, 20));
+      
+      onLoading?.(false);
+    },
+    onError: (error) => {
+      onError?.((error as Error).message);
+      onLoading?.(false);
+      toast({
+        title: '❌ Erro na descoberta inteligente',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 🔍 BUSCA OFICIAL - TOP 10 RESULTADOS (LEGACY - mantido para compatibilidade)
   const officialSearchMutation = useMutation({
     mutationFn: async () => {
       if (!companyName) throw new Error('Nome necessário');
       return await searchOfficialWebsite(companyName);
     },
     onMutate: () => {
-      // 🧹 LIMPAR tabela de empresas similares
       setSimilarCompaniesOptions([]);
       onLoading?.(true);
       toast({
@@ -476,52 +536,23 @@ export function KeywordsSEOTabEnhanced({
 
           {/* Botões de ação */}
           <div className="flex flex-col gap-2">
-            {/* 🎯 BOTÃO BUSCA OFICIAL TOP 10 - SEMPRE VISÍVEL SE NÃO TEM WEBSITE */}
+            {/* 🔥 BOTÃO ÚNICO INTELIGENTE - GOOGLE #1 + 8 FERRAMENTAS + TOP 20 */}
             {!domain && !discoveredDomain && (
               <Button
-                onClick={() => {
-                  setSimilarCompaniesOptions([]); // Limpa empresas similares
-                  officialSearchMutation.mutate();
-                }}
-                disabled={officialSearchMutation.isPending}
+                onClick={() => smartDiscoveryMutation.mutate()}
+                disabled={smartDiscoveryMutation.isPending}
                 size="lg"
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 gap-2 font-bold"
+                className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-800 gap-2 font-bold shadow-lg animate-pulse hover:animate-none"
               >
-                {officialSearchMutation.isPending ? (
+                {smartDiscoveryMutation.isPending ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Buscando...
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    Descobrindo Website & Presença Digital...
                   </>
                 ) : (
                   <>
-                    <Search className="h-5 w-5" />
-                    🔍 Buscar Website Oficial (TOP 10)
-                  </>
-                )}
-              </Button>
-            )}
-            
-            {/* 🔥 BOTÃO DISCOVERY AUTOMÁTICO - SEMPRE VISÍVEL SE NÃO TEM WEBSITE */}
-            {!domain && !discoveredDomain && (
-              <Button
-                onClick={() => {
-                  setSimilarCompaniesOptions([]); // Limpa empresas similares
-                  discoveryMutation.mutate();
-                }}
-                disabled={discoveryMutation.isPending}
-                size="sm"
-                variant="outline"
-                className="w-full gap-2"
-              >
-                {discoveryMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Descobrindo...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4" />
-                    ou Descoberta Automática (8 ferramentas)
+                    <Sparkles className="h-6 w-6" />
+                    🚀 Descobrir Website & Presença Digital Completa
                   </>
                 )}
               </Button>
@@ -686,15 +717,20 @@ export function KeywordsSEOTabEnhanced({
           </div>
         )}
 
-        {/* 📋 DROPDOWN TOP 10 - ESCOLHA DO USUÁRIO */}
-        {websiteOptions.length > 0 && (
+        {/* 📋 DROPDOWN TOP 20 - ALTERNATIVAS SCROLLÁVEIS */}
+        {allWebsiteResults.length > 0 && (
           <div className="mt-4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-3 border-blue-500 dark:border-blue-600 rounded-xl shadow-lg">
-            <p className="text-lg font-black text-blue-900 dark:text-blue-100 mb-4 flex items-center gap-2">
-              <Search className="w-6 h-6" />
-              🎯 Escolha o Website Oficial ({websiteOptions.length} opções)
-            </p>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {websiteOptions.map((option, idx) => (
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-lg font-black text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                <Search className="w-6 h-6" />
+                📋 Outras Opções ({allWebsiteResults.length} alternativas)
+              </p>
+              <Badge className="bg-blue-600 text-white">
+                Scroll para ver mais ↓
+              </Badge>
+            </div>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-blue-100">
+              {allWebsiteResults.map((option, idx) => (
                 <button
                   key={idx}
                   onClick={() => {
@@ -708,7 +744,7 @@ export function KeywordsSEOTabEnhanced({
                       phones: [],
                       addresses: [],
                     });
-                    setWebsiteOptions([]);
+                    setAllWebsiteResults([]); // Fecha dropdown
                     
                     // 🧹 LIMPAR tabela de empresas similares
                     setSimilarCompaniesOptions([]);

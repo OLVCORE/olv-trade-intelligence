@@ -52,7 +52,7 @@ export async function searchOfficialWebsite(
       },
       body: JSON.stringify({
         q: query,
-        num: 10, // TOP 10 resultados
+        num: 20, // TOP 20 resultados
         gl: 'br',
         hl: 'pt-br',
       }),
@@ -105,7 +105,7 @@ export async function searchOfficialWebsite(
     // Ordenar por confiança (maior primeiro)
     const finalResults = results
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 10);
+      .slice(0, 20); // TOP 20!
     
     console.log('[OFFICIAL] ✅ Retornando', finalResults.length, 'resultados');
     console.log('[OFFICIAL] 🎯 TOP 3:', finalResults.slice(0, 3).map(r => ({ url: r.url, conf: r.confidence })));
