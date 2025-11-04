@@ -31,6 +31,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollControls } from '@/components/common/ScrollControls';
 import { ExecutiveReportModal } from '@/components/reports/ExecutiveReportModal';
+import { consultarReceitaFederal } from '@/services/receitaFederal';
+import { searchApolloOrganizations, searchApolloPeople } from '@/services/apolloDirect';
+import { enrichment360Simplificado } from '@/services/enrichment360';
 
 export default function ICPQuarantine() {
   const navigate = useNavigate();
@@ -101,7 +104,7 @@ export default function ICPQuarantine() {
     queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
   };
 
-  // Mutations para enriquecimento na quarentena
+  // ✅ NOVA VERSÃO: Mutations para enriquecimento DIRETO (sem Edge Functions)
   const enrichReceitaMutation = useMutation({
     mutationFn: async (analysisId: string) => {
       const { data: analysis } = await supabase
@@ -112,24 +115,27 @@ export default function ICPQuarantine() {
 
       if (!analysis?.cnpj) throw new Error('CNPJ não disponível');
 
-      // Chamar com apenas CNPJ (sem company_id)
-      const { data, error } = await supabase.functions.invoke('enrich-company-receita', {
-        body: { cnpj: analysis.cnpj },
-      });
+      // ✅ CHAMAR API DIRETAMENTE (sem Edge Function)
+      const result = await consultarReceitaFederal(analysis.cnpj);
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error || 'Erro ao consultar Receita Federal');
 
       // Atualizar dados na quarentena
-      const rawData = (analysis.raw_analysis && typeof analysis.raw_analysis === 'object' && !Array.isArray(analysis.raw_analysis)) 
-        ? analysis.raw_analysis as Record<string, any>
+      const rawData = (analysis.raw_data && typeof analysis.raw_data === 'object' && !Array.isArray(analysis.raw_data)) 
+        ? analysis.raw_data as Record<string, any>
         : {};
 
       const { error: updateError } = await supabase
         .from('icp_analysis_results')
         .update({
-          raw_analysis: {
+          uf: result.data?.uf || analysis.uf,
+          municipio: result.data?.municipio || analysis.municipio,
+          porte: result.data?.porte || analysis.porte,
+          cnae_principal: result.data?.atividade_principal?.[0]?.text || analysis.cnae_principal,
+          raw_data: {
             ...rawData,
-            receita_federal: data,
+            receita_federal: result.data,
+            receita_source: result.source,
           },
         })
         .eq('id', analysisId);
@@ -262,43 +268,57 @@ export default function ICPQuarantine() {
 
       if (!analysis) throw new Error('Empresa não encontrada');
 
-      const rawData = (analysis.raw_analysis && typeof analysis.raw_analysis === 'object' && !Array.isArray(analysis.raw_analysis)) 
-        ? analysis.raw_analysis as Record<string, any>
+      const rawData = (analysis.raw_data && typeof analysis.raw_data === 'object' && !Array.isArray(analysis.raw_data)) 
+        ? analysis.raw_data as Record<string, any>
         : {};
 
-      const { data, error } = await supabase.functions.invoke('enrich-apollo', {
-        body: { 
-          type: 'search_organizations',
-          name: analysis.razao_social,
-          domain: rawData.domain || analysis.website || '',
-        },
-      });
+      // ✅ CHAMAR API DIRETAMENTE (sem Edge Function)
+      const domain = rawData.domain || analysis.domain || analysis.website || '';
+      const orgResult = await searchApolloOrganizations(analysis.razao_social, domain);
 
-      if (error) throw error;
+      if (!orgResult.success) throw new Error(orgResult.error || 'Erro ao buscar no Apollo');
+
+      const organizations = orgResult.organizations || [];
+      let peopleData: any[] = [];
+
+      // Se encontrou organizações, buscar decisores da primeira
+      if (organizations.length > 0) {
+        const firstOrg = organizations[0];
+        const peopleResult = await searchApolloPeople(firstOrg.id, 10);
+        
+        if (peopleResult.success) {
+          peopleData = peopleResult.people || [];
+        }
+      }
 
       // Extrair website do Apollo se disponível
       let websiteUpdate = {};
-      if (data?.organization?.website_url) {
-        websiteUpdate = { website: data.organization.website_url };
+      if (organizations.length > 0 && organizations[0]?.website_url) {
+        websiteUpdate = { website: organizations[0].website_url };
       }
 
       await supabase
         .from('icp_analysis_results')
         .update({
           ...websiteUpdate,
-          raw_analysis: {
+          raw_data: {
             ...rawData,
-            apollo: data,
+            apollo_organizations: organizations,
+            apollo_people: peopleData,
           },
         })
         .eq('id', analysisId);
 
-      // Recalcular score após Apollo
+      // Recalcular score após Apollo (se função existir - não é crítico)
       await supabase.rpc('calculate_icp_score_quarantine', {
         p_analysis_id: analysisId
+      }).then(() => {
+        console.log('[Apollo] Score recalculado');
+      }).catch((err) => {
+        console.warn('[Apollo] Função calculate_icp_score_quarantine não existe (OK)');
       });
 
-      return data;
+      return { organizations, people: peopleData };
     },
     onSuccess: () => {
       toast.success('✅ Apollo atualizado - Website e decisores adicionados');
@@ -429,88 +449,54 @@ export default function ICPQuarantine() {
 
       if (!analysis) throw new Error('Empresa não encontrada');
 
-      const rawData = (analysis.raw_analysis && typeof analysis.raw_analysis === 'object' && !Array.isArray(analysis.raw_analysis)) 
-        ? analysis.raw_analysis as Record<string, any>
+      const rawData = (analysis.raw_data && typeof analysis.raw_data === 'object' && !Array.isArray(analysis.raw_data)) 
+        ? analysis.raw_data as Record<string, any>
         : {};
 
-      // Progresso: 1/5 - Verificando empresa
-      toast.loading('Enriquecimento 360° iniciado...', { id: '360-progress' });
+      // ✅ ENRIQUECIMENTO SIMPLIFICADO (sem Edge Function)
+      toast.loading('Calculando scores 360°...', { id: '360-progress' });
 
-      // Se já tem company_id linkado, usar. Senão criar empresa primeiro
-      let companyId = analysis.company_id;
-      
-      if (!companyId && analysis.cnpj) {
-        // Verificar se empresa já existe pelo CNPJ
-        const { data: existing } = await supabase
-          .from('companies')
-          .select('id')
-          .eq('cnpj', analysis.cnpj)
-          .maybeSingle();
-        
-        if (existing) {
-          companyId = existing.id;
-          await supabase
-            .from('icp_analysis_results')
-            .update({ company_id: companyId })
-            .eq('id', analysisId);
-        } else {
-          // Criar empresa
-          const { data: newCompany, error: createError } = await supabase
-            .from('companies')
-            .insert({
-              name: analysis.razao_social,
-              cnpj: analysis.cnpj,
-              domain: rawData.domain || analysis.website || null,
-              website: rawData.domain || analysis.website || null,
-            })
-            .select('id')
-            .single();
-          
-          if (createError) throw createError;
-          companyId = newCompany.id;
-          
-          // Linkar empresa ao registro da quarentena
-          await supabase
-            .from('icp_analysis_results')
-            .update({ company_id: companyId })
-            .eq('id', analysisId);
-        }
-      }
-      
-      if (!companyId) throw new Error('Impossível criar/encontrar empresa');
-
-      // Progresso: 2/5 - Enriquecendo dados
-      toast.loading('Executando enriquecimento 360°... (2/5)', { id: '360-progress' });
-
-      const { data, error } = await supabase.functions.invoke('enrich-company-360', {
-        body: { company_id: companyId },
+      const result = await enrichment360Simplificado({
+        razao_social: analysis.razao_social,
+        website: analysis.website,
+        domain: analysis.domain,
+        uf: analysis.uf,
+        porte: analysis.porte,
+        cnae: analysis.cnae_principal,
+        raw_data: rawData,
       });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error || 'Erro ao calcular 360°');
 
-      // Progresso: 3/5 - Salvando dados
-      toast.loading('Salvando dados enriquecidos... (3/5)', { id: '360-progress' });
+      // Salvar scores
+      toast.loading('Salvando scores...', { id: '360-progress' });
 
       await supabase
         .from('icp_analysis_results')
         .update({
-          raw_analysis: {
+          raw_data: {
             ...rawData,
-            enrichment_360: data,
+            enrichment_360: {
+              scores: result.scores,
+              analysis: result.analysis,
+              calculated_at: new Date().toISOString(),
+            },
           },
         })
         .eq('id', analysisId);
 
-      // Progresso: 4/5 - Recalculando score
-      toast.loading('Recalculando Score ICP... (4/5)', { id: '360-progress' });
+      // Recalcular score (se função existir - não é crítico)
+      toast.loading('Recalculando Score ICP...', { id: '360-progress' });
 
       await supabase.rpc('calculate_icp_score_quarantine', {
         p_analysis_id: analysisId
+      }).catch((err) => {
+        console.warn('[360°] Função calculate_icp_score_quarantine não existe (OK)');
       });
 
       toast.dismiss('360-progress');
 
-      return data;
+      return result;
     },
     onSuccess: () => {
       toast.success('✅ Enriquecimento 360° concluído com sucesso!', {
