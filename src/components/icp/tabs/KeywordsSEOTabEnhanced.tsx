@@ -247,36 +247,61 @@ export function KeywordsSEOTabEnhanced({
               </Button>
             )}
             
-            {/* 🚨 BOTÃO SEO - Aparece quando TEM domain (original OU descoberto) */}
+            {/* 🚨 BOTÕES - SEO + INTELLIGENCE */}
             {(domain || discoveredDomain) && (
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => seoMutation.mutate()}
-                  disabled={seoMutation.isPending}
-                  size="lg"
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 gap-2"
-                >
-                  {seoMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Analisando SEO...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      Análise SEO Completa
-                    </>
-                  )}
-                </Button>
+              <div className="flex flex-col gap-2">
+                {!seoData && (
+                  <Button
+                    onClick={() => seoMutation.mutate()}
+                    disabled={seoMutation.isPending}
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-primary to-primary/80 gap-2"
+                  >
+                    {seoMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Analisando SEO...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5" />
+                        Análise SEO Completa
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                {digitalPresence && !intelligenceReport && (
+                  <Button
+                    onClick={() => intelligenceMutation.mutate()}
+                    disabled={intelligenceMutation.isPending}
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 gap-2"
+                  >
+                    {intelligenceMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        IA Analisando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5" />
+                        🧠 Análise Inteligente Completa (IA)
+                      </>
+                    )}
+                  </Button>
+                )}
 
                 {seoData && (
                   <Button
                     onClick={() => seoMutation.mutate()}
                     variant="outline"
-                    size="lg"
+                    size="sm"
                     disabled={seoMutation.isPending}
+                    className="w-full"
                   >
-                    <RefreshCw className={`h-5 w-5 ${seoMutation.isPending ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`h-4 w-4 mr-2 ${seoMutation.isPending ? 'animate-spin' : ''}`} />
+                    Atualizar Análise SEO
                   </Button>
                 )}
               </div>
