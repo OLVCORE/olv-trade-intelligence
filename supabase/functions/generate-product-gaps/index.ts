@@ -68,6 +68,14 @@ serve(async (req) => {
 
     console.log('[PRODUCT-GAPS] Analisando:', companyName);
 
+    // ✅ CONECTAR OPENAI GPT-4o-mini (REAL - NÃO MOCK!)
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiKey) {
+      console.error('[PRODUCT-GAPS] ❌ OPENAI_API_KEY não configurada!');
+      throw new Error('OPENAI_API_KEY não configurada');
+    }
+
     let strategy: 'cross-sell' | 'new-sale' | 'upsell' = 'new-sale';
     let recommendedProducts: any[] = [];
 
@@ -84,30 +92,76 @@ serve(async (req) => {
         }
       });
 
-      // Produtos FALTANTES (mesma categoria)
-      Object.entries(TOTVS_PRODUCTS).forEach(([category, products]) => {
-        if (usedCategories.has(category)) {
-          products.forEach(product => {
-            if (!detectedProducts.includes(product)) {
-              recommendedProducts.push({
-                name: product,
-                category,
-                fit_score: 85 + Math.floor(Math.random() * 10),
-                value: 'R$ 50K-150K ARR',
-                reason: `Complementar à stack TOTVS existente (${category})`,
-                timing: 'immediate',
-                priority: 'high',
-                roi_months: 12,
-                benefits: [
-                  'Integração nativa com produtos TOTVS atuais',
-                  'Reduz custos operacionais',
-                  'Melhora eficiência em 30-40%'
-                ]
-              });
-            }
-          });
+      // ✅ USAR IA PARA RECOMENDAR (não mais mock!)
+      const aiPrompt = `Você é especialista em produtos TOTVS.
+
+EMPRESA: ${companyName}
+SETOR: ${sector || 'não especificado'}
+PORTE: ${size || 'não especificado'} (${employees || '?'} funcionários)
+PRODUTOS JÁ USANDO: ${detectedProducts.join(', ')}
+
+Recomende 3-5 produtos TOTVS complementares da MESMA categoria para CROSS-SELL.
+
+Responda APENAS JSON:
+[
+  {
+    "name": "Nome do Produto",
+    "category": "Categoria",
+    "fit_score": 85-95,
+    "value": "R$ XXK-XXXK ARR",
+    "reason": "Razão específica para essa empresa",
+    "timing": "immediate",
+    "priority": "high",
+    "roi_months": 12,
+    "benefits": ["Benefício 1", "Benefício 2", "Benefício 3"]
+  }
+]`;
+
+      try {
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: aiPrompt }],
+            temperature: 0.7,
+            max_tokens: 1500
+          })
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const aiContent = aiData.choices[0].message.content;
+          const parsed = JSON.parse(aiContent.replace(/```json\n?|```/g, ''));
+          recommendedProducts = Array.isArray(parsed) ? parsed : [parsed];
+          console.log('[PRODUCT-GAPS] ✅ IA retornou:', recommendedProducts.length, 'produtos');
         }
-      });
+      } catch (error) {
+        console.error('[PRODUCT-GAPS] ❌ Erro na IA, usando fallback:', error);
+        // Fallback simples se IA falhar
+        Object.entries(TOTVS_PRODUCTS).forEach(([category, products]) => {
+          if (usedCategories.has(category)) {
+            products.forEach(product => {
+              if (!detectedProducts.includes(product) && recommendedProducts.length < 3) {
+                recommendedProducts.push({
+                  name: product,
+                  category,
+                  fit_score: 85,
+                  value: 'R$ 50K-150K ARR',
+                  reason: `Complementar à stack TOTVS existente (${category})`,
+                  timing: 'immediate',
+                  priority: 'high',
+                  roi_months: 12,
+                  benefits: ['Integração nativa', 'Reduz custos', 'Melhora eficiência']
+                });
+              }
+            });
+          }
+        });
+      }
 
       // Produtos de OUTRAS categorias (expansão)
       Object.entries(TOTVS_PRODUCTS).forEach(([category, products]) => {
@@ -131,83 +185,89 @@ serve(async (req) => {
       });
     }
     
-    // ESTRATÉGIA 2: Empresa NÃO é cliente TOTVS
+    // ESTRATÉGIA 2: Empresa NÃO é cliente TOTVS (NEW SALE)
     else {
       strategy = 'new-sale';
       console.log('[PRODUCT-GAPS] Prospect novo - NEW SALE');
 
-      // Análise por PORTE
-      let coreERP = 'Protheus';
-      if (employees && employees > 500) {
-        coreERP = 'Datasul';
-      } else if (employees && employees < 100) {
-        coreERP = 'Winthor';
-      }
+      // ✅ USAR IA PARA RECOMENDAR STACK INICIAL (não mais mock!)
+      const competitorInfo = competitors.length > 0 ? 
+        `\nCONCORRENTES DETECTADOS: ${competitors.map(c => c.name).join(', ')}` : '';
+      
+      const aiPrompt = `Você é especialista em produtos TOTVS.
 
-      // Análise por SETOR
-      const sectorLower = (sector || '').toLowerCase();
-      if (sectorLower.includes('indústria') || sectorLower.includes('manufatura')) {
-        coreERP = 'Protheus';
-      } else if (sectorLower.includes('varejo') || sectorLower.includes('comércio')) {
-        coreERP = 'Winthor';
-      } else if (sectorLower.includes('serviço')) {
-        coreERP = 'RM';
-      }
+EMPRESA: ${companyName}
+SETOR: ${sector || 'não especificado'}
+PORTE: ${size || 'não especificado'} (${employees || '?'} funcionários)
+CNAE: ${cnae || 'não especificado'}${competitorInfo}
 
-      // Stack inicial recomendado
-      recommendedProducts = [
-        {
-          name: coreERP,
+Recomende stack inicial de 3 produtos TOTVS para NEW SALE considerando porte e setor.
+
+Produtos disponíveis por categoria:
+- ERP: Protheus, Datasul, RM, Logix, Winthor
+- Fluig: Fluig BPM, Fluig ECM
+- CRM: TOTVS CRM
+- Cloud: TOTVS Cloud
+- IA: Carol AI
+
+Responda APENAS JSON:
+[
+  {
+    "name": "Produto TOTVS",
+    "category": "Categoria",
+    "fit_score": 85-100,
+    "value": "R$ XXK-XXXK ARR",
+    "reason": "Por que esse produto faz sentido para essa empresa específica",
+    "timing": "immediate|short_term|medium_term",
+    "priority": "high|medium",
+    "roi_months": 12-24,
+    "benefits": ["Benefício específico 1", "Benefício 2", "Benefício 3"]
+  }
+]`;
+
+      try {
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: aiPrompt }],
+            temperature: 0.7,
+            max_tokens: 1500
+          })
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const aiContent = aiData.choices[0].message.content;
+          const parsed = JSON.parse(aiContent.replace(/```json\n?|```/g, ''));
+          recommendedProducts = Array.isArray(parsed) ? parsed.slice(0, 3) : [parsed];
+          
+          // Se tem concorrentes, adicionar displacement
+          if (competitors.length > 0 && recommendedProducts.length > 0) {
+            const competitorNames = competitors.map(c => c.name || '').join(', ');
+            recommendedProducts[0].competitor_displacement = `Substitui ${competitorNames}`;
+          }
+          
+          console.log('[PRODUCT-GAPS] ✅ IA retornou:', recommendedProducts.length, 'produtos');
+        }
+      } catch (error) {
+        console.error('[PRODUCT-GAPS] ❌ Erro na IA, usando fallback básico:', error);
+        // Fallback mínimo
+        recommendedProducts = [{
+          name: 'Protheus',
           category: 'ERP',
-          fit_score: 90 + Math.floor(Math.random() * 10),
+          fit_score: 85,
           value: 'R$ 300K-500K ARR',
-          reason: `Porte ${size || 'médio'} + Setor ${sector || 'não especificado'}`,
+          reason: `ERP base para porte ${size || 'médio'}`,
           timing: 'immediate',
           priority: 'high',
           roi_months: 18,
-          benefits: [
-            'Gestão financeira integrada',
-            'Controle de estoque e produção',
-            'Redução de custos operacionais em 25%'
-          ]
-        },
-        {
-          name: 'Fluig BPM',
-          category: 'Fluig',
-          fit_score: 80 + Math.floor(Math.random() * 10),
-          value: 'R$ 100K-200K ARR',
-          reason: 'Automação de processos e workflows',
-          timing: 'short_term',
-          priority: 'high',
-          roi_months: 12,
-          benefits: [
-            'Digitalização de processos',
-            'Redução de tempo de aprovações em 50%',
-            'Gestão documental centralizada'
-          ]
-        },
-        {
-          name: 'TOTVS CRM',
-          category: 'CRM',
-          fit_score: 75 + Math.floor(Math.random() * 10),
-          value: 'R$ 80K-150K ARR',
-          reason: 'Gestão comercial e relacionamento com clientes',
-          timing: 'medium_term',
-          priority: 'medium',
-          roi_months: 15,
-          benefits: [
-            'Aumento de 30% em conversão de vendas',
-            'Gestão de pipeline completa',
-            'Integração com ERP'
-          ]
-        }
-      ];
-
-      // Se tem concorrentes SAP/Oracle/Microsoft → Adicionar battle card
-      if (competitors.length > 0) {
-        const competitorNames = competitors.map(c => c.name || '').join(', ');
-        recommendedProducts[0].competitor_displacement = `Substitui ${competitorNames}`;
-        recommendedProducts[0].benefits.push(`Migração de ${competitorNames} com redução de 40% de custos`);
+          benefits: ['Gestão integrada', 'Controle financeiro', 'Redução de custos']
+        }];
       }
     }
 

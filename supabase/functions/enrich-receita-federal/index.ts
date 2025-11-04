@@ -102,7 +102,7 @@ serve(async (req) => {
     if (!enrichedData) {
       try {
         console.log('[ENRICH-RECEITA] Tentando ReceitaWS...');
-        const receitaToken = Deno.env.get('VITE_RECEITAWS_API_TOKEN');
+        const receitaToken = Deno.env.get('RECEITAWS_API_TOKEN');
         
         const receitaResponse = await fetch(
           `https://www.receitaws.com.br/v1/cnpj/${cnpjClean}`,

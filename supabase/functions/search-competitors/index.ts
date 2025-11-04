@@ -27,7 +27,8 @@ function tokenVariants(name: string): string[] {
   return [...new Set(variants)];
 }
 
-// ====== VALIDAÇÃO STC RIGOROSA ======
+// ====== VALIDAÇÃO STC ULTRA-RIGOROSA ======
+// Só aceita se mencionar: Empresa Analisada + Concorrente + Contexto de USO
 function validateSTCMatch(
   text: string, 
   companyName: string, 
@@ -35,55 +36,79 @@ function validateSTCMatch(
 ): { isValid: boolean; matchType: 'triple' | 'double' | 'none'; confidence: number } {
   
   const normalized = normalizeName(text);
+  const textLower = text.toLowerCase();
   const companyVariants = tokenVariants(companyName);
   const competitorNorm = competitorName.toLowerCase();
   
-  // 1. OBRIGATÓRIO: Empresa mencionada
-  const hasCompany = companyVariants.some(v => normalized.includes(v));
+  console.log(`[VALIDAÇÃO] Empresa: ${companyName} | Concorrente: ${competitorName}`);
+  
+  // 1. OBRIGATÓRIO: Empresa mencionada (EXATA ou variação)
+  const hasCompany = companyVariants.some(v => {
+    const found = normalized.includes(v);
+    if (found) console.log(`[VALIDAÇÃO] ✅ Empresa encontrada: "${v}"`);
+    return found;
+  });
+  
   if (!hasCompany) {
+    console.log(`[VALIDAÇÃO] ❌ Empresa NÃO encontrada. Variantes testadas: ${companyVariants.join(', ')}`);
     return { isValid: false, matchType: 'none', confidence: 0 };
   }
   
   // 2. OBRIGATÓRIO: Concorrente mencionado
   const hasCompetitor = normalized.includes(competitorNorm);
   if (!hasCompetitor) {
+    console.log(`[VALIDAÇÃO] ❌ Concorrente "${competitorName}" NÃO encontrado`);
     return { isValid: false, matchType: 'none', confidence: 0 };
   }
   
-  // 3. CONTEXTO: Palavras que indicam USO/COMPETIÇÃO (MUITO RIGOROSO)
+  console.log(`[VALIDAÇÃO] ✅ Concorrente "${competitorName}" encontrado`);
+  
+  // 3. CONTEXTO ULTRA-RIGOROSO: Palavras que PROVAM uso (não apenas menção)
   const strongContexts = [
-    /\b(usa|utiliza|implementou|migrou|adotou|contratou|cliente)\b/i,
-    /\b(sistema|software|plataforma|solução)\s+(ERP|de\s+gestão)/i,
-    /\b(substituir|trocar|migração|implementação)\b/i,
+    /\b(usa|utiliza|implementou|migrou para|adotou|contratou)\b/i,
+    /\b(cliente de|cliente do|utiliza o|usa o sistema)\b/i,
+    /\b(substituiu|trocou|migração de|mudou de)\b/i,
   ];
   
   const mediumContexts = [
-    /\b(integração|módulo|licença|contrato)\b/i,
-    /\b(erp|gestão\s+empresarial|sistema\s+integrado)\b/i,
+    /\b(sistema|software|plataforma|solução)\s+(ERP|de gestão)\b/i,
+    /\b(integração com|módulo|licença|contrato)\b/i,
   ];
   
   let strongMatches = 0;
   let mediumMatches = 0;
+  const foundContexts: string[] = [];
   
   for (const pattern of strongContexts) {
-    if (pattern.test(text)) strongMatches++;
+    if (pattern.test(text)) {
+      strongMatches++;
+      foundContexts.push(`FORTE: ${pattern.source}`);
+    }
   }
   
   for (const pattern of mediumContexts) {
-    if (pattern.test(text)) mediumMatches++;
+    if (pattern.test(text)) {
+      mediumMatches++;
+      foundContexts.push(`MÉDIO: ${pattern.source}`);
+    }
   }
   
-  // TRIPLE MATCH: Empresa + Concorrente + 2+ contextos fortes OU 1 forte + 2 médios
-  if (strongMatches >= 2 || (strongMatches >= 1 && mediumMatches >= 2)) {
-    return { isValid: true, matchType: 'triple', confidence: 90 };
+  console.log(`[VALIDAÇÃO] Contextos: ${strongMatches} fortes + ${mediumMatches} médios`);
+  
+  // TRIPLE MATCH: Empresa + Concorrente + 2+ contextos fortes
+  if (strongMatches >= 2) {
+    console.log(`[VALIDAÇÃO] ✅ TRIPLE MATCH (${strongMatches} contextos fortes)`);
+    return { isValid: true, matchType: 'triple', confidence: 95 };
   }
   
-  // DOUBLE MATCH: Empresa + Concorrente + 1 contexto forte OU 2 médios
-  if (strongMatches >= 1 || mediumMatches >= 2) {
-    return { isValid: true, matchType: 'double', confidence: 70 };
+  // DOUBLE MATCH: Empresa + Concorrente + 1 contexto forte + 1 médio
+  if (strongMatches >= 1 && mediumMatches >= 1) {
+    console.log(`[VALIDAÇÃO] ✅ DOUBLE MATCH (${strongMatches} forte + ${mediumMatches} médio)`);
+    return { isValid: true, matchType: 'double', confidence: 75 };
   }
   
-  // Sem contexto suficiente = REJEITAR
+  // ❌ REJEITAR: Apenas menção genérica (não há evidência de USO)
+  console.log(`[VALIDAÇÃO] ❌ REJEITADO - Sem contexto de uso suficiente`);
   return { isValid: false, matchType: 'none', confidence: 0 };
 }
 
