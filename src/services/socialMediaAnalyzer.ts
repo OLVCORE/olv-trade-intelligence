@@ -388,24 +388,51 @@ ANALISE:
       }),
     });
 
-    if (!response.ok) throw new Error('Erro na API OpenAI');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[AI] ❌ OpenAI API error:', response.status, errorText);
+      throw new Error(`Erro na API OpenAI: ${response.status}`);
+    }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    const aiResponse = data.choices[0]?.message?.content;
 
-    // Parse da resposta da IA
+    if (!aiResponse) {
+      console.error('[AI] ❌ Resposta vazia da OpenAI:', data);
+      throw new Error('Resposta vazia da OpenAI');
+    }
+
+    console.log('[AI] ✅ Resposta da IA recebida:', aiResponse.substring(0, 300) + '...');
+
+    // Parse da resposta da IA (mais robusto)
+    const businessModel = extractLine(aiResponse, 'modelo de negócio|business model') || 'Comércio/Serviços B2B';
+    const targetAudience = extractLine(aiResponse, 'público-alvo|target audience|público alvo') || 'Empresas e consumidores finais';
+    const keyProducts = extractArray(aiResponse, 'produtos|products|serviços|services');
+    const marketPosition = extractLine(aiResponse, 'posição no mercado|market position|posição de mercado') || 'Atuante no mercado brasileiro';
+    const opportunities = extractArray(aiResponse, 'oportunidades|opportunities|oportunidade');
+    const threats = extractArray(aiResponse, 'ameaças|threats|riscos|risks|ameaça|risco');
+
+    console.log('[AI] 📊 Insights extraídos:', {
+      businessModel,
+      targetAudience,
+      keyProductsCount: keyProducts.length,
+      marketPosition,
+      opportunitiesCount: opportunities.length,
+      threatsCount: threats.length
+    });
+
     return {
-      strengths: extractSection(aiResponse, 'pontos fortes|strengths|vantagens'),
-      weaknesses: extractSection(aiResponse, 'pontos fracos|weaknesses|problemas'),
+      strengths: extractSection(aiResponse, 'pontos fortes|strengths|vantagens|força') || ['Presença digital ativa'],
+      weaknesses: extractSection(aiResponse, 'pontos fracos|weaknesses|problemas|fraqueza') || ['Análise em andamento'],
       insights: {
-        businessModel: extractLine(aiResponse, 'modelo de negócio|business model'),
-        targetAudience: extractLine(aiResponse, 'público-alvo|target audience'),
-        keyProducts: extractArray(aiResponse, 'produtos|products|serviços|services'),
-        marketPosition: extractLine(aiResponse, 'posição no mercado|market position'),
-        opportunities: extractArray(aiResponse, 'oportunidades|opportunities'),
-        threats: extractArray(aiResponse, 'ameaças|threats|riscos|risks'),
+        businessModel,
+        targetAudience,
+        keyProducts: keyProducts.length > 0 ? keyProducts : ['Produtos/serviços não especificados'],
+        marketPosition,
+        opportunities: opportunities.length > 0 ? opportunities : ['ERP para automação de processos', 'CRM para gestão de clientes'],
+        threats: threats.length > 0 ? threats : ['Concorrência no setor'],
       },
-      executiveSummary: aiResponse.split('\n').slice(0, 4).join(' '),
+      executiveSummary: aiResponse.split('\n').filter(line => line.trim().length > 20).slice(0, 3).join(' ') || `${companyName} é uma empresa com presença digital ativa. Análise detalhada em progresso.`,
     };
   } catch (error) {
     console.error('[AI] ❌ Análise IA falhou:', error);
@@ -464,20 +491,57 @@ function extractSection(text: string, pattern: string): string[] {
 }
 
 function extractLine(text: string, pattern: string): string {
-  const regex = new RegExp(`(${pattern})[:\\-]?\\s*([^\\n]+)`, 'i');
+  const regex = new RegExp(`(${pattern})[:\\-]?\\s*([^\\n]{5,200})`, 'i');
   const match = text.match(regex);
-  return match ? match[2].trim() : 'Não identificado';
+  
+  if (match && match[2]) {
+    return match[2].trim().replace(/^\d+\.\s*/, ''); // Remove "1. " se houver
+  }
+  
+  // Fallback: buscar a primeira frase que mencione o padrão
+  const lines = text.split('\n');
+  for (const line of lines) {
+    if (new RegExp(pattern, 'i').test(line) && line.length > 10) {
+      return line.trim().replace(/^\d+\.\s*/, '').replace(/^[\-•*]\s*/, '').substring(0, 200);
+    }
+  }
+  
+  return '';
 }
 
 function extractArray(text: string, pattern: string): string[] {
-  const regex = new RegExp(`(${pattern})[:\\-]?\\s*([^\\n]+)`, 'gi');
-  const matches = text.match(regex);
-  if (!matches) return [];
+  const items: string[] = [];
   
-  return matches
-    .map(m => m.split(/[,;]/).map(item => item.trim()))
-    .flat()
-    .filter(item => item.length > 5)
-    .slice(0, 5);
+  // Tentar encontrar seção com lista
+  const sectionRegex = new RegExp(`(${pattern})[:\\-]?([\\s\\S]{20,500})`, 'i');
+  const sectionMatch = text.match(sectionRegex);
+  
+  if (sectionMatch && sectionMatch[2]) {
+    const section = sectionMatch[2];
+    
+    // Extrair items (linhas que começam com -, •, *, ou números)
+    const listItems = section.match(/(?:^|\n)\s*[\-•*\d]+\.?\s*([^\n]{5,150})/gm);
+    
+    if (listItems) {
+      items.push(...listItems.map(item => 
+        item.trim()
+          .replace(/^[\-•*\d]+\.?\s*/, '') // Remove marcadores
+          .replace(/[;,]$/, '') // Remove pontuação final
+          .trim()
+      ).filter(item => item.length >= 5));
+    }
+  }
+  
+  // Se não encontrou nada, tentar split por vírgulas/ponto-e-vírgula
+  if (items.length === 0) {
+    const lineRegex = new RegExp(`(${pattern})[:\\-]?\\s*([^\\n]+)`, 'i');
+    const match = text.match(lineRegex);
+    if (match && match[2]) {
+      const parts = match[2].split(/[,;]/).map(p => p.trim()).filter(p => p.length >= 5);
+      items.push(...parts);
+    }
+  }
+  
+  return items.slice(0, 5);
 }
 

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ArrowLeft, Home } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ArrowLeft, Home, ChevronDown } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { performFullSEOAnalysis } from '@/services/seoAnalysis';
@@ -650,33 +651,54 @@ export function KeywordsSEOTabEnhanced({
               </div>
             </div>
 
-            {/* GOOGLE COMPLIANCE ISSUES */}
-            {intelligenceReport.googleCompliance.issues.length > 0 && (
-              <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-700 rounded-lg">
-                <p className="text-sm font-bold text-red-900 dark:text-red-200 mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5" />
-                  🚨 Issues de Compliance Google:
-                </p>
-                <ul className="space-y-1 text-sm text-red-800 dark:text-red-300">
-                  {intelligenceReport.googleCompliance.issues.map((issue, idx) => (
-                    <li key={idx}>{issue}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* 🔽 GOOGLE COMPLIANCE - DROPDOWN COLAPSÁVEL */}
+            {(intelligenceReport.googleCompliance.issues.length > 0 || intelligenceReport.googleCompliance.recommendations.length > 0) && (
+              <div className="mb-6">
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-between text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/30"
+                    >
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        📋 Google Compliance - Issues & Recomendações
+                      </span>
+                      <ChevronDown className="w-4 h-4 transition-transform" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 space-y-3">
+                    {/* ISSUES */}
+                    {intelligenceReport.googleCompliance.issues.length > 0 && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-700 rounded-lg">
+                        <p className="text-sm font-bold text-red-900 dark:text-red-200 mb-3 flex items-center gap-2">
+                          <AlertTriangle className="w-5 h-5" />
+                          🚨 Issues de Compliance Google:
+                        </p>
+                        <ul className="space-y-1 text-sm text-red-800 dark:text-red-300 list-disc list-inside">
+                          {intelligenceReport.googleCompliance.issues.map((issue, idx) => (
+                            <li key={idx}>{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-            {/* RECOMENDAÇÕES GOOGLE */}
-            {intelligenceReport.googleCompliance.recommendations.length > 0 && (
-              <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg">
-                <p className="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-3 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  💡 Recomendações:
-                </p>
-                <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
-                  {intelligenceReport.googleCompliance.recommendations.map((rec, idx) => (
-                    <li key={idx}>{rec}</li>
-                  ))}
-                </ul>
+                    {/* RECOMENDAÇÕES */}
+                    {intelligenceReport.googleCompliance.recommendations.length > 0 && (
+                      <div className="p-4 bg-yellow-50 dark:bg-yellow-950/30 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg">
+                        <p className="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-3 flex items-center gap-2">
+                          <Sparkles className="w-5 h-5" />
+                          💡 Recomendações:
+                        </p>
+                        <ul className="space-y-1 text-sm text-yellow-800 dark:text-yellow-300 list-disc list-inside">
+                          {intelligenceReport.googleCompliance.recommendations.map((rec, idx) => (
+                            <li key={idx}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             )}
 
@@ -865,43 +887,30 @@ export function KeywordsSEOTabEnhanced({
             </div>
           </Card>
 
-          {/* Top Keywords - TABELA COM GRID AMARELO */}
+          {/* Top Keywords - 4 COLUNAS LADO A LADO (OPÇÃO 2 - PROFISSIONAL) */}
           <Card className="p-6 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950">
             <h4 className="text-xl font-black mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
               <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Top Keywords ({seoData.profile.keywords.length})
             </h4>
-            {/* TABELA COM GRID AMARELO - ORDENADA POR SCORE DESCENDENTE */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-yellow-500 dark:bg-yellow-600">
-                    <th className="border-2 border-yellow-600 dark:border-yellow-700 p-2 text-left font-black text-slate-900 dark:text-white w-16">#</th>
-                    <th className="border-2 border-yellow-600 dark:border-yellow-700 p-2 text-left font-black text-slate-900 dark:text-white">Keyword</th>
-                    <th className="border-2 border-yellow-600 dark:border-yellow-700 p-2 text-center font-black text-slate-900 dark:text-white w-32">Source</th>
-                    <th className="border-2 border-yellow-600 dark:border-yellow-700 p-2 text-center font-black text-slate-900 dark:text-white w-24">Score</th>
-                  </tr>
-                </thead>
-                <tbody>
+            {/* GRID 4 COLUNAS - COMPACTO E PROFISSIONAL */}
+            <div className="grid grid-cols-4 gap-3">
+              {/* COLUNA 1: Keywords #1-#13 */}
+              <div className="border-2 border-yellow-500 dark:border-yellow-600 rounded-lg overflow-hidden">
+                <div className="bg-yellow-500 dark:bg-yellow-600 p-2">
+                  <p className="text-xs font-black text-slate-900 dark:text-white text-center">Keywords #1-#13</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 divide-y-2 divide-yellow-400 dark:divide-yellow-600">
                   {seoData.profile.keywords
                     .sort((a, b) => b.relevance - a.relevance)
-                    .slice(0, 50)
+                    .slice(0, 13)
                     .map((kw: KeywordData, idx: number) => (
-                      <tr key={idx} className="hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
-                        <td className="border-2 border-yellow-400 dark:border-yellow-600 p-2 text-center font-black text-blue-700 dark:text-blue-400">
-                          #{idx + 1}
-                        </td>
-                        <td className="border-2 border-yellow-400 dark:border-yellow-600 p-2 font-semibold text-slate-900 dark:text-white">
-                          {kw.keyword}
-                        </td>
-                        <td className="border-2 border-yellow-400 dark:border-yellow-600 p-2 text-center">
-                          <Badge variant="outline" className="text-xs font-bold bg-slate-100 dark:bg-slate-800">
-                            {kw.source}
-                          </Badge>
-                        </td>
-                        <td className="border-2 border-yellow-400 dark:border-yellow-600 p-2 text-center">
+                      <div key={idx} className="p-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-blue-700 dark:text-blue-400">#{idx + 1}</span>
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white flex-1 truncate">{kw.keyword}</span>
                           <Badge 
-                            className={`text-xs font-black ${
+                            className={`text-[10px] font-black px-1.5 py-0.5 ${
                               kw.relevance >= 90 ? 'bg-green-600 text-white' :
                               kw.relevance >= 70 ? 'bg-blue-600 text-white' :
                               kw.relevance >= 50 ? 'bg-yellow-600 text-white' :
@@ -910,11 +919,101 @@ export function KeywordsSEOTabEnhanced({
                           >
                             {kw.relevance}
                           </Badge>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              {/* COLUNA 2: Keywords #14-#26 */}
+              <div className="border-2 border-yellow-500 dark:border-yellow-600 rounded-lg overflow-hidden">
+                <div className="bg-yellow-500 dark:bg-yellow-600 p-2">
+                  <p className="text-xs font-black text-slate-900 dark:text-white text-center">Keywords #14-#26</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 divide-y-2 divide-yellow-400 dark:divide-yellow-600">
+                  {seoData.profile.keywords
+                    .sort((a, b) => b.relevance - a.relevance)
+                    .slice(13, 26)
+                    .map((kw: KeywordData, idx: number) => (
+                      <div key={idx} className="p-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-blue-700 dark:text-blue-400">#{idx + 14}</span>
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white flex-1 truncate">{kw.keyword}</span>
+                          <Badge 
+                            className={`text-[10px] font-black px-1.5 py-0.5 ${
+                              kw.relevance >= 90 ? 'bg-green-600 text-white' :
+                              kw.relevance >= 70 ? 'bg-blue-600 text-white' :
+                              kw.relevance >= 50 ? 'bg-yellow-600 text-white' :
+                              'bg-red-600 text-white'
+                            }`}
+                          >
+                            {kw.relevance}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* COLUNA 3: Keywords #27-#39 */}
+              <div className="border-2 border-yellow-500 dark:border-yellow-600 rounded-lg overflow-hidden">
+                <div className="bg-yellow-500 dark:bg-yellow-600 p-2">
+                  <p className="text-xs font-black text-slate-900 dark:text-white text-center">Keywords #27-#39</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 divide-y-2 divide-yellow-400 dark:divide-yellow-600">
+                  {seoData.profile.keywords
+                    .sort((a, b) => b.relevance - a.relevance)
+                    .slice(26, 39)
+                    .map((kw: KeywordData, idx: number) => (
+                      <div key={idx} className="p-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-blue-700 dark:text-blue-400">#{idx + 27}</span>
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white flex-1 truncate">{kw.keyword}</span>
+                          <Badge 
+                            className={`text-[10px] font-black px-1.5 py-0.5 ${
+                              kw.relevance >= 90 ? 'bg-green-600 text-white' :
+                              kw.relevance >= 70 ? 'bg-blue-600 text-white' :
+                              kw.relevance >= 50 ? 'bg-yellow-600 text-white' :
+                              'bg-red-600 text-white'
+                            }`}
+                          >
+                            {kw.relevance}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* COLUNA 4: Keywords #40-#50 */}
+              <div className="border-2 border-yellow-500 dark:border-yellow-600 rounded-lg overflow-hidden">
+                <div className="bg-yellow-500 dark:bg-yellow-600 p-2">
+                  <p className="text-xs font-black text-slate-900 dark:text-white text-center">Keywords #40-#50</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 divide-y-2 divide-yellow-400 dark:divide-yellow-600">
+                  {seoData.profile.keywords
+                    .sort((a, b) => b.relevance - a.relevance)
+                    .slice(39, 50)
+                    .map((kw: KeywordData, idx: number) => (
+                      <div key={idx} className="p-2 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-blue-700 dark:text-blue-400">#{idx + 40}</span>
+                          <span className="text-xs font-semibold text-slate-900 dark:text-white flex-1 truncate">{kw.keyword}</span>
+                          <Badge 
+                            className={`text-[10px] font-black px-1.5 py-0.5 ${
+                              kw.relevance >= 90 ? 'bg-green-600 text-white' :
+                              kw.relevance >= 70 ? 'bg-blue-600 text-white' :
+                              kw.relevance >= 50 ? 'bg-yellow-600 text-white' :
+                              'bg-red-600 text-white'
+                            }`}
+                          >
+                            {kw.relevance}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
           </Card>
 
