@@ -1240,8 +1240,9 @@ export default function ICPQuarantine() {
                 </TableRow>
               ) : (
                 filteredCompanies.map((company) => {
-                  const rawData = (company.raw_analysis && typeof company.raw_analysis === 'object' && !Array.isArray(company.raw_analysis)) 
-                    ? company.raw_analysis as Record<string, any>
+                  // ✅ USAR raw_data (campo correto onde salvamos os enriquecimentos)
+                  const rawData = (company.raw_data && typeof company.raw_data === 'object' && !Array.isArray(company.raw_data)) 
+                    ? company.raw_data as Record<string, any>
                     : {};
                   
                   return (
