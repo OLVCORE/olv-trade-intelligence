@@ -873,6 +873,30 @@ export function KeywordsSEOTabEnhanced({
           )}
         </Card>
       )}
+
+      {/* 🚨 BOTÃO SALVAR - FIXO E GRANDE */}
+      {(digitalPresence || seoData) && (
+        <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 p-4 rounded-b-lg shadow-2xl border-t-4 border-green-400 dark:border-green-500 mt-6">
+          <Button
+            onClick={() => {
+              const dataToSave = { digitalPresence, seoData, competitiveAnalysis };
+              onDataChange?.(dataToSave);
+              toast({
+                title: '✅ Dados salvos!',
+                description: 'Análise Keywords & SEO salva no relatório',
+              });
+            }}
+            size="lg"
+            className="w-full bg-white hover:bg-green-50 text-green-900 font-black text-lg h-14 shadow-xl border-2 border-green-300"
+          >
+            <Save className="w-6 h-6 mr-3" />
+            💾 SALVAR ANÁLISE KEYWORDS & SEO
+          </Button>
+          <p className="text-center text-xs text-white mt-2 font-semibold">
+            ⚠️ Clique para salvar antes de trocar de aba (evitar perda de créditos!)
+          </p>
+        </div>
+      )}
     </div>
   );
 }
