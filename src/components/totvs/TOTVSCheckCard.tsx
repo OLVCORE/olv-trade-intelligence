@@ -47,7 +47,9 @@ import {
   LayoutDashboard,
   Users,
   Globe,
-  UserCircle
+  UserCircle,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 interface TOTVSCheckCardProps {
@@ -286,7 +288,59 @@ export default function TOTVSCheckCard({
 
   return (
     <Card className="p-6">
-      <Tabs defaultValue="executive" className="w-full">
+      {/* 🚨 ALERT DIALOG - MUDANÇAS NÃO SALVAS */}
+      <AlertDialog open={showUnsavedAlert} onOpenChange={setShowUnsavedAlert}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 animate-pulse" />
+              </div>
+              <AlertDialogTitle className="text-lg">
+                ⚠️ Alterações Não Salvas!
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="pt-3 space-y-2">
+              <p className="text-base">
+                Você tem <strong>alterações não salvas</strong> nesta aba.
+              </p>
+              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
+                  🚨 ATENÇÃO: PERDA DE CRÉDITOS!
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  Se você não salvar, <strong>todas as informações desta aba serão perdidas</strong> e os <strong>créditos já consumidos NÃO serão recuperados</strong>.
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                O que você deseja fazer?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setShowUnsavedAlert(false)} className="order-3 sm:order-1">
+              Cancelar
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={confirmTabChange}
+              className="order-2 gap-2"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Descartar Alterações
+            </Button>
+            <Button
+              onClick={cancelTabChange}
+              className="order-1 sm:order-3 gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <Save className="w-4 h-4" />
+              Salvar e Continuar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-8 mb-6 h-auto">
           <TabsTrigger value="executive" className="flex items-center gap-2 text-xs">
             <LayoutDashboard className="w-4 h-4" />
