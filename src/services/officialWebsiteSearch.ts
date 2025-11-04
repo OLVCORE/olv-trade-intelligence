@@ -34,8 +34,15 @@ export async function searchOfficialWebsite(
     const serperKey = import.meta.env.VITE_SERPER_API_KEY;
     if (!serperKey) throw new Error('SERPER_API_KEY não configurada');
 
-    // ⚡ QUERY DIRETA E ASSERTIVA
-    const query = `website oficial "${razaoSocial}"`;
+    // 🎯 EXTRAIR NOME FANTASIA (entre parênteses) - MAIS ASSERTIVO!
+    const nomeBusca = razaoSocial.includes('(') 
+      ? razaoSocial.match(/\(([^)]+)\)/)?.[1] || razaoSocial
+      : razaoSocial;
+    
+    console.log('[OFFICIAL] 🎯 Usando nome:', nomeBusca, '(extraído de:', razaoSocial + ')');
+
+    // ⚡ QUERY DIRETA COM NOME FANTASIA
+    const query = `website oficial "${nomeBusca}"`;
     
     const response = await fetch('https://google.serper.dev/search', {
       method: 'POST',
