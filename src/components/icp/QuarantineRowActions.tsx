@@ -1,5 +1,6 @@
 import { Settings, CheckCircle, XCircle, Eye, Trash2, RefreshCw, Target, Edit, Search, Building2, Sparkles, Zap, ExternalLink, Loader2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +58,7 @@ export function QuarantineRowActions({
   const [isOpen, setIsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichingAction, setEnrichingAction] = useState<string | null>(null);
+  const [enrichmentProgress, setEnrichmentProgress] = useState(0);
   const [showReport, setShowReport] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const navigate = useNavigate();
@@ -91,12 +93,30 @@ export function QuarantineRowActions({
     try {
       setIsEnriching(true);
       setEnrichingAction(action);
+      setEnrichmentProgress(0);
+      
+      // Simular progress para "Análise Completa" (3 etapas)
+      if (action === 'Análise Completa 360°') {
+        // 1/3
+        setTimeout(() => setEnrichmentProgress(33), 500);
+        // 2/3
+        setTimeout(() => setEnrichmentProgress(67), 3000);
+      } else {
+        // Enriquecimento individual
+        setTimeout(() => setEnrichmentProgress(50), 500);
+        setTimeout(() => setEnrichmentProgress(90), 2000);
+      }
+      
       await fn(company.id);
+      setEnrichmentProgress(100);
     } catch (error) {
       toast.error(`Erro ao executar ${action}`);
     } finally {
-      setIsEnriching(false);
-      setEnrichingAction(null);
+      setTimeout(() => {
+        setIsEnriching(false);
+        setEnrichingAction(null);
+        setEnrichmentProgress(0);
+      }, 500);
     }
   };
 
@@ -276,19 +296,32 @@ export function QuarantineRowActions({
           {onEnrichCompleto && (
             <Tooltip delayDuration={100}>
               <TooltipTrigger asChild>
-                <DropdownMenuItem
-                  onClick={() => handleEnrich('Análise Completa 360°', onEnrichCompleto)}
-                  disabled={isEnriching || !company.cnpj}
-                  className="relative bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 hover:from-primary/40 hover:via-primary/30 hover:to-primary/40 border-l-4 border-primary font-bold cursor-pointer transition-all animate-pulse"
-                >
-                  {enrichingAction === 'Análise Completa 360°' ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin text-primary" />
-                  ) : (
-                    <Zap className="h-4 w-4 mr-2 text-primary" />
+                <div className="px-2 py-1.5">
+                  <DropdownMenuItem
+                    onClick={() => handleEnrich('Análise Completa 360°', onEnrichCompleto)}
+                    disabled={isEnriching || !company.cnpj}
+                    className="relative bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 hover:from-primary/40 hover:via-primary/30 hover:to-primary/40 border-l-4 border-primary font-bold cursor-pointer transition-all animate-pulse"
+                  >
+                    {enrichingAction === 'Análise Completa 360°' ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin text-primary" />
+                    ) : (
+                      <Zap className="h-4 w-4 mr-2 text-primary" />
+                    )}
+                    <span className="text-primary">Análise Completa 360°</span>
+                    <Sparkles className="h-3 w-3 ml-auto text-primary animate-pulse" />
+                  </DropdownMenuItem>
+                  {/* PROGRESS BAR VISUAL */}
+                  {enrichingAction === 'Análise Completa 360°' && isEnriching && (
+                    <div className="mt-2 space-y-1">
+                      <Progress value={enrichmentProgress} className="h-2" />
+                      <p className="text-xs text-center text-primary font-medium">
+                        {enrichmentProgress === 33 && '1/3: Receita Federal...'}
+                        {enrichmentProgress === 67 && '2/3: Intelligence 360°...'}
+                        {enrichmentProgress === 100 && '3/3: Concluído!'}
+                      </p>
+                    </div>
                   )}
-                  <span className="text-primary">Análise Completa 360°</span>
-                  <Sparkles className="h-3 w-3 ml-auto text-primary animate-pulse" />
-                </DropdownMenuItem>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-sm bg-primary text-primary-foreground">
                 <p className="font-bold text-sm">⚡ SUPER ENRIQUECIMENTO - TUDO EM 1 CLIQUE!</p>
