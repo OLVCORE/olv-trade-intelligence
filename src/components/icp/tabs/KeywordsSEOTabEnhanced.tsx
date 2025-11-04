@@ -173,29 +173,62 @@ export function KeywordsSEOTabEnhanced({
           </div>
 
           {/* Botões de ação */}
-          <div className="flex gap-2">
-            <Button
-              onClick={() => seoMutation.mutate()}
-              disabled={seoMutation.isPending || !domain}
-              className="bg-gradient-to-r from-primary to-primary/80"
-            >
-              {seoMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
-              Análise SEO Completa
-            </Button>
-
-            {seoData && (
+          <div className="flex flex-col gap-2">
+            {/* 🚨 BOTÃO DISCOVERY - Aparece quando não tem domain */}
+            {!domain && !discoveredDomain && (
               <Button
-                onClick={() => seoMutation.mutate()}
-                variant="outline"
-                size="sm"
-                disabled={seoMutation.isPending}
+                onClick={() => discoveryMutation.mutate()}
+                disabled={discoveryMutation.isPending}
+                size="lg"
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 gap-2"
               >
-                <RefreshCw className={`h-4 w-4 ${seoMutation.isPending ? 'animate-spin' : ''}`} />
+                {discoveryMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Descobrindo...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5" />
+                    🔍 Descobrir Presença Digital Completa
+                  </>
+                )}
               </Button>
+            )}
+            
+            {/* 🚨 BOTÃO SEO - Aparece quando TEM domain (original OU descoberto) */}
+            {(domain || discoveredDomain) && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => seoMutation.mutate()}
+                  disabled={seoMutation.isPending}
+                  size="lg"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 gap-2"
+                >
+                  {seoMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Analisando SEO...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5" />
+                      Análise SEO Completa
+                    </>
+                  )}
+                </Button>
+
+                {seoData && (
+                  <Button
+                    onClick={() => seoMutation.mutate()}
+                    variant="outline"
+                    size="lg"
+                    disabled={seoMutation.isPending}
+                  >
+                    <RefreshCw className={`h-5 w-5 ${seoMutation.isPending ? 'animate-spin' : ''}`} />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
