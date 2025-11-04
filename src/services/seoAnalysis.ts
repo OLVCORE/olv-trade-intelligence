@@ -2,6 +2,44 @@
 
 // Não precisa de Supabase - funciona com APIs diretas (Jina AI + Serper)
 
+// 🚫 FILTRO: Domínios inválidos (portais, redes sociais, blogs)
+const INVALID_DOMAINS = [
+  'wikipedia.org', 'wiki', 
+  'youtube.com', 'youtu.be',
+  'facebook.com', 'fb.com',
+  'instagram.com',
+  'twitter.com', 'x.com',
+  'linkedin.com',
+  'blog.', '.blog',
+  'portal.', '.portal',
+  'noticias.', '.noticias',
+  'news.', '.news',
+  'forum.', '.forum',
+  'gov.br', '.gov.',
+  'edu.', '.edu',
+  'github.com',
+  'stackoverflow.com',
+  'medium.com',
+  'reddit.com',
+];
+
+// ✅ VALIDADOR: Só aceitar empresas REAIS
+function isValidCompanyDomain(url: string): boolean {
+  const urlLower = url.toLowerCase();
+  
+  // 1. Rejeitar domínios inválidos
+  if (INVALID_DOMAINS.some(invalid => urlLower.includes(invalid))) {
+    return false;
+  }
+  
+  // 2. Aceitar apenas domínios corporativos
+  const hasValidTLD = ['.com.br', '.ind.br', '.net.br', '.com', '.net', '.org', '.io'].some(tld => 
+    urlLower.includes(tld)
+  );
+  
+  return hasValidTLD;
+}
+
 export interface KeywordData {
   keyword: string;
   frequency: number;
