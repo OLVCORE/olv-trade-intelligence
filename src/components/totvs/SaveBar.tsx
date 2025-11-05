@@ -5,9 +5,10 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send, Shield } from 'lucide-react';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
 import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
+import { SAFE_MODE, BLOCK_WRITES } from '@/lib/flags';
 
 type TabStatus = 'draft' | 'processing' | 'completed' | 'error';
 
@@ -125,20 +126,33 @@ export default function SaveBar({
             onClick={onSaveAll}
             disabled={readOnly || isSaving || allCompleted}
             size="sm"
-            className="gap-2 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`gap-2 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
+              SAFE_MODE 
+                ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800' 
+                : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800'
+            }`}
           >
             {isSaving || anyProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Salvando...
+                {SAFE_MODE ? 'Simulando...' : 'Salvando...'}
               </>
             ) : (
               <>
+                {SAFE_MODE && <Shield className="w-4 h-4" />}
                 <Save className="w-4 h-4" />
-                Salvar Relatório
+                {SAFE_MODE ? 'Salvar (Dry-Run)' : 'Salvar Relatório'}
               </>
             )}
           </Button>
+          
+          {/* 🛡️ SPEC #SAFE-00: Aviso de Safe Mode */}
+          {SAFE_MODE && (
+            <span className="text-xs text-amber-300 font-semibold flex items-center gap-1">
+              <Shield className="w-3 h-3" />
+              {BLOCK_WRITES ? 'writes bloqueadas' : 'modo seguro'}
+            </span>
+          )}
 
           {/* 📄 Botão Exportar PDF (SECONDARY - opcional) */}
           {onExportPdf && (

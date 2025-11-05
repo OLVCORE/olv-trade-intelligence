@@ -18,6 +18,7 @@ import type { CompanyIntelligence } from '@/services/competitiveIntelligence';
 import { discoverFullDigitalPresence, type DigitalPresence } from '@/services/websiteDiscovery';
 import { generateCompanyIntelligenceReport, type CompanyIntelligenceReport } from '@/services/socialMediaAnalyzer';
 import { searchOfficialWebsite, type WebsiteSearchResult } from '@/services/officialWebsiteSearch';
+import { DISABLE_AUTO_DISCOVERY } from '@/lib/flags';
 
 interface KeywordsSEOTabProps {
   companyName?: string;
@@ -274,15 +275,12 @@ export function KeywordsSEOTabEnhanced({
 
   // 🔥 ANTI-REPROCESSO: Wrapper para smartDiscoveryMutation
   const handleSmartDiscovery = () => {
-    // 🔍 SPEC #005.D.3: Noise Suppressor - desabilitar auto-discovery durante diagnóstico
-    const disableAutoDiscovery = String((import.meta as any)?.env?.VITE_DISABLE_AUTO_DISCOVERY ?? '').trim().toLowerCase();
-    const isDiscoveryDisabled = ['1','true','on','yes'].includes(disableAutoDiscovery);
-    
-    if (isDiscoveryDisabled) {
-      console.info('[DISCOVERY] ⏸️ Auto discovery desabilitado em dev (diagnóstico SPEC #005.D.3)');
+    // 🛡️ SPEC #SAFE-00: Noise Suppressor - desabilitar auto-discovery durante diagnóstico
+    if (DISABLE_AUTO_DISCOVERY) {
+      console.info('[SAFE] ⏸️ Auto discovery desabilitado (VITE_DISABLE_AUTO_DISCOVERY=1)');
       toast({
         title: '⏸️ Discovery Desabilitado',
-        description: 'Auto-discovery está desabilitado (VITE_DISABLE_AUTO_DISCOVERY=1). Para testar, remova a flag do .env.local.',
+        description: 'Auto-discovery está desabilitado para economia de créditos. Para ativar, remova VITE_DISABLE_AUTO_DISCOVERY do .env.local.',
         duration: 5000
       });
       return;

@@ -6,6 +6,7 @@ import { useRef, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { isDiagEnabled, dlog, dwarn } from '@/lib/diag';
+import { DISABLE_AUTOSAVE, BLOCK_WRITES } from '@/lib/flags';
 
 export type TabKey =
   | 'keywords' | 'totvs' | 'competitors' | 'similar'
@@ -30,6 +31,13 @@ const fetchFullReport = async (stcHistoryId: string) => {
 };
 
 const updateFullReport = async (stcHistoryId: string, fullReport: any) => {
+  // 🛡️ SPEC #SAFE-00: Bloqueio de escritas (dry-run)
+  if (BLOCK_WRITES) {
+    console.info('[SAFE] 🛡️ BLOCK_WRITES ativo — simulando persistência (no-op)', { stcHistoryId });
+    // Retorna o payload de volta sem gravar (simula sucesso)
+    return fullReport;
+  }
+  
   const { data, error } = await supabase
     .from('stc_verification_history')
     .update({ full_report: fullReport, updated_at: new Date().toISOString() })
@@ -50,9 +58,25 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
   const qc = useQueryClient();
   const qk = ['stc_full_report', stcHistoryId];
 
+  // 🛡️ SPEC #SAFE-00: Flags de proteção
+  const autosaveDisabled = DISABLE_AUTOSAVE;
+  const blockWrites = BLOCK_WRITES;
+
   // 🔍 SPEC #005.D.1: Diagnóstico autosave (helpers centralizados)
   if (isDiagEnabled()) {
-    dlog(`Autosave/${tabKey}`, 'init', { stcHistoryId, tabKey, cacheKey, hasInitialData: !!initialData });
+    dlog(`Autosave/${tabKey}`, 'init', { 
+      stcHistoryId, 
+      tabKey, 
+      cacheKey, 
+      hasInitialData: !!initialData,
+      autosaveDisabled,
+      blockWrites
+    });
+  }
+  
+  // 🛡️ SPEC #SAFE-00: Log de aviso se autosave desabilitado
+  if (autosaveDisabled) {
+    console.warn(`[SAFE] ⚠️ Autosave desabilitado para aba '${tabKey}' — nenhum salvamento automático será executado`);
   }
 
   const { data: fullReport, isLoading } = useQuery({
@@ -104,6 +128,12 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
 
   const scheduleSave = useCallback(
     async (partialData: any, status: 'draft' | 'processing' | 'completed' = 'draft') => {
+      // 🛡️ SPEC #SAFE-00: Bloquear autosave se desabilitado
+      if (autosaveDisabled) {
+        console.info(`[SAFE] ⏸️ Autosave desabilitado — agendamento ignorado para '${tabKey}'`, { status });
+        return;
+      }
+      
       if (timer.current) clearTimeout(timer.current);
       
       const next = setStatus(status);
@@ -125,11 +155,17 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
       timer.current = setTimeout(() => persist(next), 1200);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stcHistoryId, tabKey, cacheKey, fullReport]
+    [stcHistoryId, tabKey, cacheKey, fullReport, autosaveDisabled]
   );
 
   const flushSave = useCallback(
     async (partialData: any, status: 'draft' | 'processing' | 'completed' = 'draft') => {
+      // 🛡️ SPEC #SAFE-00: Bloquear flushSave se autosave desabilitado
+      if (autosaveDisabled) {
+        console.info(`[SAFE] ⏸️ Autosave desabilitado — flushSave ignorado para '${tabKey}'`, { status });
+        return;
+      }
+      
       if (timer.current) clearTimeout(timer.current);
       
       const next = setStatus(status);
@@ -151,7 +187,7 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
       await persist(next);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stcHistoryId, tabKey, cacheKey, fullReport]
+    [stcHistoryId, tabKey, cacheKey, fullReport, autosaveDisabled]
   );
 
   const shouldSkipExpensiveProcessing =

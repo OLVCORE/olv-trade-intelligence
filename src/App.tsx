@@ -11,6 +11,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import TOTVSCheckReport from "@/pages/Leads/TOTVSCheckReport";
 import { Loader2 } from "lucide-react";
 import { TrevoAssistant } from "./components/trevo/TrevoAssistant";
+import SafeModeBanner from "@/components/dev/SafeModeBanner";
 
 // Eager load only critical pages
 import Index from "./pages/Index";
@@ -860,6 +861,9 @@ const App = () => (
           </Suspense>
           </AuthProvider>
         </BrowserRouter>
+        
+        {/* SPEC #SAFE-00: Banner de Safe Mode */}
+        <SafeModeBanner />
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
