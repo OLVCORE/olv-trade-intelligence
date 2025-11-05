@@ -1,416 +1,331 @@
-# 🎯 Guia de Contribuição — OLV Intelligence Prospect v2
+# Guia de Contribuição — OLV Intelligence Prospect v2
 
-**Última atualização:** 2025-11-05  
-**Versão:** 1.0.0
+Este documento estabelece as **regras operacionais** para desenvolvimento com governança e conformidade.
 
 ---
 
-## 🛡️ Regras Operacionais (Guardrails)
+## 🎯 Princípios Fundamentais
 
 ### Regra 1: Não alterar regras de negócio sem SPEC assinada
 
-❌ **PROIBIDO:**
-- Modificar lógica de cálculo (score, weight, confidence)
-- Alterar fluxos de aprovação/rejeição
-- Mudar estrutura de dados do Supabase
-- Adicionar/remover campos de formulários
+✅ **Permitido:**
+- Correções de bugs documentados
+- Melhorias de performance sem mudança de comportamento
+- Refatoração com testes aprovados
+- Telemetria e diagnóstico (protegido por flags)
 
-✅ **PERMITIDO:**
-- Telemetria e logs (guardados por flags)
-- Refatoração sem mudança de comportamento
-- Correção de bugs documentados
-- Melhorias de UI/UX aprovadas
-
-**Processo:**
-1. Abrir issue descrevendo a necessidade
-2. Criar SPEC (docs/specs/SPEC_XXX.md)
-3. Aguardar aprovação (tech lead ou PO)
-4. Implementar com referência à SPEC no commit
-
----
+❌ **Proibido:**
+- Mudanças em lógica de negócio sem SPEC
+- Alterações em cálculos/algoritmos sem validação
+- Remoção de validações existentes
+- Bypass de guardrails de segurança
 
 ### Regra 2: Sempre mostrar diffs antes de escrever
 
-❌ **PROIBIDO:**
-- Commits sem review de diffs
-- "Trust me, I know what I'm doing"
-- Mudanças em lote sem auditoria
+✅ **Fluxo correto:**
+1. Ler o arquivo atual (`read_file`)
+2. Propor mudanças com diff visível
+3. Aguardar aprovação do revisor
+4. Aplicar mudanças
+5. Verificar lints (`read_lints`)
+6. Commit com mensagem estruturada
 
-✅ **OBRIGATÓRIO:**
-```bash
-# Antes de commitar
-git diff
-
-# Ou filtrado por arquivo
-git diff src/components/totvs/SaveBar.tsx
-
-# Ou usando ferramentas visuais
-git difftool
-```
-
-**Processo:**
-1. Fazer mudanças localmente
-2. Revisar diffs linha por linha
-3. Testar no navegador (console + network)
-4. Commitar com mensagem estruturada
-
----
+❌ **Proibido:**
+- Modificar arquivos sem mostrar o que muda
+- "Confie em mim, está certo"
+- Commits sem revisar diff
 
 ### Regra 3: Mudanças fora dos arquivos listados no SPEC = rejeitar
 
-**Exemplo de SPEC válida:**
+Cada SPEC deve listar **explicitamente** os arquivos que serão modificados.
 
-```markdown
-## Arquivos Modificados
-
+✅ **Exemplo (SPEC #005.D):**
+```
+Arquivos a modificar:
 - src/components/totvs/SaveBar.tsx
 - src/components/icp/tabs/useReportAutosave.ts
-- src/lib/flags.ts (novo)
+- src/lib/diag.ts (NOVO)
 ```
 
-❌ **REJEITAR** se commits incluem arquivos não listados (exceto: docs, testes)
-
-✅ **ACEITAR** apenas mudanças nos arquivos declarados
+❌ **Rejeitar se:**
+- Arquivo modificado não está na lista
+- "Só um ajuste rápido em..."
+- Modificações "de passagem"
 
 **Exceções permitidas:**
-- Adicionar testes (`*.test.tsx`, `*.spec.ts`)
-- Atualizar documentação (`*.md`)
-- Adicionar tipos (`*.d.ts`)
-
----
+- Arquivos de documentação (`.md`)
+- Arquivos de configuração de CI/CD
+- Testes relacionados
 
 ### Regra 4: Se houver erro no console/Network, travar SPEC e emitir Hotfix
 
-**Gatilhos de bloqueio:**
+✅ **Processo:**
+1. Detectar erro no console ou Network Tab
+2. **PARAR** implementação do SPEC atual
+3. Emitir **SPEC Hotfix #XXX.Y** com:
+   - **Causa raiz** do erro
+   - **Impacto** (bloqueante? crítico? menor?)
+   - **Solução cirúrgica** (diff mínimo)
+4. Aplicar hotfix
+5. Validar erro corrigido
+6. Retomar SPEC original
 
-| Erro | Ação | Exemplo |
-|------|------|---------|
-| TypeScript error | ❌ BLOQUEAR | `Property 'x' does not exist` |
-| Linter error | ⚠️ AVISAR | `Unused variable` |
-| Console error | ❌ BLOQUEAR | `Cannot read property of undefined` |
-| Network 4xx/5xx | ❌ BLOQUEAR | `401 Unauthorized`, `500 Internal` |
-| React warning | ⚠️ AVISAR | `Keys should be unique` |
-
-**Processo de Hotfix:**
-1. Identificar causa raiz (debugging)
-2. Criar SPEC Hotfix (ex: `SPEC_005_D_1_SaveBar_Fix.md`)
-3. Documentar: **Causa → Impacto → Solução**
-4. Implementar correção mínima
-5. Validar com testes
-6. Commit com referência ao Hotfix
+❌ **Proibido:**
+- "Vou corrigir e continuar..."
+- Corrigir erro sem documentar
+- Ignorar warnings que podem virar erros
 
 ---
 
-## 🔒 Safe Mode (SPEC #SAFE-00)
+## 🔒 Modo Seguro (SAFE MODE)
 
-Durante diagnóstico e desenvolvimento, use Safe Mode para evitar custos acidentais:
+Durante diagnósticos ou desenvolvimento que não deve gerar custos:
 
-### Ativar Safe Mode
+### Flags de Proteção
 
-Criar/editar `.env.local`:
+Criar `.env.local` com:
 
 ```bash
+# Modo seguro completo (sem custos)
 VITE_SAFE_MODE=1
 VITE_DISABLE_AUTOSAVE=1
 VITE_DISABLE_AUTO_DISCOVERY=1
 VITE_BLOCK_WRITES=1
+
+# Diagnóstico (telemetria extra)
 VITE_DEBUG_SAVEBAR=1
 ```
 
-### Proteções Ativas
+### Comportamentos em SAFE MODE
 
-| Flag | Efeito | Uso |
-|------|--------|-----|
-| `VITE_SAFE_MODE` | Ativa banner de aviso | Sempre ativar em diagnóstico |
-| `VITE_DISABLE_AUTOSAVE` | Bloqueia autosave automático | Testar SaveBar sem persistência |
-| `VITE_DISABLE_AUTO_DISCOVERY` | Bloqueia discovery automático | Economizar créditos de APIs |
-| `VITE_BLOCK_WRITES` | Bloqueia TODAS as escritas no Supabase | Dry-run total |
-| `VITE_DEBUG_SAVEBAR` | Ativa telemetria detalhada | Debugging de SaveBar/Autosave |
+| Flag | Comportamento |
+|------|---------------|
+| `SAFE_MODE=1` | Ativa banner visual + combina todas as proteções |
+| `DISABLE_AUTOSAVE=1` | `scheduleSave` e `flushSave` viram no-op |
+| `DISABLE_AUTO_DISCOVERY=1` | Discovery só roda com clique manual |
+| `BLOCK_WRITES=1` | Supabase writes retornam simulação de sucesso |
+| `DEBUG_SAVEBAR=1` | Logs detalhados de SaveBar e Autosave |
 
-### Indicadores Visuais
+### Validação Visual
 
-- **Banner amarelo** no canto inferior direito
-- **SaveBar com borda amarela** (diagnóstico)
-- **Botão "Salvar (Dry-Run)"** em vez de "Salvar Relatório"
-- **Texto "writes bloqueadas"** visível
+Com SAFE MODE ativo, você verá:
+- 🟡 **Banner amarelo** fixo no canto inferior direito
+- 🟡 **Borda amarela** na SaveBar (em vez de cinza)
+- 🟡 **Botão "Salvar (Dry-Run)"** (em vez de "Salvar Relatório")
+- 🟡 **Texto "writes bloqueadas"** ao lado do botão
 
 ---
 
-## 📝 Padrão de Commits
+## 📋 Checklist de Desenvolvimento
 
-### Conventional Commits
+Antes de cada commit:
 
-```bash
-<type>(<scope>): <subject>
+- [ ] **Lint:** `pnpm lint` sem erros
+- [ ] **Type check:** `pnpm tsc --noEmit` sem erros
+- [ ] **Diff revisado:** Todas as mudanças fazem sentido?
+- [ ] **SPEC documentada:** Mudanças estão em uma SPEC?
+- [ ] **Console limpo:** Sem erros no browser console?
+- [ ] **Network limpo:** Sem 4xx/5xx em requisições?
+- [ ] **Safe mode testado:** Com e sem flags?
 
-<body>
+---
 
-<footer>
+## 🏗️ Estrutura de Projeto
+
 ```
+/docs/
+├── specs/           # SPECs individuais (SPEC_001.md, SPEC_002.md, etc.)
+├── adrs/            # Architecture Decision Records
+└── playbooks/       # Guias operacionais
 
-**Types permitidos:**
-- `feat`: Nova funcionalidade
-- `fix`: Correção de bug
-- `docs`: Documentação
-- `refactor`: Refatoração sem mudança de comportamento
-- `test`: Adicionar/modificar testes
-- `chore`: Manutenção (deps, config)
-- `perf`: Performance
-- `style`: Formatação (não muda lógica)
-
-**Scopes recomendados:**
-- `savebar`, `autosave`, `pipeline`, `quarantine`, `icp`, `discovery`, `totvs`
-
-**Exemplos:**
-
-```bash
-# Feature com SPEC
-git commit -m "feat(savebar): SPEC #005 barra fixa de acoes criticas"
-
-# Hotfix
-git commit -m "fix(autosave): SPEC #005.D.1 helpers centralizados de telemetria"
-
-# Documentação
-git commit -m "docs: adicionar CONTRIBUTING.md com guardrails"
-
-# Refatoração
-git commit -m "refactor(flags): centralizar feature flags em lib/flags.ts"
+/src/
+├── components/
+├── lib/
+│   ├── diag.ts      # Helpers de diagnóstico
+│   ├── flags.ts     # Feature flags centralizadas
+│   └── api/
+│       └── supabaseClient.ts  # Wrapper guardado
+├── services/        # Lógica de negócio
+└── pages/           # Páginas da aplicação
 ```
 
 ---
 
-## 🧪 Testes Obrigatórios
+## 🚀 Workflow de SPECs
 
-Antes de commitar, execute:
+### 1. Planejamento
 
-### 1. Lint
+```markdown
+# SPEC #XXX — Título da Mudança
+
+## Objetivo
+O que será implementado e por quê
+
+## Arquivos a modificar
+- src/components/X.tsx
+- src/services/Y.ts
+
+## Critérios de aceite
+- [ ] Funcionalidade X funciona
+- [ ] Console sem erros
+- [ ] Network sem 4xx/5xx
+```
+
+### 2. Implementação
+
 ```bash
+# Criar branch (opcional)
+git checkout -b spec-xxx
+
+# Desenvolver com safe mode
+echo "VITE_SAFE_MODE=1" >> .env.local
+
+# Revisar diffs antes de commitar
+git diff
+
+# Commit estruturado
+git commit -m "SPEC #XXX: Titulo conciso
+
+Detalhes da implementação
+- Mudança 1
+- Mudança 2
+
+Refs: SPEC-XXX"
+```
+
+### 3. Validação
+
+```bash
+# Lint
 pnpm lint
-```
 
-### 2. Type Check
-```bash
+# Type check
 pnpm tsc --noEmit
-```
 
-### 3. Build
-```bash
+# Build (se aplicável)
 pnpm build
+
+# Teste manual no navegador
+# - Console limpo?
+# - Network limpo?
+# - UX funciona?
 ```
 
-### 4. Teste Manual (Checklist)
-
-- [ ] Console sem erros TypeScript/React
-- [ ] Network sem erros 4xx/5xx (exceto esperados)
-- [ ] UI renderiza corretamente
-- [ ] Funcionalidade principal testada
-- [ ] Safe Mode testado (se aplicável)
-
----
-
-## 🔍 Processo de Code Review
-
-### Self-Review (antes de commitar)
-
-1. **Ler o diff completo:** `git diff`
-2. **Validar formatação:** `pnpm lint`
-3. **Testar no navegador:** F12 → Console + Network
-4. **Verificar SPEC:** Todos arquivos listados?
-5. **Validar commit message:** Segue Conventional Commits?
-
-### Peer Review (antes de merge)
-
-1. Verificar se SPEC foi seguida
-2. Testar localmente (pull + test)
-3. Validar que não há regressões
-4. Aprovar ou solicitar mudanças
-
----
-
-## 📚 Estrutura de Documentação
-
-```
-/
-├── docs/
-│   ├── specs/              # SPECs individuais
-│   │   ├── SPEC_001_Autosave.md
-│   │   ├── SPEC_005_SaveBar.md
-│   │   └── SPEC_SAFE_00_SafeMode.md
-│   ├── adrs/               # Architecture Decision Records
-│   │   ├── 001-why-vite.md
-│   │   └── 002-why-supabase.md
-│   └── playbooks/          # Guias operacionais
-│       ├── deployment.md
-│       └── debugging.md
-├── CONTRIBUTING.md         # Este arquivo
-├── CHANGELOG.md            # Histórico de mudanças
-└── README.md               # Visão geral do projeto
-```
-
----
-
-## 🚫 Anti-Patterns (Evitar)
-
-### ❌ Commits sem contexto
+### 4. Merge
 
 ```bash
-git commit -m "fix"
-git commit -m "update"
-git commit -m "wip"
+# Push para revisão
+git push origin spec-xxx
+
+# Após aprovação
+git checkout master
+git merge spec-xxx
+git push origin master
 ```
 
-### ❌ Mudanças massivas sem SPEC
+---
 
-```bash
-# 50 arquivos modificados sem documentação
-git add .
-git commit -m "refactor everything"
-```
+## 🧪 Testes
 
-### ❌ Código comentado em produção
+### Manuais (obrigatórios)
+
+Para cada SPEC:
+1. Testar com SAFE_MODE ativo (sem custos)
+2. Testar sem SAFE_MODE (comportamento real)
+3. Verificar console (F12)
+4. Verificar Network Tab
+5. Testar em Chrome E Edge (mínimo)
+
+### Automatizados (recomendados)
 
 ```typescript
-// const oldFunction = () => { ... }; // DELETAR
-// TODO: fix this later // CRIAR ISSUE
+// src/components/__tests__/SaveBar.test.tsx
+import { render, screen } from '@testing-library/react';
+import SaveBar from '../SaveBar';
+
+describe('SaveBar', () => {
+  it('should show dry-run when SAFE_MODE active', () => {
+    // Mock da flag
+    vi.stubEnv('VITE_SAFE_MODE', '1');
+    
+    render(<SaveBar statuses={{}} onSaveAll={vi.fn()} onApprove={vi.fn()} />);
+    
+    expect(screen.getByText(/dry-run/i)).toBeInTheDocument();
+  });
+});
 ```
 
-### ❌ Console.log em produção (sem guards)
+---
+
+## 🚫 Anti-Patterns
+
+### ❌ NÃO faça
 
 ```typescript
-console.log('debug info'); // ❌
-```
-
-**Correto:**
-```typescript
-if (isDiagEnabled()) {
-  dlog('Component', 'debug info'); // ✅
+// Mudança sem SPEC
+function calculateICP(data) {
+  // "Só vou melhorar o algoritmo rapidinho..."
+  return data.score * 1.5; // 🚨 REGRESSÃO!
 }
+
+// Write direto sem guardrail
+supabase.from('companies').update({ ... }); // 🚨 CUSTO!
+
+// Commit vago
+git commit -m "fix stuff"  // 🚨 SEM CONTEXTO!
 ```
 
----
-
-## ✅ Best Practices
-
-### 1. Sempre usar helpers centralizados
+### ✅ FAÇA
 
 ```typescript
-// ❌ Evitar
-if (import.meta.env.VITE_SAFE_MODE === '1') { ... }
-
-// ✅ Usar
-import { SAFE_MODE } from '@/lib/flags';
-if (SAFE_MODE) { ... }
-```
-
-### 2. Telemetria com guards
-
-```typescript
-// ❌ Evitar
-console.log('[DEBUG]', data);
-
-// ✅ Usar
-if (isDiagEnabled()) {
-  dlog('Component', 'event', data);
+// Com SPEC e telemetria
+function calculateICP(data) {
+  if (isDiagEnabled()) {
+    dlog('ICP', 'calculateICP input', data);
+  }
+  
+  const score = data.score * 1.2; // SPEC #123: Ajuste de peso
+  
+  if (isDiagEnabled()) {
+    dlog('ICP', 'calculateICP output', score);
+  }
+  
+  return score;
 }
-```
 
-### 3. Commits atômicos
+// Write guardado
+guardedWrite(() => 
+  supabase.from('companies').update({ ... })
+);
 
-Cada commit deve:
-- Resolver 1 problema específico
-- Ser reversível isoladamente
-- Ter mensagem descritiva
-- Incluir testes (quando aplicável)
+// Commit estruturado
+git commit -m "fix(icp): SPEC #123 ajuste de peso do score
 
----
-
-## 🔄 Workflow Recomendado
-
-### Feature Branch
-
-```bash
-# Criar branch
-git checkout -b feat/spec-007-keywords-refinement
-
-# Implementar com commits atômicos
-git commit -m "feat(keywords): SPEC #007 adicionar filtro de relevancia"
-git commit -m "test(keywords): adicionar testes do filtro"
-git commit -m "docs: atualizar SPEC #007 com exemplos"
-
-# Push
-git push origin feat/spec-007-keywords-refinement
-
-# Pull Request (GitHub/GitLab)
-# Code review → Merge
-```
-
-### Hotfix
-
-```bash
-# Criar branch de hotfix
-git checkout -b hotfix/savebar-z-index
-
-# Fix
-git commit -m "fix(savebar): SPEC #005.D.2 ajustar z-index para 9999"
-
-# Merge direto na main (após review rápido)
+- Mudança de multiplicador 1.0 → 1.2
+- Motivo: alinhamento com benchmarks
+- Refs: SPEC-123"
 ```
 
 ---
 
-## 🧹 Limpeza de Código
+## 📞 Contatos / Suporte
 
-### Antes de commitar, verificar:
-
-- [ ] Imports não utilizados removidos
-- [ ] Console.logs de debug removidos (ou guardados)
-- [ ] Código comentado removido
-- [ ] TODOs convertidos em issues
-- [ ] Formatação consistente (Prettier)
-
-### Ferramentas
-
-```bash
-# Auto-fix de lint
-pnpm lint --fix
-
-# Formatar código
-pnpm format  # (se configurado)
-```
+**Maintainer:** Statutory Builder  
+**Stack:** React 18 + TypeScript + Vite + Supabase  
+**Deploy:** Vercel  
+**Documentação:** `/docs/`
 
 ---
 
-## 📞 Suporte
+## 📚 Referências
 
-**Dúvidas sobre:**
-- SPECs → consultar `docs/specs/`
-- Arquitetura → consultar `docs/adrs/`
-- Debugging → consultar `SPEC_005_D_DIAGNOSTIC_GUIDE.md`
-- Safe Mode → consultar `SPEC_SAFE_00.md`
-
-**Processo de escalação:**
-1. Consultar documentação
-2. Buscar no histórico de commits (`git log --grep`)
-3. Abrir issue no GitHub
-4. Consultar tech lead
+- [SPEC #001](docs/specs/SPEC_001.md) — Autosave
+- [SPEC #005](docs/specs/SPEC_005.md) — SaveBar
+- [SPEC #005.D](SPEC_005_D_DIAGNOSTIC_GUIDE.md) — Diagnóstico
+- [ORDEM #SAFE-00](SPEC_SAFE_00_OPERATIONAL_ORDER.md) — Modo Seguro
 
 ---
 
-## ✅ Checklist Final (Antes de Push)
-
-- [ ] Código lintado (`pnpm lint`)
-- [ ] Type check passou (`pnpm tsc --noEmit`)
-- [ ] Build funciona (`pnpm build`)
-- [ ] Testes manuais executados
-- [ ] SPEC seguida (arquivos corretos)
-- [ ] Commit message válida (Conventional Commits)
-- [ ] Documentação atualizada (se aplicável)
-- [ ] Safe Mode testado (se aplicável)
-- [ ] Zero regressões visuais/funcionais
-
----
-
-**Autor:** Statutory Builder + Claude Sonnet 4.5  
-**Data:** 2025-11-05  
-**Versão:** 1.0.0
-
+**Versão:** 1.0.0  
+**Última atualização:** 2025-11-05  
+**Status:** ✅ Ativo

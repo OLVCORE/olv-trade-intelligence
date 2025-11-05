@@ -87,10 +87,21 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
   });
 
   const { mutateAsync: persist } = useMutation({
-    mutationFn: (next: any) => {
+    mutationFn: async (next: any) => {
       if (isDiagEnabled()) {
         dlog(`Autosave/${tabKey}`, 'persist:start', { payloadSize: JSON.stringify(next)?.length, tabsCount: Object.keys(next).length });
       }
+      
+      // 🔒 ORDEM OPERACIONAL #SAFE-00: Bloqueio de escrita
+      if (blockWrites) {
+        console.info(`[SAFE][Autosave/${tabKey}] 🔒 BLOCK_WRITES ativo — simulando persistência (no-op)`);
+        if (isDiagEnabled()) {
+          dlog(`Autosave/${tabKey}`, 'persist:blocked (dry-run)', { wouldPersist: Object.keys(next).length + ' tabs' });
+        }
+        // Retorna echo para não quebrar fluxo
+        return next;
+      }
+      
       return updateFullReport(stcHistoryId, next);
     },
     onSuccess: (next) => {
