@@ -19,7 +19,6 @@ import type { CompanyIntelligence } from '@/services/competitiveIntelligence';
 import { discoverFullDigitalPresence, type DigitalPresence } from '@/services/websiteDiscovery';
 import { generateCompanyIntelligenceReport, type CompanyIntelligenceReport } from '@/services/socialMediaAnalyzer';
 import { searchOfficialWebsite, type WebsiteSearchResult } from '@/services/officialWebsiteSearch';
-import { DISABLE_AUTO_DISCOVERY } from '@/lib/flags';
 
 interface KeywordsSEOTabProps {
   companyName?: string;
@@ -833,6 +832,38 @@ export function KeywordsSEOTabEnhanced({
                   <>
                     <Sparkles className="h-6 w-6" />
                     🚀 Descobrir Website & Presença Digital Completa
+                  </>
+                )}
+              </Button>
+            )}
+            
+            {/* 🔁 HF-STACK-2.2: Botão Reverificar Discovery */}
+            {(domain || discoveredDomain) && (
+              <Button
+                onClick={() => {
+                  // Limpar domain atual e forçar nova busca
+                  setDiscoveredDomain(null);
+                  setDigitalPresence(null);
+                  setSeoData(null);
+                  setIntelligenceReport(null);
+                  setAllWebsiteResults([]);
+                  // Disparar discovery novamente
+                  smartDiscoveryMutation.mutate();
+                }}
+                disabled={smartDiscoveryMutation.isPending}
+                size="sm"
+                variant="outline"
+                className="w-full gap-2 border-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900"
+              >
+                {smartDiscoveryMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Reverificando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    🔁 Reverificar (Forçar nova busca)
                   </>
                 )}
               </Button>

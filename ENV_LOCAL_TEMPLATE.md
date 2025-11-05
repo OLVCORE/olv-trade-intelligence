@@ -17,11 +17,19 @@ VITE_BLOCK_WRITES=1
 VITE_DEBUG_SAVEBAR=1
 
 # =============================================================================
+# HF-STACK-2.3 — OpenAI API Key (obrigatória para IA funcionar)
+# =============================================================================
+# IMPORTANTE: Substitua pela sua chave real do OpenAI
+# Obtenha em: https://platform.openai.com/api-keys
+VITE_OPENAI_API_KEY=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# =============================================================================
 # Instruções:
 # 1. Crie o arquivo .env.local na raiz do projeto
 # 2. Cole as flags acima
-# 3. Reinicie o servidor: pnpm dev
-# 4. Verifique no console: [DIAG][BOOT] deve mostrar os valores
+# 3. Substitua VITE_OPENAI_API_KEY pela sua chave real
+# 4. Reinicie o servidor: pnpm dev
+# 5. Verifique no console: [DIAG][BOOT] deve mostrar os valores
 # =============================================================================
 ```
 
