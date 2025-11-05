@@ -52,14 +52,34 @@ export const BLOCK_WRITES = truthy(flag('VITE_BLOCK_WRITES'));
 export const DEBUG_SAVEBAR = truthy(flag('VITE_DEBUG_SAVEBAR'));
 
 /**
- * Log de inicialização das flags (apenas em dev)
+ * Log centralizado das flags no boot (dev only)
+ * Chamado pelo main.tsx para mostrar flags ativas
  */
-if (import.meta.env.DEV) {
-  console.group('[FLAGS] 🚩 Feature Flags Carregadas');
-  console.log('SAFE_MODE:', SAFE_MODE);
-  console.log('DISABLE_AUTOSAVE:', DISABLE_AUTOSAVE);
-  console.log('DISABLE_AUTO_DISCOVERY:', DISABLE_AUTO_DISCOVERY);
-  console.log('BLOCK_WRITES:', BLOCK_WRITES);
-  console.log('DEBUG_SAVEBAR:', DEBUG_SAVEBAR);
-  console.groupEnd();
+export function logFlagsOnBoot() {
+  if (!import.meta.env.DEV) return;
+  
+  try {
+    // Vite injeta as envs em import.meta.env como strings
+    const env = (import.meta as any)?.env ?? {};
+    
+    // eslint-disable-next-line no-console
+    console.log('[DIAG][BOOT] flags:', {
+      VITE_SAFE_MODE: env?.VITE_SAFE_MODE ?? '',
+      VITE_DISABLE_AUTOSAVE: env?.VITE_DISABLE_AUTOSAVE ?? '',
+      VITE_DISABLE_AUTO_DISCOVERY: env?.VITE_DISABLE_AUTO_DISCOVERY ?? '',
+      VITE_BLOCK_WRITES: env?.VITE_BLOCK_WRITES ?? '',
+      VITE_DEBUG_SAVEBAR: env?.VITE_DEBUG_SAVEBAR ?? '',
+    });
+    
+    // Log consolidado (tabela)
+    console.group('[FLAGS] 🚩 Feature Flags Carregadas');
+    console.log('SAFE_MODE:', SAFE_MODE);
+    console.log('DISABLE_AUTOSAVE:', DISABLE_AUTOSAVE);
+    console.log('DISABLE_AUTO_DISCOVERY:', DISABLE_AUTO_DISCOVERY);
+    console.log('BLOCK_WRITES:', BLOCK_WRITES);
+    console.log('DEBUG_SAVEBAR:', DEBUG_SAVEBAR);
+    console.groupEnd();
+  } catch {
+    // noop
+  }
 }
