@@ -75,6 +75,8 @@ export default function TOTVSCheckCard({
   onResult,
   latestReport,
 }: TOTVSCheckCardProps) {
+  console.info('[TOTS] ✅ TOTVSCheckCard montado — SaveBar deveria aparecer aqui');
+  
   const [enabled, setEnabled] = useState(autoVerify);
   const [filterMode, setFilterMode] = useState<'all' | 'triple'>('all');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -486,6 +488,18 @@ export default function TOTVSCheckCard({
   const doubleMatches = evidences.filter((e: any) => e.match_type === 'double');
   
   const filteredEvidences = filterMode === 'triple' ? tripleMatches : evidences;
+
+  // 🔍 SPEC #005.D: Diagnóstico SaveBar (telemetria temporária)
+  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+    const statusesObj = getStatuses();
+    console.group("[DIAG][TOTVSCheckCard] SaveBar props");
+    console.log("props.readOnly:", readOnly);
+    console.log("props.isSaving:", isSaving);
+    console.log("props.snapshot:", snapshot ? `versão ${snapshot.version}` : 'null (editável)');
+    console.table(statusesObj);
+    console.log("registry size:", Object.keys(statusesObj).length);
+    console.groupEnd();
+  }
 
   return (
     <Card className="p-6">

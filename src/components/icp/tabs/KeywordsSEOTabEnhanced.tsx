@@ -97,6 +97,8 @@ export function KeywordsSEOTabEnhanced({
   useEffect(() => {
     if (!stcHistoryId) return; // Só registra se tem ID de histórico
 
+    console.info('[REGISTRY] ✅ Registered: keywords');
+
     registerTab('keywords', {
       flushSave: async () => {
         // Coleta todos os dados atuais
@@ -122,6 +124,7 @@ export function KeywordsSEOTabEnhanced({
 
     // Cleanup ao desmontar
     return () => {
+      console.info('[REGISTRY] 🧹 Unregistered: keywords');
       unregisterTab('keywords');
     };
   }, [
@@ -141,6 +144,8 @@ export function KeywordsSEOTabEnhanced({
   // 🔥 Análise SEO completa
   const seoMutation = useMutation({
     mutationFn: async () => {
+      console.info('[KEYWORDS] ▶️ Disparando análise SEO...');
+      
       const activeDomain = discoveredDomain || domain;
       if (!activeDomain) throw new Error('Domain não disponível');
       
@@ -193,6 +198,8 @@ export function KeywordsSEOTabEnhanced({
         if (stcHistoryId) {
           await flushSave(savedPayload, 'completed');
         }
+        
+        console.info('[KEYWORDS] ✅ Análise SEO concluída e salva');
         
         onLoading?.(false);
         
@@ -384,6 +391,8 @@ export function KeywordsSEOTabEnhanced({
       if (!companyName) throw new Error('Nome necessário');
       if (!cnpj) throw new Error('CNPJ necessário');
       
+      console.info('[KEYWORDS] ▶️ Disparando discovery determinístico...');
+      
       // 🎯 DISCOVERY DETERMINÍSTICO (SPEC #004)
       const discoveryInputs: DiscoveryInputs = {
         cnpj: cnpj,
@@ -475,6 +484,8 @@ export function KeywordsSEOTabEnhanced({
         if (stcHistoryId) {
           await flushSave(savedPayload, 'completed');
         }
+        
+        console.info('[KEYWORDS] ✅ Discovery concluído e salvo');
         
         toast({
           title: '✅ Website descoberto!',

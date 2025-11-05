@@ -17,6 +17,11 @@ const registry = new Map<string, TabAPI>(); // key = tabKey, ex.: 'keywords', 't
 export const registerTab = (tabKey: string, api: TabAPI) => {
   console.log(`[REGISTRY] 📝 Registrando aba '${tabKey}'`);
   registry.set(tabKey, api);
+  
+  // 🔍 SPEC #005.D: Diagnóstico registry (telemetria temporária)
+  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+    console.log(`[DIAG][tabsRegistry] registered: ${tabKey} | total: ${registry.size} | keys:`, [...registry.keys()]);
+  }
 };
 
 /**
@@ -33,6 +38,15 @@ export const unregisterTab = (tabKey: string) => {
  */
 export const saveAllTabs = async () => {
   console.log(`[REGISTRY] 💾 Salvando todas as abas (${registry.size} registradas)...`);
+  
+  // 🔍 SPEC #005.D: Diagnóstico saveAll (telemetria temporária)
+  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+    console.group("[DIAG][tabsRegistry] saveAllTabs");
+    console.log("registered tabs:", [...registry.keys()]);
+    console.log("statuses before save:", getStatuses());
+    console.groupEnd();
+  }
+  
   const ops = [...registry.values()].map(api => api.flushSave());
   const results = await Promise.allSettled(ops);
   
@@ -40,6 +54,17 @@ export const saveAllTabs = async () => {
   const failures = results.filter(r => r.status === 'rejected').length;
   
   console.log(`[REGISTRY] ✅ Salvo: ${successes} abas | ❌ Falhas: ${failures}`);
+  
+  // 🔍 SPEC #005.D: Diagnóstico pós-save (telemetria temporária)
+  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+    console.group("[DIAG][tabsRegistry] saveAllTabs:results");
+    console.log("successes:", successes, "| failures:", failures);
+    console.log("statuses after save:", getStatuses());
+    if (failures > 0) {
+      console.warn("failed results:", results.filter(r => r.status === 'rejected'));
+    }
+    console.groupEnd();
+  }
   
   return results;
 };

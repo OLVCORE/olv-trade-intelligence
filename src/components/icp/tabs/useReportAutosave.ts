@@ -36,13 +36,27 @@ const updateFullReport = async (stcHistoryId: string, fullReport: any) => {
     .select('id, full_report')
     .single();
   
-  if (error) throw error;
+  if (error) {
+    console.error('[AUTOSAVE] ❌ Erro Supabase', error);
+    throw error;
+  }
+  
+  console.info('[AUTOSAVE] ✅ Salvo com sucesso no Supabase', { stcHistoryId });
   return data.full_report as any;
 };
 
 export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData }: Params) {
   const qc = useQueryClient();
   const qk = ['stc_full_report', stcHistoryId];
+
+  // 🔍 SPEC #005.D: Diagnóstico autosave (telemetria temporária)
+  const debug = !!import.meta.env.VITE_DEBUG_SAVEBAR;
+  const log = (...args: any[]) => debug && console.log(`[DIAG][Autosave][${tabKey}]`, ...args);
+  const warn = (...args: any[]) => debug && console.warn(`[DIAG][Autosave][${tabKey}]`, ...args);
+
+  if (debug) {
+    log('init', { stcHistoryId, tabKey, cacheKey, hasInitialData: !!initialData });
+  }
 
   const { data: fullReport, isLoading } = useQuery({
     queryKey: qk,
@@ -52,13 +66,28 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
   });
 
   const { mutateAsync: persist } = useMutation({
-    mutationFn: (next: any) => updateFullReport(stcHistoryId, next),
+    mutationFn: (next: any) => {
+      if (debug) {
+        log('persist:start', { payloadSize: JSON.stringify(next)?.length, tabsCount: Object.keys(next).length });
+      }
+      return updateFullReport(stcHistoryId, next);
+    },
     onSuccess: (next) => {
       qc.setQueryData(qk, next);
       console.log(`[AUTOSAVE] ✅ Aba '${tabKey}' salva com sucesso`);
+      if (debug) {
+        log('persist:success', { 
+          timestamp: new Date().toISOString(),
+          payloadSize: JSON.stringify(next)?.length,
+          tabsInReport: Object.keys(next).length
+        });
+      }
     },
     onError: (error) => {
       console.error(`[AUTOSAVE] ❌ Erro ao salvar aba '${tabKey}':`, error);
+      if (debug) {
+        warn('persist:error', { error, message: (error as Error)?.message });
+      }
     },
   });
 
@@ -88,6 +117,14 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
       };
       
       console.log(`[AUTOSAVE] ⏳ Agendando salvamento da aba '${tabKey}' em 1.2s...`);
+      if (debug) {
+        log('scheduleSave', { 
+          status, 
+          dataKeys: Object.keys(partialData || {}), 
+          cacheKey,
+          debounceMs: 1200
+        });
+      }
       timer.current = setTimeout(() => persist(next), 1200);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +142,15 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
         cache_key: cacheKey ?? getTab().cache_key ?? null 
       };
       
-      console.log(`[AUTOSAVE] 💾 Salvando imediatamente aba '${tabKey}'...`);
+      console.info('[AUTOSAVE] 🔄 flushSave()', { stcHistoryId, tabKey, status });
+      if (debug) {
+        log('flushSave:immediate', { 
+          status, 
+          dataKeys: Object.keys(partialData || {}),
+          cacheKey,
+          bypass: 'debounce cleared'
+        });
+      }
       await persist(next);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

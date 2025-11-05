@@ -2,6 +2,7 @@
 // Consolidação de: Status + Salvar + Aprovar + Exportar PDF
 // Elimina botões redundantes espalhados pela UI
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send } from 'lucide-react';
@@ -26,10 +27,25 @@ export default function SaveBar({
   readOnly = false,
   isSaving = false,
 }: SaveBarProps) {
+  console.info('[SaveBar] ✅ SaveBar montada — exibindo ações unificadas');
+  
   const anyProcessing = Object.values(statuses).some(s => s === 'processing');
   const allCompleted = Object.values(statuses).every(s => s === 'completed');
   const anyDraft = Object.values(statuses).some(s => s === 'draft');
   const anyError = Object.values(statuses).some(s => s === 'error');
+
+  // 🔍 SPEC #005.D: Diagnóstico ciclo de vida (telemetria temporária)
+  useEffect(() => {
+    if (!import.meta.env.VITE_DEBUG_SAVEBAR) return;
+    
+    const entries = Object.entries(statuses || {});
+    console.group("[DIAG][SaveBar] mount/update");
+    console.log("readOnly:", readOnly, "| isSaving:", isSaving);
+    console.table(entries.map(([tab, st]) => ({ tab, status: st })));
+    console.log("Agregados → anyProcessing:", anyProcessing, "| allCompleted:", allCompleted, "| anyDraft:", anyDraft, "| anyError:", anyError);
+    console.log("DOM element:", document.querySelector('.sticky.top-0.z-40') ? '✅ Found' : '❌ Not found');
+    console.groupEnd();
+  }, [statuses, readOnly, isSaving, anyProcessing, allCompleted, anyDraft, anyError]);
 
   return (
     <div className="sticky top-0 z-40 border-b-2 border-slate-700/70 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-md shadow-lg">

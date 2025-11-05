@@ -8,6 +8,11 @@ interface TabIndicatorProps {
 }
 
 export function TabIndicator({ status = 'draft' }: TabIndicatorProps) {
+  // 🔍 SPEC #005.D: Diagnóstico status visual (telemetria temporária)
+  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+    console.log(`[DIAG][TabIndicator] render with status: ${status}`);
+  }
+
   const config = {
     completed: { 
       color: 'bg-emerald-500', 
