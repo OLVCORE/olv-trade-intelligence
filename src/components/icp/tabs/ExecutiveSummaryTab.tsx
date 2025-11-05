@@ -1,5 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
+import { toast } from 'sonner';
 import { 
   CheckCircle, 
   XCircle, 
@@ -20,6 +22,8 @@ interface ExecutiveSummaryTabProps {
   competitorsCount?: number;
   clientsCount?: number;
   maturityScore?: number;
+  savedData?: any;
+  onDataChange?: (data: any) => void;
 }
 
 export function ExecutiveSummaryTab({
@@ -28,8 +32,36 @@ export function ExecutiveSummaryTab({
   similarCount = 0,
   competitorsCount = 0,
   clientsCount = 0,
-  maturityScore = 0
+  maturityScore = 0,
+  savedData,
+  onDataChange
 }: ExecutiveSummaryTabProps) {
+  
+  // 🔄 RESET: Voltar ao estado inicial
+  const handleReset = () => {
+    // Executive é read-only, então apenas notifica que voltou
+    toast.info('Retornando ao início');
+  };
+
+  // 💾 SALVAR: Executive Summary
+  const handleSave = () => {
+    const reportData = {
+      stcResult,
+      similarCount,
+      competitorsCount,
+      clientsCount,
+      maturityScore,
+      savedAt: new Date().toISOString(),
+    };
+    
+    onDataChange?.(reportData);
+    
+    toast.success('✅ Sumário Executivo Salvo!', {
+      description: 'Dados armazenados no histórico',
+    });
+  };
+
+  const hasData = !!(stcResult || similarCount || competitorsCount);
   // Calcular confiança TOTVS baseado nos dados STC reais
   const evidenceCount = stcResult?.evidences?.length || 0;
   const totalWeight = stcResult?.total_weight || 0;
@@ -53,6 +85,17 @@ export function ExecutiveSummaryTab({
 
   return (
     <div className="space-y-6">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {hasData && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!stcResult}
+          hasUnsavedChanges={false}
+        />
+      )}
       {/* Decisão Final */}
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="flex items-center gap-4">

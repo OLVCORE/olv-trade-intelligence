@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
+import { toast } from 'sonner';
 import { Target, ExternalLink, TrendingUp, Building2, Search, Zap } from 'lucide-react';
 import { useCompetitorSearch } from '@/hooks/useCompetitorSearch';
 import { useCompetitorAnalysis } from '@/hooks/useCompetitorAnalysis';
@@ -12,14 +14,28 @@ interface CompetitorsTabProps {
   companyName?: string;
   cnpj?: string;
   domain?: string;
+  savedData?: any;
+  onDataChange?: (data: any) => void;
 }
 
-export function CompetitorsTab({ companyId, companyName, cnpj, domain }: CompetitorsTabProps) {
+export function CompetitorsTab({ companyId, companyName, cnpj, domain, savedData, onDataChange }: CompetitorsTabProps) {
   const [hasSearched, setHasSearched] = useState(false);
-  const [externalData, setExternalData] = useState<any | null>(null);
+  const [externalData, setExternalData] = useState<any | null>(savedData || null);
   const { mutateAsync: searchCompetitors, data: searchData, isPending } = useCompetitorSearch();
   const { data: internalCompetitors, isLoading: loadingInternal } = useCompetitorAnalysis(companyId);
   const { data: latestReport } = useLatestSTCReport(companyId, companyName);
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    setHasSearched(false);
+    setExternalData(null);
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(externalData);
+    toast.success('✅ Análise de Concorrentes Salva!');
+  };
 
   useEffect(() => {
     const saved = (latestReport as any)?.full_report?.competitors_report;
@@ -55,6 +71,10 @@ export function CompetitorsTab({ companyId, companyName, cnpj, domain }: Competi
   if (!hasSearched) {
     return (
       <Card className="p-6">
+        <FloatingNavigation
+          onHome={handleReset}
+          showSaveButton={false}
+        />
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <Target className="w-8 h-8 text-primary" />
@@ -95,6 +115,18 @@ export function CompetitorsTab({ companyId, companyName, cnpj, domain }: Competi
   
   return (
     <div className="space-y-4">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {externalData && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!externalData}
+          hasUnsavedChanges={!!externalData}
+        />
+      )}
+      
       {/* Concorrentes ERP Detectados Internamente */}
       {hasInternalData && (
         <>
