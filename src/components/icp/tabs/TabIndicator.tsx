@@ -2,15 +2,16 @@
 // Verde = Salvo | Amarelo = Não salvo | Azul = Processando | Vermelho = Erro
 
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { isDiagEnabled, dlog } from '@/lib/diag';
 
 interface TabIndicatorProps {
   status?: 'draft' | 'processing' | 'completed' | 'error';
 }
 
 export function TabIndicator({ status = 'draft' }: TabIndicatorProps) {
-  // 🔍 SPEC #005.D: Diagnóstico status visual (telemetria temporária)
-  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
-    console.log(`[DIAG][TabIndicator] render with status: ${status}`);
+  // 🔍 SPEC #005.D.1: Diagnóstico status visual (helper centralizado)
+  if (isDiagEnabled()) {
+    dlog('TabIndicator', `render with status: ${status}`);
   }
 
   const config = {

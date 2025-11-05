@@ -274,6 +274,20 @@ export function KeywordsSEOTabEnhanced({
 
   // 🔥 ANTI-REPROCESSO: Wrapper para smartDiscoveryMutation
   const handleSmartDiscovery = () => {
+    // 🔍 SPEC #005.D.3: Noise Suppressor - desabilitar auto-discovery durante diagnóstico
+    const disableAutoDiscovery = String((import.meta as any)?.env?.VITE_DISABLE_AUTO_DISCOVERY ?? '').trim().toLowerCase();
+    const isDiscoveryDisabled = ['1','true','on','yes'].includes(disableAutoDiscovery);
+    
+    if (isDiscoveryDisabled) {
+      console.info('[DISCOVERY] ⏸️ Auto discovery desabilitado em dev (diagnóstico SPEC #005.D.3)');
+      toast({
+        title: '⏸️ Discovery Desabilitado',
+        description: 'Auto-discovery está desabilitado (VITE_DISABLE_AUTO_DISCOVERY=1). Para testar, remova a flag do .env.local.',
+        duration: 5000
+      });
+      return;
+    }
+    
     // Construir cache_key determinística
     const discoveryCacheKey = buildDiscoveryCacheKey({
       cnpj: cnpj,

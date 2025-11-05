@@ -30,6 +30,7 @@ import { saveAllTabs, hasNonCompleted, getStatuses, getStatusCounts } from '@/co
 import { createSnapshotFromFullReport, loadSnapshot, isReportClosed, generatePdfFromSnapshot, type Snapshot } from '@/components/icp/tabs/snapshotReport';
 import SaveBar from './SaveBar';
 import { toast } from 'sonner';
+import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
 import {
   RefreshCw,
   CheckCircle,
@@ -489,16 +490,16 @@ export default function TOTVSCheckCard({
   
   const filteredEvidences = filterMode === 'triple' ? tripleMatches : evidences;
 
-  // 🔍 SPEC #005.D: Diagnóstico SaveBar (telemetria temporária)
-  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
+  // 🔍 SPEC #005.D.1: Diagnóstico SaveBar (telemetria centralizada)
+  if (isDiagEnabled()) {
     const statusesObj = getStatuses();
-    console.group("[DIAG][TOTVSCheckCard] SaveBar props");
-    console.log("props.readOnly:", readOnly);
-    console.log("props.isSaving:", isSaving);
-    console.log("props.snapshot:", snapshot ? `versão ${snapshot.version}` : 'null (editável)');
-    console.table(statusesObj);
-    console.log("registry size:", Object.keys(statusesObj).length);
-    console.groupEnd();
+    dgroup('TOTVSCheckCard', 'SaveBar props');
+    dlog('TOTVSCheckCard', 'props.readOnly:', readOnly);
+    dlog('TOTVSCheckCard', 'props.isSaving:', isSaving);
+    dlog('TOTVSCheckCard', 'props.snapshot:', snapshot ? `versão ${snapshot.version}` : 'null (editável)');
+    dtable(statusesObj);
+    dlog('TOTVSCheckCard', 'registry size:', Object.keys(statusesObj).length);
+    dgroupEnd();
   }
 
   return (

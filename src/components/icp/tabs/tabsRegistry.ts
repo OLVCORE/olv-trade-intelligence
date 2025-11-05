@@ -1,6 +1,8 @@
 // Registry de abas do relatório ICP para salvar em lote
 // Cada aba registra suas funções flushSave() e getStatus()
 
+import { isDiagEnabled, dlog, dwarn, dgroup, dgroupEnd } from '@/lib/diag';
+
 export type Status = 'draft' | 'processing' | 'completed' | 'error';
 
 export type TabAPI = {
@@ -18,9 +20,9 @@ export const registerTab = (tabKey: string, api: TabAPI) => {
   console.log(`[REGISTRY] 📝 Registrando aba '${tabKey}'`);
   registry.set(tabKey, api);
   
-  // 🔍 SPEC #005.D: Diagnóstico registry (telemetria temporária)
-  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
-    console.log(`[DIAG][tabsRegistry] registered: ${tabKey} | total: ${registry.size} | keys:`, [...registry.keys()]);
+  // 🔍 SPEC #005.D.1: Diagnóstico registry (helpers centralizados)
+  if (isDiagEnabled()) {
+    dlog('tabsRegistry', `registered: ${tabKey} | total: ${registry.size} | keys:`, [...registry.keys()]);
   }
 };
 
@@ -39,12 +41,12 @@ export const unregisterTab = (tabKey: string) => {
 export const saveAllTabs = async () => {
   console.log(`[REGISTRY] 💾 Salvando todas as abas (${registry.size} registradas)...`);
   
-  // 🔍 SPEC #005.D: Diagnóstico saveAll (telemetria temporária)
-  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
-    console.group("[DIAG][tabsRegistry] saveAllTabs");
-    console.log("registered tabs:", [...registry.keys()]);
-    console.log("statuses before save:", getStatuses());
-    console.groupEnd();
+  // 🔍 SPEC #005.D.1: Diagnóstico saveAll (helpers centralizados)
+  if (isDiagEnabled()) {
+    dgroup('tabsRegistry', 'saveAllTabs');
+    dlog('tabsRegistry', "registered tabs:", [...registry.keys()]);
+    dlog('tabsRegistry', "statuses before save:", getStatuses());
+    dgroupEnd();
   }
   
   const ops = [...registry.values()].map(api => api.flushSave());
@@ -55,15 +57,15 @@ export const saveAllTabs = async () => {
   
   console.log(`[REGISTRY] ✅ Salvo: ${successes} abas | ❌ Falhas: ${failures}`);
   
-  // 🔍 SPEC #005.D: Diagnóstico pós-save (telemetria temporária)
-  if (import.meta.env.VITE_DEBUG_SAVEBAR) {
-    console.group("[DIAG][tabsRegistry] saveAllTabs:results");
-    console.log("successes:", successes, "| failures:", failures);
-    console.log("statuses after save:", getStatuses());
+  // 🔍 SPEC #005.D.1: Diagnóstico pós-save (helpers centralizados)
+  if (isDiagEnabled()) {
+    dgroup('tabsRegistry', 'saveAllTabs:results');
+    dlog('tabsRegistry', "successes:", successes, "| failures:", failures);
+    dlog('tabsRegistry', "statuses after save:", getStatuses());
     if (failures > 0) {
-      console.warn("failed results:", results.filter(r => r.status === 'rejected'));
+      dwarn('tabsRegistry', "failed results:", results.filter(r => r.status === 'rejected'));
     }
-    console.groupEnd();
+    dgroupEnd();
   }
   
   return results;

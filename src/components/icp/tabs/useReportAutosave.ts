@@ -5,6 +5,7 @@
 import { useRef, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { isDiagEnabled, dlog, dwarn } from '@/lib/diag';
 
 export type TabKey =
   | 'keywords' | 'totvs' | 'competitors' | 'similar'
@@ -49,13 +50,9 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
   const qc = useQueryClient();
   const qk = ['stc_full_report', stcHistoryId];
 
-  // 🔍 SPEC #005.D: Diagnóstico autosave (telemetria temporária)
-  const debug = !!import.meta.env.VITE_DEBUG_SAVEBAR;
-  const log = (...args: any[]) => debug && console.log(`[DIAG][Autosave][${tabKey}]`, ...args);
-  const warn = (...args: any[]) => debug && console.warn(`[DIAG][Autosave][${tabKey}]`, ...args);
-
-  if (debug) {
-    log('init', { stcHistoryId, tabKey, cacheKey, hasInitialData: !!initialData });
+  // 🔍 SPEC #005.D.1: Diagnóstico autosave (helpers centralizados)
+  if (isDiagEnabled()) {
+    dlog(`Autosave/${tabKey}`, 'init', { stcHistoryId, tabKey, cacheKey, hasInitialData: !!initialData });
   }
 
   const { data: fullReport, isLoading } = useQuery({
@@ -67,16 +64,16 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
 
   const { mutateAsync: persist } = useMutation({
     mutationFn: (next: any) => {
-      if (debug) {
-        log('persist:start', { payloadSize: JSON.stringify(next)?.length, tabsCount: Object.keys(next).length });
+      if (isDiagEnabled()) {
+        dlog(`Autosave/${tabKey}`, 'persist:start', { payloadSize: JSON.stringify(next)?.length, tabsCount: Object.keys(next).length });
       }
       return updateFullReport(stcHistoryId, next);
     },
     onSuccess: (next) => {
       qc.setQueryData(qk, next);
       console.log(`[AUTOSAVE] ✅ Aba '${tabKey}' salva com sucesso`);
-      if (debug) {
-        log('persist:success', { 
+      if (isDiagEnabled()) {
+        dlog(`Autosave/${tabKey}`, 'persist:success', { 
           timestamp: new Date().toISOString(),
           payloadSize: JSON.stringify(next)?.length,
           tabsInReport: Object.keys(next).length
@@ -85,8 +82,8 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
     },
     onError: (error) => {
       console.error(`[AUTOSAVE] ❌ Erro ao salvar aba '${tabKey}':`, error);
-      if (debug) {
-        warn('persist:error', { error, message: (error as Error)?.message });
+      if (isDiagEnabled()) {
+        dwarn(`Autosave/${tabKey}`, 'persist:error', { error, message: (error as Error)?.message });
       }
     },
   });
@@ -117,8 +114,8 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
       };
       
       console.log(`[AUTOSAVE] ⏳ Agendando salvamento da aba '${tabKey}' em 1.2s...`);
-      if (debug) {
-        log('scheduleSave', { 
+      if (isDiagEnabled()) {
+        dlog(`Autosave/${tabKey}`, 'scheduleSave', { 
           status, 
           dataKeys: Object.keys(partialData || {}), 
           cacheKey,
@@ -143,8 +140,8 @@ export function useReportAutosave({ stcHistoryId, tabKey, cacheKey, initialData 
       };
       
       console.info('[AUTOSAVE] 🔄 flushSave()', { stcHistoryId, tabKey, status });
-      if (debug) {
-        log('flushSave:immediate', { 
+      if (isDiagEnabled()) {
+        dlog(`Autosave/${tabKey}`, 'flushSave:immediate', { 
           status, 
           dataKeys: Object.keys(partialData || {}),
           cacheKey,

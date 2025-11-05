@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send } from 'lucide-react';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
+import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
 
 type TabStatus = 'draft' | 'processing' | 'completed' | 'error';
 
@@ -29,26 +30,44 @@ export default function SaveBar({
 }: SaveBarProps) {
   console.info('[SaveBar] ✅ SaveBar montada — exibindo ações unificadas');
   
+  const diag = isDiagEnabled();
   const anyProcessing = Object.values(statuses).some(s => s === 'processing');
   const allCompleted = Object.values(statuses).every(s => s === 'completed');
   const anyDraft = Object.values(statuses).some(s => s === 'draft');
   const anyError = Object.values(statuses).some(s => s === 'error');
 
-  // 🔍 SPEC #005.D: Diagnóstico ciclo de vida (telemetria temporária)
+  // 🔍 SPEC #005.D.2: Padding-top no body durante diagnóstico (evita cobrir conteúdo)
   useEffect(() => {
-    if (!import.meta.env.VITE_DEBUG_SAVEBAR) return;
+    if (!diag) return;
+    const prev = document.body.style.paddingTop;
+    document.body.style.paddingTop = '80px'; // altura da SaveBar + margem
+    dlog('SaveBar', '📐 Body padding-top aplicado: 80px');
+    return () => { 
+      document.body.style.paddingTop = prev;
+      dlog('SaveBar', '📐 Body padding-top restaurado:', prev);
+    };
+  }, [diag]);
+
+  // 🔍 SPEC #005.D.1: Diagnóstico ciclo de vida (telemetria centralizada)
+  useEffect(() => {
+    if (!diag) return;
     
     const entries = Object.entries(statuses || {});
-    console.group("[DIAG][SaveBar] mount/update");
-    console.log("readOnly:", readOnly, "| isSaving:", isSaving);
-    console.table(entries.map(([tab, st]) => ({ tab, status: st })));
-    console.log("Agregados → anyProcessing:", anyProcessing, "| allCompleted:", allCompleted, "| anyDraft:", anyDraft, "| anyError:", anyError);
-    console.log("DOM element:", document.querySelector('.sticky.top-0.z-40') ? '✅ Found' : '❌ Not found');
-    console.groupEnd();
-  }, [statuses, readOnly, isSaving, anyProcessing, allCompleted, anyDraft, anyError]);
+    dgroup('SaveBar', 'mount/update');
+    dlog('SaveBar', 'readOnly:', readOnly, '| isSaving:', isSaving);
+    dtable(entries.map(([tab, st]) => ({ tab, status: st })));
+    dlog('SaveBar', 'Agregados → anyProcessing:', anyProcessing, '| allCompleted:', allCompleted, '| anyDraft:', anyDraft, '| anyError:', anyError);
+    dlog('SaveBar', 'DOM element:', document.querySelector('.sticky.top-0.z-40, .fixed.top-0.z-\\[9999\\]') ? '✅ Found' : '❌ Not found');
+    dgroupEnd();
+  }, [statuses, readOnly, isSaving, anyProcessing, allCompleted, anyDraft, anyError, diag]);
+
+  // 🔍 SPEC #005.D.2: Fixed position durante diagnóstico (maior z-index para debug)
+  const wrapperClass = diag
+    ? "fixed inset-x-0 top-0 z-[9999] border-b-2 border-yellow-500/70 bg-gradient-to-r from-slate-900 to-slate-800 backdrop-blur-md shadow-2xl"
+    : "sticky top-0 z-40 border-b-2 border-slate-700/70 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-md shadow-lg";
 
   return (
-    <div className="sticky top-0 z-40 border-b-2 border-slate-700/70 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-md shadow-lg">
+    <div className={wrapperClass}>
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-6 py-3">
         {/* 📊 Semáforos por aba */}
         <div className="flex flex-wrap items-center gap-3">
