@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { Loader2, Building2, MapPin, Users, TrendingUp, AlertTriangle, Plus, Sparkles, Eye, RefreshCw, Globe, ExternalLink, Filter, X, Award, Flame, Star, AlertCircle, BarChart3, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimilarCompaniesTabProps {
@@ -17,6 +19,7 @@ interface SimilarCompaniesTabProps {
   state?: string;
   size?: string;
   savedData?: any[];
+  onDataChange?: (data: any) => void;
 }
 
 interface WebDiscoveredCompany {
@@ -253,10 +256,23 @@ export function SimilarCompaniesTab({
   sector, 
   state, 
   size,
-  savedData
+  savedData,
+  onDataChange
 }: SimilarCompaniesTabProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    setActiveScoreFilter(null);
+    sonnerToast.info('Retornando ao início');
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(data?.similar_companies);
+    sonnerToast.success('✅ Empresas Similares Salvas!');
+  };
   
   // ===== TODOS OS HOOKS NO TOPO (NUNCA CONDICIONAIS) =====
   const [isAddingCompany, setIsAddingCompany] = useState<string | null>(null);
@@ -1725,6 +1741,18 @@ export function SimilarCompaniesTab({
 
   return (
     <div className="space-y-6">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {data?.similar_companies && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!data?.similar_companies?.length}
+          hasUnsavedChanges={false}
+        />
+      )}
+      
       {/* Header com Estatísticas */}
       <Card className="border-muted/50 bg-card/50 backdrop-blur-sm relative z-0">
         <CardHeader>

@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { Loader2, Target, TrendingUp, Lightbulb, Package, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 
 interface Analysis360TabProps {
   companyId: string;
@@ -15,6 +17,8 @@ interface Analysis360TabProps {
     score?: number;
   };
   similarCompanies?: any;
+  savedData?: any;
+  onDataChange?: (data: any) => void;
 }
 
 interface ScoreBreakdownItem {
@@ -50,8 +54,21 @@ export function Analysis360Tab({
   companyId, 
   companyName,
   stcResult,
-  similarCompanies
+  similarCompanies,
+  savedData,
+  onDataChange
 }: Analysis360TabProps) {
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    sonnerToast.info('Retornando ao início');
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(data);
+    sonnerToast.success('✅ Análise 360° Salva!');
+  };
   
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['360-analysis', companyId],
@@ -356,6 +373,17 @@ export function Analysis360Tab({
 
   return (
     <div className="space-y-6">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {data && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!data}
+          hasUnsavedChanges={false}
+        />
+      )}
       {/* Score Principal */}
       <Card className={`relative overflow-hidden border-2 ${getScoreBorder(opportunity_score)} bg-gradient-to-br ${getScoreGradient(opportunity_score)} backdrop-blur-sm`}>
         <CardHeader className="pb-3">
