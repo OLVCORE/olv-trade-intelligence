@@ -71,33 +71,54 @@ export async function searchOfficialWebsite(
       const title = result.title || '';
       const snippet = result.snippet || '';
       
+      // 🚫 REJEITAR REDES SOCIAIS (não são websites oficiais!)
+      const isSocialMedia = 
+        url.includes('facebook.com') ||
+        url.includes('instagram.com') ||
+        url.includes('linkedin.com/company') ||
+        url.includes('linkedin.com/in') ||
+        url.includes('twitter.com') ||
+        url.includes('youtube.com');
+      
       // Detectar se é backlink
       const isBacklink = BACKLINK_DOMAINS.some(backlink => 
         url.toLowerCase().includes(backlink)
       );
       
       // Calcular confiança (0-100)
-      let confidence = 100 - (index * 10); // Posição no ranking
+      let confidence = 100 - (index * 5); // Posição no ranking (menos penalidade)
+      
+      // 🚫 PENALIZAR PESADO redes sociais (não queremos como #1!)
+      if (isSocialMedia) {
+        confidence = confidence * 0.2; // 80% de penalidade!
+      }
       
       if (isBacklink) {
         confidence = confidence * 0.3; // Penalizar backlinks
       }
       
-      // Bonificar se tem nome da empresa no title
-      if (title.toLowerCase().includes(razaoSocial.toLowerCase().split(' ')[0])) {
-        confidence = Math.min(100, confidence + 20);
+      // ✅ BONIFICAR websites corporativos próprios
+      if (url.includes('.com.br') || url.includes('.ind.br') || url.includes('.net.br')) {
+        confidence = Math.min(100, confidence + 40); // +40 pontos!
       }
       
-      // Bonificar se tem .com.br ou .ind.br
-      if (url.includes('.com.br') || url.includes('.ind.br')) {
-        confidence = Math.min(100, confidence + 15);
+      // ✅ BONIFICAR se tem nome da empresa no domain (não só no title)
+      const domain = url.replace(/^https?:\/\//, '').split('/')[0];
+      const primeirapalavra = razaoSocial.toLowerCase().split(' ')[0];
+      if (domain.toLowerCase().includes(primeirapalavra)) {
+        confidence = Math.min(100, confidence + 30); // +30 pontos!
+      }
+      
+      // Bonificar se tem nome da empresa no title
+      if (title.toLowerCase().includes(primeirapalavra)) {
+        confidence = Math.min(100, confidence + 10);
       }
 
       return {
         url,
         title,
         snippet,
-        isBacklink,
+        isBacklink: isBacklink || isSocialMedia,
         confidence: Math.round(confidence),
       };
     });
