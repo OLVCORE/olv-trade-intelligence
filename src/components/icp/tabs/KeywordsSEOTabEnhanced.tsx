@@ -8,6 +8,7 @@ import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { useReportAutosave } from './useReportAutosave';
 import { TabStatusBadge } from './TabIndicator';
 import { registerTab, unregisterTab } from './tabsRegistry';
+import { deterministicDiscovery, buildDiscoveryCacheKey, type DiscoveryInputs, type DiscoveryResult } from './discovery/deterministicDiscovery';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { performFullSEOAnalysis } from '@/services/seoAnalysis';
@@ -264,6 +265,29 @@ export function KeywordsSEOTabEnhanced({
     seoMutation.mutate();
   };
 
+  // 🔥 ANTI-REPROCESSO: Wrapper para smartDiscoveryMutation
+  const handleSmartDiscovery = () => {
+    // Construir cache_key determinística
+    const discoveryCacheKey = buildDiscoveryCacheKey({
+      cnpj: cnpj,
+      razaoSocial: companyName,
+      country: 'BR',
+      state: '',
+    });
+
+    // Verificar se já foi processado com mesma cache_key
+    if (shouldSkipExpensiveProcessing && discoveredDomain && autosaveStatus === 'completed') {
+      toast({
+        title: '💾 Descoberta já realizada',
+        description: 'O website já foi descoberto para esta empresa. Use "Reprocessar" se desejar atualizar.',
+        duration: 5000
+      });
+      return;
+    }
+
+    smartDiscoveryMutation.mutate();
+  };
+
   // 🏢 BUSCA EMPRESAS SIMILARES - TOP 10 (CNAE + NCM + Keywords)
   const similarCompaniesMutation = useMutation({
     mutationFn: async () => {
@@ -354,60 +378,137 @@ export function KeywordsSEOTabEnhanced({
     },
   });
 
-  // 🔥 BUSCA INTELIGENTE ÚNICA - TUDO EM PARALELO
+  // 🔥 DISCOVERY DETERMINÍSTICO - Razão Social + CNPJ + Redes Sociais
   const smartDiscoveryMutation = useMutation({
     mutationFn: async () => {
       if (!companyName) throw new Error('Nome necessário');
+      if (!cnpj) throw new Error('CNPJ necessário');
       
-      // 🚀 PARALELO 1: Busca Google (TOP 20)
-      const googleResults = await searchOfficialWebsite(companyName);
+      // 🎯 DISCOVERY DETERMINÍSTICO (SPEC #004)
+      const discoveryInputs: DiscoveryInputs = {
+        cnpj: cnpj,
+        razaoSocial: companyName,
+        country: 'BR',
+        state: '', // TODO: passar UF se disponível
+      };
       
-      // 🚀 PARALELO 2: Discovery 8 Ferramentas
+      console.log('[KEYWORDS] 🎯 Executando discovery determinístico...', discoveryInputs);
+      
+      const discoveryResult = await deterministicDiscovery(discoveryInputs);
+      
+      // 🚀 PARALELO: Discovery 8 Ferramentas (mantém para complementar)
       const digitalPresencePromise = discoverFullDigitalPresence(companyName, cnpj);
-      
       const [presenca] = await Promise.all([digitalPresencePromise]);
       
-      return { googleResults, presenca };
+      return { discoveryResult, presenca };
     },
     onMutate: () => {
       setSimilarCompaniesOptions([]);
       setAllWebsiteResults([]);
       onLoading?.(true);
-      toast({
-        title: '🔍 Descoberta Inteligente em andamento...',
-        description: 'Buscando Google + 8 Ferramentas em paralelo',
-      });
-    },
-    onSuccess: ({ googleResults, presenca }) => {
-      console.log('[SMART] ✅ Google:', googleResults.length, '| Presença:', presenca.confidence);
       
-      // 🔥 AUTO-SELECIONAR #1 do Google (mais assertivo)
-      if (googleResults.length > 0) {
-        const top1 = googleResults[0];
-        const cleanDomain = top1.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-        setDiscoveredDomain(cleanDomain);
-        setDigitalPresence({
-          ...presenca,
-          website: top1.url,
-        });
-        
-        toast({
-          title: '✅ Website #1 selecionado automaticamente!',
-          description: `${top1.title} | ${top1.confidence}% confiança`,
-          duration: 5000,
-        });
+      // 🔥 AUTOSAVE: Marcar como processing
+      if (stcHistoryId) {
+        flushSave({
+          seoData,
+          digitalPresence,
+          discoveredDomain,
+          intelligenceReport,
+          allWebsiteResults,
+          similarCompaniesOptions,
+        }, 'processing');
       }
       
-      // Mostrar TOP 20 como alternativas
-      setAllWebsiteResults(googleResults.slice(0, 20));
+      toast({
+        title: '🔍 Descoberta Determinística em andamento...',
+        description: 'Razão Social + CNPJ + Redes Sociais...',
+      });
+    },
+    onSuccess: async ({ discoveryResult, presenca }) => {
+      console.log('[DISCOVERY] ✅ Resultado:', {
+        domain: discoveryResult.discoveredDomain,
+        confidence: discoveryResult.confidence,
+        socials: Object.keys(discoveryResult.socialProfiles).length,
+      });
+      
+      // 🔥 AUTO-SELECIONAR domínio descoberto
+      if (discoveryResult.discoveredDomain) {
+        setDiscoveredDomain(discoveryResult.discoveredDomain);
+        
+        // Mesclar redes sociais do discovery com presença digital
+        const mergedPresence = {
+          ...presenca,
+          website: discoveryResult.domainUrl,
+          linkedin: discoveryResult.socialProfiles.linkedin?.[0] || presenca.linkedin,
+          instagram: discoveryResult.socialProfiles.instagram?.[0] || presenca.instagram,
+          facebook: discoveryResult.socialProfiles.facebook?.[0] || presenca.facebook,
+          twitter: discoveryResult.socialProfiles.twitter?.[0] || presenca.twitter,
+          youtube: discoveryResult.socialProfiles.youtube?.[0] || presenca.youtube,
+        };
+        
+        setDigitalPresence(mergedPresence);
+        
+        // Converter sources para allWebsiteResults
+        const websiteResults = discoveryResult.sources.map((source, idx) => ({
+          url: source.url,
+          title: source.title,
+          snippet: '',
+          confidence: idx === 0 ? discoveryResult.confidence : Math.max(0, discoveryResult.confidence - (idx * 10)),
+          isBacklink: false,
+        }));
+        
+        setAllWebsiteResults(websiteResults);
+        
+        const savedPayload = {
+          seoData,
+          digitalPresence: mergedPresence,
+          discoveredDomain: discoveryResult.discoveredDomain,
+          intelligenceReport,
+          allWebsiteResults: websiteResults,
+          similarCompaniesOptions,
+          discoveryResult, // Salvar resultado bruto do discovery
+        };
+        
+        onDataChange?.(savedPayload);
+        
+        // 🔥 AUTOSAVE: Flush save imediato
+        if (stcHistoryId) {
+          await flushSave(savedPayload, 'completed');
+        }
+        
+        toast({
+          title: '✅ Website descoberto!',
+          description: `${discoveryResult.discoveredDomain} | ${discoveryResult.confidence}% confiança | ${Object.keys(discoveryResult.socialProfiles).length} rede(s) social(is)`,
+          duration: 5000,
+        });
+      } else {
+        toast({
+          title: '⚠️ Nenhum website encontrado',
+          description: 'Verifique os dados da empresa e tente novamente.',
+          variant: 'destructive',
+        });
+      }
       
       onLoading?.(false);
     },
     onError: (error) => {
       onError?.((error as Error).message);
       onLoading?.(false);
+      
+      // 🔥 AUTOSAVE: Marcar como error
+      if (stcHistoryId) {
+        flushSave({
+          seoData,
+          digitalPresence,
+          discoveredDomain,
+          intelligenceReport,
+          allWebsiteResults,
+          similarCompaniesOptions,
+        }, 'error');
+      }
+      
       toast({
-        title: '❌ Erro na descoberta inteligente',
+        title: '❌ Erro na descoberta determinística',
         description: (error as Error).message,
         variant: 'destructive',
       });
@@ -691,10 +792,10 @@ export function KeywordsSEOTabEnhanced({
 
           {/* Botões de ação */}
           <div className="flex flex-col gap-2">
-            {/* 🔥 BOTÃO ÚNICO INTELIGENTE - GOOGLE #1 + 8 FERRAMENTAS + TOP 20 */}
+            {/* 🔥 BOTÃO DISCOVERY DETERMINÍSTICO - Razão Social + CNPJ + Redes Sociais */}
             {!domain && !discoveredDomain && (
               <Button
-                onClick={() => smartDiscoveryMutation.mutate()}
+                onClick={handleSmartDiscovery}
                 disabled={smartDiscoveryMutation.isPending}
                 size="lg"
                 className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-800 gap-2 font-bold shadow-lg animate-pulse hover:animate-none"
