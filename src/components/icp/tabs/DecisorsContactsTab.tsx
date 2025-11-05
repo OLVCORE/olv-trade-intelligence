@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { performFullLinkedInAnalysis } from '@/services/phantomBusterEnhanced';
 import type { LinkedInProfileData } from '@/services/phantomBusterEnhanced';
 
@@ -15,6 +17,7 @@ interface DecisorsContactsTabProps {
   linkedinUrl?: string;
   domain?: string;
   savedData?: any;
+  onDataChange?: (data: any) => void;
 }
 
 export function DecisorsContactsTab({ 
@@ -22,10 +25,22 @@ export function DecisorsContactsTab({
   companyName, 
   linkedinUrl, 
   domain,
-  savedData 
+  savedData,
+  onDataChange 
 }: DecisorsContactsTabProps) {
   const { toast } = useToast();
   const [analysisData, setAnalysisData] = useState<any>(savedData || null);
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    setAnalysisData(null);
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(analysisData);
+    sonnerToast.success('✅ Decisores & Contatos Salvos!');
+  };
 
   // 🔥 Análise LinkedIn completa
   const linkedinMutation = useMutation({
@@ -71,6 +86,18 @@ export function DecisorsContactsTab({
 
   return (
     <div className="space-y-4">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {analysisData && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!analysisData}
+          hasUnsavedChanges={!!analysisData}
+        />
+      )}
+      
       {/* Header */}
       <Card className="p-6 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="flex items-center justify-between">

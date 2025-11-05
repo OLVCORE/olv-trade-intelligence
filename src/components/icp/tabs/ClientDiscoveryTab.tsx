@@ -1,11 +1,13 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { Users, Building2, MapPin, TrendingUp, ExternalLink, Search, Loader2 } from 'lucide-react';
 import { useCompanySimilar } from '@/hooks/useCompanySimilar';
 import { useClientDiscoveryWave7 } from '@/hooks/useClientDiscoveryWave7';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { toast as sonnerToast } from 'sonner';
 
 interface ClientDiscoveryTabProps {
   companyId?: string;
@@ -13,9 +15,10 @@ interface ClientDiscoveryTabProps {
   cnpj?: string;
   domain?: string;
   savedData?: any[];
+  onDataChange?: (data: any) => void;
 }
 
-export function ClientDiscoveryTab({ companyId, companyName, cnpj, domain, savedData }: ClientDiscoveryTabProps) {
+export function ClientDiscoveryTab({ companyId, companyName, cnpj, domain, savedData, onDataChange }: ClientDiscoveryTabProps) {
   const { toast } = useToast();
   const { data: similarCompanies, isLoading, refetch } = useCompanySimilar(companyId);
   const { mutate: executeWave7, isPending: isExecutingWave7 } = useClientDiscoveryWave7();
@@ -25,6 +28,17 @@ export function ClientDiscoveryTab({ companyId, companyName, cnpj, domain, saved
   // Usar dados salvos se disponíveis
   const loadedFromHistory = !!savedData;
   const directClients = savedData || similarCompanies || [];
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    setWave7Results(null);
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.({ directClients, wave7Results });
+    sonnerToast.success('✅ Client Discovery Salvo!');
+  };
 
   // Função para executar Wave7
   const handleExecuteWave7 = () => {
@@ -100,6 +114,17 @@ export function ClientDiscoveryTab({ companyId, companyName, cnpj, domain, saved
 
   return (
     <div className="space-y-4">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {directClients.length > 0 && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={directClients.length === 0}
+          hasUnsavedChanges={!!wave7Results}
+        />
+      )}
       {/* Header com estratégia de expansão */}
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="flex items-center gap-4">

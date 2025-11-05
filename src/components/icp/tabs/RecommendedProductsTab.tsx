@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingNavigation } from '@/components/common/FloatingNavigation';
+import { toast } from 'sonner';
 import { Package, Sparkles, TrendingUp, CheckCircle, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { useProductGaps } from '@/hooks/useProductGaps';
 
@@ -14,6 +16,8 @@ interface RecommendedProductsTabProps {
   employees?: number;
   stcResult?: any;
   similarCompanies?: any[];
+  savedData?: any;
+  onDataChange?: (data: any) => void;
 }
 
 export function RecommendedProductsTab({ 
@@ -25,8 +29,22 @@ export function RecommendedProductsTab({
   size,
   employees,
   stcResult,
-  similarCompanies
+  similarCompanies,
+  savedData,
+  onDataChange
 }: RecommendedProductsTabProps) {
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    // Products é query-based, reset não faz sentido
+    toast.info('Retornando ao início');
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(productGapsData);
+    toast.success('✅ Produtos Recomendados Salvos!');
+  };
   
   // Buscar produtos recomendados REAIS via Edge Function
   const { data: productGapsData, isLoading, error } = useProductGaps({
@@ -85,7 +103,19 @@ export function RecommendedProductsTab({
   } = productGapsData || {};
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* 🎯 NAVEGAÇÃO FLUTUANTE */}
+      {productGapsData && (
+        <FloatingNavigation
+          onBack={handleReset}
+          onHome={handleReset}
+          onSave={handleSave}
+          showSaveButton={true}
+          saveDisabled={!productGapsData}
+          hasUnsavedChanges={false}
+        />
+      )}
+      
       {/* Header */}
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
         <div className="flex items-center gap-4">
