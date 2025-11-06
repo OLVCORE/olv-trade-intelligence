@@ -459,8 +459,13 @@ export function KeywordsSEOTabEnhanced({
         socials: Object.keys(discoveryResult.socialProfiles).length,
       });
       
+      // Checar se encontrou ALGO útil (domínio OU redes sociais OU presença digital)
+      const hasSocialProfiles = Object.values(discoveryResult.socialProfiles).some(arr => arr && arr.length > 0);
+      const hasPresenca = presenca && (presenca.website || presenca.linkedin || presenca.instagram || presenca.facebook);
+      const foundSomething = discoveryResult.discoveredDomain || hasSocialProfiles || hasPresenca;
+      
       // 🔥 AUTO-SELECIONAR domínio descoberto
-      if (discoveryResult.discoveredDomain) {
+      if (foundSomething) {
         setDiscoveredDomain(discoveryResult.discoveredDomain);
         
         // Mesclar redes sociais do discovery com presença digital
@@ -506,9 +511,18 @@ export function KeywordsSEOTabEnhanced({
         
         console.info('[KEYWORDS] ✅ Discovery concluído e salvo');
         
+        // Toast adaptativo baseado no que foi encontrado
+        const socialsCount = Object.values(discoveryResult.socialProfiles).filter(arr => arr && arr.length > 0).length;
+        const toastTitle = discoveryResult.discoveredDomain 
+          ? '✅ Website descoberto!' 
+          : '✅ Presença digital encontrada!';
+        const toastDesc = discoveryResult.discoveredDomain
+          ? `${discoveryResult.discoveredDomain} | ${discoveryResult.confidence}% confiança | ${socialsCount} rede(s) social(is)`
+          : `${socialsCount} rede(s) social(is) encontrada(s) | ${presenca.website ? 'Website: ' + presenca.website : 'Sem website próprio'}`;
+        
         toast({
-          title: '✅ Website descoberto!',
-          description: `${discoveryResult.discoveredDomain} | ${discoveryResult.confidence}% confiança | ${Object.keys(discoveryResult.socialProfiles).length} rede(s) social(is)`,
+          title: toastTitle,
+          description: toastDesc,
           duration: 5000,
         });
       } else {
