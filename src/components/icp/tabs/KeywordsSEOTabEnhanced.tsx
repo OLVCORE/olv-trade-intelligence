@@ -1131,57 +1131,7 @@ export function KeywordsSEOTabEnhanced({
           </div>
         )}
 
-        {/* 🏢 DROPDOWN EMPRESAS SIMILARES - TOP 10 */}
-        {similarCompaniesOptions.length > 0 && (
-          <div className="mt-4 p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-3 border-purple-500 dark:border-purple-600 rounded-xl shadow-lg">
-            <p className="text-lg font-black text-purple-900 dark:text-purple-100 mb-4 flex items-center gap-2">
-              <Target className="w-6 h-6" />
-              🏢 Empresas Similares ({similarCompaniesOptions.length} encontradas)
-            </p>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {similarCompaniesOptions.map((company, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 bg-white dark:bg-slate-900 rounded-lg border-2 border-purple-300 dark:border-purple-700 hover:border-purple-500 hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-black text-base text-purple-700 dark:text-purple-400">#{idx + 1}</span>
-                      </div>
-                      <p className="font-bold text-base text-slate-900 dark:text-white mb-1">{company.title}</p>
-                      <p className="text-sm text-purple-600 dark:text-purple-400 mb-2 break-all">{company.url}</p>
-                      <p className="text-sm text-slate-700 dark:text-slate-300">{company.snippet}</p>
-                      
-                      <div className="mt-3 flex gap-2">
-                        <Button
-                          onClick={() => {
-                            // TODO: Adicionar à quarentena
-                            toast({
-                              title: '📋 Empresa adicionada!',
-                              description: `${company.title} será enriquecida na quarentena`,
-                            });
-                          }}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          ➕ Adicionar à Quarentena
-                        </Button>
-                        <Button
-                          onClick={() => window.open(company.url, '_blank')}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <ExternalLink className="w-4 h-4 mr-2" /> Visitar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* 🏢 Empresas Similares movidas para aba Competitors */}
         
         {/* 🚨 CARD EXPLICATIVO - SUPER DISCOVERY */}
         {!domain && !discoveredDomain && !discoveryMutation.isPending && websiteOptions.length === 0 && (

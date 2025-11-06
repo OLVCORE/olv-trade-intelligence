@@ -115,6 +115,9 @@ export default function TOTVSCheckCard({
   // Track de dados por aba (para salvar)
   const tabDataRef = useRef<Record<string, any>>({});
   
+  // Compartilhar dados entre abas (Keywords → Competitors)
+  const [sharedSimilarCompanies, setSharedSimilarCompanies] = useState<any[]>([]);
+  
   // 🛡️ HF-STACK-1.B: Bloqueio de navegação com alterações não salvas
   const hasDirty = Object.values(unsavedChanges).some(v => v === true);
   useBeforeUnload(
@@ -1064,6 +1067,7 @@ export default function TOTVSCheckCard({
             companyName={companyName}
             cnpj={cnpj}
             domain={domain}
+            similarCompanies={sharedSimilarCompanies}
           />
         </TabsContent>
 
@@ -1133,6 +1137,10 @@ export default function TOTVSCheckCard({
                 tabDataRef.current.keywords = data;
                 setUnsavedChanges(prev => ({ ...prev, keywords: true }));
                 setTabsStatus(prev => ({ ...prev, keywords: 'success' }));
+                // Compartilhar empresas similares com aba Competitors
+                if (data.similarCompaniesOptions) {
+                  setSharedSimilarCompanies(data.similarCompaniesOptions);
+                }
               }}
               onLoading={(loading) => {
                 if (loading) {
