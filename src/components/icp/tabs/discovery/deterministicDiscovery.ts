@@ -203,6 +203,9 @@ const BLOCKLIST_HOSTS = [
   'cnpjtotal.com.br',
   'empresascnpj.com',
   'cnpj.rocks',
+  'cnpjeempresas.com.br',
+  'pesquisaempresas.com.br',
+  'enderecofiscal.com.br',
   // Agregadores e diretórios
   'serasa.com.br',
   'guiadeempresas',
@@ -212,10 +215,17 @@ const BLOCKLIST_HOSTS = [
   'guiadeindustrias.com.br',
   'guiaempresas.com.br',
   'getin.com.br',
+  'salario.com.br',
+  // Jurídico e documentos
+  'jusbrasil.com.br',
+  'escavador.com',
+  'diariooficial',
+  '.gov.br',
   // News
   'economia.uol.com.br',
   'biz.yahoo.com',
   'dun-bradstreet',
+  'bloomberg.com',
 ];
 
 function isDirectoryHost(url: string): boolean {
@@ -230,26 +240,30 @@ function isDirectoryHost(url: string): boolean {
 function buildQueries(input: DiscoveryInputs) {
   const raz = (input.razaoSocial || '').trim();
   
-  // 🔧 HOTFIX: Queries balanceadas (encontrar resultados SEM poluir com diretórios)
+  // 🔥 EXTRAIR APENAS NOME PRINCIPAL (remover S.A., Ltda, Indústria, etc)
+  const mainName = raz
+    .replace(/\s+(S\.?A\.?|Ltda\.?|LTDA|ME|EPP|EIRELI)(\s|$)/gi, '')
+    .replace(/\s+(Indústria|Comércio|Serviços|Transportes|Logística)(\s|de\s|e\s)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')[0]; // Pega só primeira palavra principal
   
-  // Query 1: Simples e direta (empresa + Brasil)
-  const q1 = `"${raz}"`;
+  console.log(`[QUERY] 🎯 Nome simplificado: "${mainName}" (original: "${raz}")`);
   
-  // Query 2: Foco .com.br (Brasil)
-  const q2 = `"${raz}" site:*.com.br`;
+  // Blocklist explícito para queries
+  const blocklist = '-jusbrasil -escavador -econodata -serasa -cnpj.biz -telelistas -guiadeempresas -salario.com.br';
   
-  // Query 3: Redes sociais (para confirmação e perfis)
-  const q3 = `"${raz}" (${[
-    'site:linkedin.com',
-    'site:instagram.com',
-    'site:facebook.com',
-    'site:x.com',
-    'site:twitter.com',
-    'site:youtube.com',
-  ].join(' OR ')})`;
+  // Query 1: Nome principal + site oficial + blocklist
+  const q1 = `"${mainName}" "site oficial" ${blocklist}`;
   
-  // Query 4: Site oficial explícito (pode ter menos resultados mas mais precisos)
-  const q4 = `"${raz}" "site oficial" OR "website oficial"`;
+  // Query 2: Nome principal + .com.br + blocklist
+  const q2 = `"${mainName}" site:*.com.br ${blocklist}`;
+  
+  // Query 3: Redes sociais (APENAS para o nome principal)
+  const q3 = `"${mainName}" (site:linkedin.com OR site:instagram.com OR site:facebook.com)`;
+  
+  // Query 4: Nome completo como fallback (mas com blocklist)
+  const q4 = `"${raz}" ${blocklist}`;
   
   return [q1, q2, q3, q4];
 }
