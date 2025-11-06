@@ -17,6 +17,7 @@ import {
 import { useSimpleTOTVSCheck } from '@/hooks/useSimpleTOTVSCheck';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useEnsureSTCHistory } from '@/hooks/useEnsureSTCHistory';
 import { SimilarCompaniesTab } from '@/components/intelligence/SimilarCompaniesTab';
 import { Analysis360Tab } from '@/components/intelligence/Analysis360Tab';
 import { ExecutiveSummaryTab } from '@/components/icp/tabs/ExecutiveSummaryTab';
@@ -78,6 +79,14 @@ export default function TOTVSCheckCard({
   latestReport,
 }: TOTVSCheckCardProps) {
   console.info('[TOTS] ✅ TOTVSCheckCard montado — SaveBar deveria aparecer aqui');
+  
+  // 🔥 GARANTIR que existe um stcHistoryId ANTES de processar
+  const { stcHistoryId, isCreating: isCreatingHistory } = useEnsureSTCHistory({
+    companyId,
+    companyName: companyName || 'Empresa Sem Nome',
+    cnpj,
+    existingId: latestReport?.id,
+  });
   
   const [enabled, setEnabled] = useState(autoVerify);
   const [filterMode, setFilterMode] = useState<'all' | 'triple'>('all');
@@ -1118,7 +1127,7 @@ export default function TOTVSCheckCard({
               companyName={companyName}
               domain={domain}
               cnpj={cnpj}
-              stcHistoryId={latestReport?.id}
+              stcHistoryId={stcHistoryId || undefined}
               savedData={latestReport?.full_report?.keywords_seo_report}
               onDataChange={(data) => {
                 tabDataRef.current.keywords = data;
