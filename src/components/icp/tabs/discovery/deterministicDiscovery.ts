@@ -272,8 +272,8 @@ function buildQueries(input: DiscoveryInputs) {
   // Query 2: Nome principal com TLD brasileiro
   const q2 = `"${mainName}" site:*.com.br ${blocklist}`;
   
-  // Query 3: Todas as redes sociais
-  const q3 = `"${mainName}" (site:linkedin.com OR site:instagram.com OR site:facebook.com OR site:x.com OR site:twitter.com OR site:youtube.com OR site:tiktok.com)`;
+  // Query 3: Redes sociais (validação)
+  const q3 = `"${mainName}" (site:linkedin.com OR site:instagram.com OR site:facebook.com)`;
   
   return [q1, q2, q3];
 }
