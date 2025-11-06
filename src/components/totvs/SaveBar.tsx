@@ -121,30 +121,31 @@ export default function SaveBar({
             </div>
           )}
 
-          {/* 💾 Botão Salvar Relatório (PRIMARY) */}
-          <Button
-            onClick={onSaveAll}
-            disabled={readOnly || isSaving || allCompleted}
-            size="sm"
-            className={`gap-2 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-              SAFE_MODE 
-                ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800' 
-                : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800'
-            }`}
-          >
-            {isSaving || anyProcessing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {SAFE_MODE ? 'Simulando...' : 'Salvando...'}
-              </>
-            ) : (
-              <>
-                {SAFE_MODE && <Shield className="w-4 h-4" />}
-                <Save className="w-4 h-4" />
-                {SAFE_MODE ? 'Salvar (Dry-Run)' : 'Salvar Relatório'}
-              </>
-            )}
-          </Button>
+          {/* 💾 Salvar (ÚNICO botão de salvamento) */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={onSaveAll}
+                  disabled={readOnly || isSaving || allCompleted}
+                  size="sm"
+                  variant={allCompleted ? "outline" : "default"}
+                  className={`gap-2 ${allCompleted ? '' : 'bg-green-600 hover:bg-green-700'}`}
+                >
+                  {isSaving || anyProcessing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs font-semibold">
+                  {allCompleted ? '✅ Relatório salvo' : '💾 Salvar todas as abas'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {/* 🛡️ SPEC #SAFE-00: Aviso de Safe Mode */}
           {SAFE_MODE && (

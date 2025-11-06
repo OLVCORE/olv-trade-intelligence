@@ -802,21 +802,6 @@ export function KeywordsSEOTabEnhanced({
           )}
           
           {/* 📝 BOTÃO EDITAR WEBSITE - FICA NA BARRA EXTRA */}
-          {(discoveredDomain || domain) && !isEditingWebsite && (
-            <div className="flex justify-end -mt-2">
-              <Button
-                onClick={() => {
-                  setIsEditingWebsite(true);
-                  setEditedWebsite(discoveredDomain || domain || '');
-                }}
-                variant="outline"
-                size="sm"
-                className="gap-2 hover:bg-yellow-100 dark:hover:bg-yellow-900"
-              >
-                <Edit className="w-4 h-4" /> Editar Website
-              </Button>
-            </div>
-          )}
         </>
       )}
       
@@ -1049,13 +1034,29 @@ export function KeywordsSEOTabEnhanced({
         {/* 📋 WEBSITE ATUAL EM USO */}
         {(discoveredDomain || domain) && !isEditingWebsite && (
           <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-600 rounded-lg">
-            <p className="text-sm font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              🌐 Website em uso para análises:
-            </p>
-            <p className="text-base font-black text-blue-700 dark:text-blue-300 mt-1">
-              {discoveredDomain || domain}
-            </p>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  🌐 Website em uso para análises:
+                </p>
+                <p className="text-base font-black text-blue-700 dark:text-blue-300 mt-1">
+                  {discoveredDomain || domain}
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setIsEditingWebsite(true);
+                  setEditedWebsite(discoveredDomain || domain || '');
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Editar
+              </Button>
+            </div>
           </div>
         )}
 
@@ -2100,15 +2101,13 @@ export function KeywordsSEOTabEnhanced({
                 description: 'Análise Keywords & SEO salva no relatório',
               });
             }}
-            size="lg"
-            className="w-full bg-white hover:bg-green-50 text-green-900 font-black text-lg h-14 shadow-xl border-2 border-green-300"
+            size="sm"
+            variant="outline"
+            className="gap-2"
           >
-            <Save className="w-6 h-6 mr-3" />
-            💾 SALVAR ANÁLISE KEYWORDS & SEO
+            <Save className="w-4 h-4" />
+            Salvar Agora
           </Button>
-          <p className="text-center text-xs text-white mt-2 font-semibold">
-            ⚠️ Clique para salvar antes de trocar de aba (evitar perda de créditos!)
-          </p>
         </div>
       )}
     </div>
