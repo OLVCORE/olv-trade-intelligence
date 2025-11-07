@@ -830,6 +830,17 @@ export default function TOTVSCheckCard({
 
         {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
         <TabsContent value="detection" className="mt-0 overflow-y-auto">
+          {/* 🐛 DEBUG: Log state antes de renderizar */}
+          {(() => {
+            console.log('[TOTVS-TAB-RENDER] Condições:', {
+              hasData: !!data,
+              enabled,
+              dataKeys: data ? Object.keys(data) : [],
+              willShowButton: !data || !enabled
+            });
+            return null;
+          })()}
+          
           {/* SE NÃO TEM DADOS DO STC, MOSTRAR BOTÃO VERIFICAR */}
           {!data || !enabled ? (
             <div className="text-center py-12">
