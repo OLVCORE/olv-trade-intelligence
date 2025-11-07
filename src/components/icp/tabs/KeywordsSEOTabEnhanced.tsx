@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ChevronDown, Edit } from 'lucide-react';
+import { Search, TrendingUp, ExternalLink, Globe, Target, BarChart3, Loader2, Sparkles, RefreshCw, Save, AlertTriangle, Zap, ChevronDown, Edit, Linkedin, Mail, Phone } from 'lucide-react';
 import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { useReportAutosave } from './useReportAutosave';
 import { TabStatusBadge } from './TabIndicator';
@@ -820,12 +820,12 @@ export function KeywordsSEOTabEnhanced({
         </>
       )}
       
-      {/* Header */}
-      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
+      {/* Header - CORPORATE THEME */}
+      <Card className="p-6 bg-card border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-4 rounded-full bg-primary/10">
-              <Search className="w-8 h-8 text-primary" />
+            <div className="p-3 rounded-lg bg-muted">
+              <Search className="w-7 h-7 text-muted-foreground" />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
@@ -845,29 +845,30 @@ export function KeywordsSEOTabEnhanced({
 
           {/* Botões de ação */}
           <div className="flex flex-col gap-2">
-            {/* 🔥 BOTÃO DISCOVERY DETERMINÍSTICO - Razão Social + CNPJ + Redes Sociais */}
+            {/* 🔥 BOTÃO DISCOVERY - CORPORATE THEME */}
             {!domain && !discoveredDomain && (
               <Button
                 onClick={handleSmartDiscovery}
                 disabled={smartDiscoveryMutation.isPending}
                 size="lg"
-                className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-800 gap-2 font-bold shadow-lg animate-pulse hover:animate-none"
+                variant="default"
+                className="w-full gap-2 font-semibold"
               >
                 {smartDiscoveryMutation.isPending ? (
                   <>
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    Descobrindo Website & Presença Digital...
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Descobrindo...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-6 w-6" />
-                    🚀 Descobrir Website & Presença Digital Completa
+                    <Sparkles className="h-5 w-5" />
+                    Descobrir Website & Presença Digital
                   </>
                 )}
               </Button>
             )}
             
-            {/* 🔁 HF-STACK-2.2: Botão Reverificar Discovery */}
+            {/* 🔁 Botão Reverificar - CORPORATE THEME */}
             {(domain || discoveredDomain) && (
               <Button
                 onClick={() => {
@@ -883,7 +884,7 @@ export function KeywordsSEOTabEnhanced({
                 disabled={smartDiscoveryMutation.isPending}
                 size="sm"
                 variant="outline"
-                className="w-full gap-2 border-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900"
+                className="w-full gap-2"
               >
                 {smartDiscoveryMutation.isPending ? (
                   <>
@@ -1133,47 +1134,79 @@ export function KeywordsSEOTabEnhanced({
 
         {/* 🏢 Empresas Similares movidas para aba Competitors */}
         
-        {/* 🚨 CARD EXPLICATIVO - SUPER DISCOVERY */}
+        {/* 🚨 CARD EXPLICATIVO - SUPER DISCOVERY - CORPORATE THEME */}
         {!domain && !discoveredDomain && !discoveryMutation.isPending && websiteOptions.length === 0 && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-2 border-purple-300 dark:border-purple-700 rounded-lg">
-            <p className="text-base font-bold text-purple-900 dark:text-purple-100 mb-3 flex items-center gap-2">
-              <Zap className="w-6 h-6" />
-              🚀 SUPER DISCOVERY - Arsenal Completo de Ferramentas!
-            </p>
-            <div className="grid grid-cols-2 gap-3 text-sm text-purple-800 dark:text-purple-200 mb-3">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                <strong>Serper:</strong> Website + Redes Sociais
+          <Card className="mt-4 p-6 bg-card border-border">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-muted">
+                <Sparkles className="w-6 h-6 text-muted-foreground" />
               </div>
-              <div className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                <strong>BrasilAPI:</strong> Email → Domain
-              </div>
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4" />
-                <strong>Hunter.io:</strong> Domain + Emails
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <strong>Apollo.io:</strong> Organization
+              <div>
+                <h4 className="text-lg font-semibold">SUPER DISCOVERY</h4>
+                <p className="text-sm text-muted-foreground">Arsenal Completo de Ferramentas</p>
               </div>
             </div>
-            <div className="p-3 bg-white/60 dark:bg-black/30 rounded border border-purple-200 dark:border-purple-800">
-              <p className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
-                🎯 Busca completa em:
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Serper:</strong> Website + Redes Sociais</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <span><strong>BrasilAPI:</strong> Email → Domain</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Target className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Hunter.io:</strong> Domain + Emails</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <span><strong>Apollo.io:</strong> Organization</span>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-muted/50 rounded-lg border border-border">
+              <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Target className="w-4 h-4 text-muted-foreground" />
+                Busca completa em:
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge className="bg-purple-100 text-purple-900 dark:bg-purple-800 dark:text-purple-100">Website oficial</Badge>
-                <Badge className="bg-blue-100 text-blue-900 dark:bg-blue-800 dark:text-blue-100">LinkedIn</Badge>
-                <Badge className="bg-pink-100 text-pink-900 dark:bg-pink-800 dark:text-pink-100">Instagram</Badge>
-                <Badge className="bg-sky-100 text-sky-900 dark:bg-sky-800 dark:text-sky-100">Twitter/X</Badge>
-                <Badge className="bg-indigo-100 text-indigo-900 dark:bg-indigo-800 dark:text-indigo-100">Facebook</Badge>
-                <Badge className="bg-red-100 text-red-900 dark:bg-red-800 dark:text-red-100">YouTube</Badge>
-                <Badge className="bg-green-100 text-green-900 dark:bg-green-800 dark:text-green-100">Emails</Badge>
-                <Badge className="bg-amber-100 text-amber-900 dark:bg-amber-800 dark:text-amber-100">Telefones</Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline" className="gap-1.5">
+                  <Globe className="w-3 h-3" />
+                  Website oficial
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <Linkedin className="w-3 h-3" />
+                  LinkedIn
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                  Instagram
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  Twitter/X
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  Facebook
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  YouTube
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <Mail className="w-3 h-3" />
+                  Emails
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <Phone className="w-3 h-3" />
+                  Telefones
+                </Badge>
               </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* 🟡 LOADING STATE - Discovery em progresso */}
