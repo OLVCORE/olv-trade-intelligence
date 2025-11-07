@@ -414,15 +414,32 @@ export function QuarantineReportModal({
             
             if (error) throw error;
             
-            // Aplicar dados do relatório selecionado
-            if (selectedReport?.full_report) {
-              setStcResult(selectedReport.full_report);
-              console.log('[HISTORY] ✅ Relatório aplicado:', reportId);
+            if (!selectedReport?.full_report) {
+              toast.error('Relatório vazio', {
+                description: 'Este relatório não tem dados salvos.',
+              });
+              return;
             }
             
-            toast.success('✅ Relatório carregado do histórico!', {
-              description: `Salvo em ${new Date(selectedReport.created_at).toLocaleString('pt-BR')}`,
+            console.log('[HISTORY] 📦 Full report recebido:', {
+              hasDetection: !!selectedReport.full_report.detection_report,
+              evidencesCount: selectedReport.full_report.detection_report?.evidences?.length || 0,
             });
+            
+            // Aplicar dados do relatório selecionado
+            setStcResult(selectedReport.full_report.detection_report || selectedReport.full_report);
+            console.log('[HISTORY] ✅ Relatório aplicado ao estado');
+            
+            // 🔥 FORÇAR REFRESH para garantir que tudo aparece
+            toast.success('✅ Relatório carregado! Atualizando tela...', {
+              description: `Salvo em ${new Date(selectedReport.created_at).toLocaleString('pt-BR')}`,
+              duration: 2000,
+            });
+            
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+            
           } catch (error: any) {
             console.error('[HISTORY] ❌ Erro ao carregar relatório:', error);
             toast.error('Erro ao carregar relatório', { description: error.message });

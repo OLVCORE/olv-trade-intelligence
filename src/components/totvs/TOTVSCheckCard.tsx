@@ -1467,30 +1467,53 @@ export default function TOTVSCheckCard({
             
             if (error) throw error;
             
-            // Carregar dados do full_report em tabDataRef
-            if (selectedReport?.full_report) {
-              const report = selectedReport.full_report;
-              
-              // Carregar cada aba
-              if (report.detection) tabDataRef.current.detection = report.detection;
-              if (report.decisors_report) tabDataRef.current.decisors = report.decisors_report;
-              if (report.keywords_seo_report) tabDataRef.current.keywords = report.keywords_seo_report;
-              if (report.competitors_report) tabDataRef.current.competitors = report.competitors_report;
-              if (report.similar_companies_report) tabDataRef.current.similar = report.similar_companies_report;
-              if (report.clients_report) tabDataRef.current.clients = report.clients_report;
-              if (report.analysis_report) tabDataRef.current.analysis = report.analysis_report;
-              if (report.products_report) tabDataRef.current.products = report.products_report;
-              if (report.executive_report) tabDataRef.current.executive = report.executive_report;
-              
-              console.log('[HISTORY] ✅ Relatório carregado:', reportId);
+            if (!selectedReport?.full_report) {
+              toast.error('Relatório vazio', {
+                description: 'Este relatório não tem dados salvos.',
+              });
+              return;
             }
             
-            // Forçar re-render
-            queryClient.invalidateQueries({ queryKey: ['latest-stc-report'] });
-            
-            toast.success('✅ Relatório carregado do histórico!', {
-              description: `Salvo em ${new Date(selectedReport.created_at).toLocaleString('pt-BR')}`,
+            console.log('[HISTORY] 📦 Full report recebido:', {
+              hasDetection: !!selectedReport.full_report.detection_report,
+              hasDecisors: !!selectedReport.full_report.decisors_report,
+              hasKeywords: !!selectedReport.full_report.keywords_seo_report,
+              evidencesCount: selectedReport.full_report.detection_report?.evidences?.length || 0,
             });
+            
+            // Carregar dados do full_report em tabDataRef
+            const report = selectedReport.full_report;
+            
+            // Carregar cada aba
+            if (report.detection_report) tabDataRef.current.detection = report.detection_report;
+            if (report.decisors_report) tabDataRef.current.decisors = report.decisors_report;
+            if (report.keywords_seo_report) tabDataRef.current.keywords = report.keywords_seo_report;
+            if (report.competitors_report) tabDataRef.current.competitors = report.competitors_report;
+            if (report.similar_companies_report) tabDataRef.current.similar = report.similar_companies_report;
+            if (report.clients_report) tabDataRef.current.clients = report.clients_report;
+            if (report.analysis_report) tabDataRef.current.analysis = report.analysis_report;
+            if (report.products_report) tabDataRef.current.products = report.products_report;
+            if (report.executive_report) tabDataRef.current.executive = report.executive_report;
+            
+            console.log('[HISTORY] ✅ Relatório carregado:', reportId);
+            console.log('[HISTORY] 📊 TabDataRef atualizado:', Object.keys(tabDataRef.current));
+            
+            // 🔥 FORÇAR RE-RENDER: Invalidar TODAS as queries relacionadas
+            await queryClient.invalidateQueries({ queryKey: ['latest-stc-report'] });
+            await queryClient.invalidateQueries({ queryKey: ['simple-totvs-check'] });
+            await queryClient.invalidateQueries({ queryKey: ['stc-history'] });
+            
+            // 🔥 FORÇAR REFRESH DA PÁGINA para aplicar dados
+            toast.success('✅ Relatório carregado! Atualizando...', {
+              description: `Salvo em ${new Date(selectedReport.created_at).toLocaleString('pt-BR')}`,
+              duration: 2000,
+            });
+            
+            // Recarregar após 1 segundo para garantir que queries invalidaram
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+            
           } catch (error: any) {
             console.error('[HISTORY] ❌ Erro ao carregar relatório:', error);
             toast.error('Erro ao carregar relatório', { description: error.message });
