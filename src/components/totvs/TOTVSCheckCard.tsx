@@ -396,8 +396,7 @@ export default function TOTVSCheckCard({
     console.log('[TOTVS-REG] 📝 Registrando aba TOTVS no tabsRegistry');
     
     registerTabInGlobal('detection', {
-      validate: async () => ({ success: true }), // Sempre válido se tem dados
-      save: async () => {
+      flushSave: async () => {
         console.log('[TOTVS-SAVE] 💾 Salvando aba TOTVS...');
         // Os dados já foram salvos pelo useSimpleTOTVSCheck, só confirmar
         setTotvsSaved(true);
@@ -405,16 +404,15 @@ export default function TOTVSCheckCard({
           description: `Status: ${data.status?.toUpperCase()} | ${data.evidences?.length || 0} evidências`,
           duration: 3000,
         });
-        return { success: true };
       },
-      getData: () => data,
+      getStatus: () => totvsSaved ? 'completed' : 'draft',
     });
     
     return () => {
       console.log('[TOTVS-REG] 🧹 Desregistrando aba TOTVS');
       unregisterTabInGlobal('detection');
     };
-  }, [data]);
+  }, [data, totvsSaved]);
 
   // 🔒 SNAPSHOT: Carregar snapshot para verificar modo read-only
   useEffect(() => {
