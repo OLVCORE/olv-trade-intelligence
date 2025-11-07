@@ -221,7 +221,12 @@ const NEWS_SOURCES_PREMIUM = [
   'itforum.com.br',             // IT Forum (TI empresarial)
   'canaltech.com.br',           // Canaltech
   'revistapegn.globo.com',      // Pequenas Empresas & Grandes Negócios
-  'meioemensagem.com.br'        // Meio & Mensagem (marketing/tech)
+  'meioemensagem.com.br',       // Meio & Mensagem (marketing/tech)
+  
+  // 🎥 VÍDEO & CONTEÚDO (Peso 75 pts)
+  'youtube.com',                // ✨ YouTube (cases, depoimentos, eventos)
+  'vimeo.com',                  // Vimeo (vídeos corporativos)
+  'slideshare.net'              // SlideShare (apresentações)
 ];
 
 // 📘 TIER 3: CASES OFICIAIS TOTVS (Peso Médio-Alto = 80 pts)
@@ -916,8 +921,24 @@ serve(async (req) => {
       totalQueries += NEWS_SOURCES_PREMIUM.length;
       
       console.log(`[SIMPLE-TOTVS] ✅ FASE 4 concluída: ${evidenciasNewsPremium.length} evidências premium`);
+      
+      // 🎥 FASE 5: BUSCA EM VÍDEOS (YouTube, Vimeo)
+      console.log('[SIMPLE-TOTVS] 🎥 FASE 5: Buscando em canais de vídeo (YouTube, Vimeo)...');
+      const evidenciasVideos = await searchMultiplePortals({
+        portals: ['youtube.com', 'vimeo.com'],
+        companyName: shortSearchTerm,
+        serperKey,
+        sourceType: 'video_content',
+        sourceWeight: 75, // Peso médio-alto (vídeos são boas evidências)
+        dateRestrict: 'y5',
+      });
+      evidencias.push(...evidenciasVideos);
+      sourcesConsulted += 2; // YouTube + Vimeo
+      totalQueries += 2;
+      
+      console.log(`[SIMPLE-TOTVS] ✅ FASE 5 concluída: ${evidenciasVideos.length} evidências de vídeo`);
 
-      console.log('[SIMPLE-TOTVS] 📰 FASE 5: Buscando notícias gerais (Google News)...');
+      console.log('[SIMPLE-TOTVS] 📰 FASE 6: Buscando notícias gerais (Google News)...');
       totalQueries++;
 
       try {
