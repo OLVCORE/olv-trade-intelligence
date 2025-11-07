@@ -334,9 +334,13 @@ export default function TOTVSCheckCard({
       evidencesCount: data?.evidences?.length || 0,
     });
     
-    // 🔍 EXPANDIR data completo
+    // 🔍 EXPANDIR data completo (com proteção)
     if (data) {
-      console.log('[TOTVS-CARD] 📦 data sendo usado:', JSON.stringify(data, null, 2).substring(0, 2000));
+      try {
+        console.log('[TOTVS-CARD] 📦 data sendo usado:', JSON.stringify(data, null, 2).substring(0, 2000));
+      } catch (e) {
+        console.log('[TOTVS-CARD] 📦 data sendo usado (raw):', data);
+      }
     }
     
     // 💰 LOG ECONOMIA DE CRÉDITOS
@@ -616,8 +620,10 @@ export default function TOTVSCheckCard({
   // 🔍 EXPANDIR todas as evidências
   if (evidences.length > 0) {
     console.log('[TOTVS-CARD] 📦 TODAS AS EVIDÊNCIAS:', JSON.stringify(evidences, null, 2).substring(0, 3000));
-  } else {
+  } else if (data) {
     console.warn('[TOTVS-CARD] 🚨 ZERO EVIDÊNCIAS! Dados completos:', JSON.stringify(data, null, 2).substring(0, 2000));
+  } else {
+    console.warn('[TOTVS-CARD] 🚨 SEM DADOS! latestReport e liveData estão vazios');
   }
 
   // 🔍 SPEC #005.D.1: Diagnóstico SaveBar (telemetria centralizada)
