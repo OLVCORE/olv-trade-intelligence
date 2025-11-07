@@ -531,6 +531,7 @@ export default function TOTVSCheckCard({
     });
     
     try {
+      // 1. Salvar todas as abas (chama flushSave de cada uma)
       const results = await saveAllTabs();
       const successes = results.filter(r => r.status === 'fulfilled');
       const failures = results.filter(r => r.status === 'rejected');
@@ -540,16 +541,61 @@ export default function TOTVSCheckCard({
         toast.error('Algumas abas falharam ao salvar', {
           description: `${successes.length} salva(s) com sucesso, ${failures.length} com erro. Verifique o console.`,
         });
-      } else {
-        console.log('[REGISTRY] ✅ Todas as abas salvas com sucesso!');
-        toast.success('✅ Relatório salvo no sistema!', {
-          description: `${successes.length} aba(s) salva(s) com sucesso.`,
-          duration: 5000,
-        });
-        
-        // Invalidar cache para recarregar dados
-        queryClient.invalidateQueries({ queryKey: ['stc-history'] });
+        return; // Não salvar no banco se houver falhas
       }
+      
+      console.log('[REGISTRY] ✅ Todas as abas salvas com sucesso!');
+      
+      // 2. 🔥 CRITICAL: Salvar full_report no banco (stc_verification_history)
+      if (stcHistoryId) {
+        try {
+          // Montar full_report com dados de todas as abas
+          const fullReport = {
+            detection_report: data, // Dados do TOTVS Check
+            decisors_report: tabDataRef.current.decisors,
+            keywords_seo_report: tabDataRef.current.keywords,
+            competitors_report: tabDataRef.current.competitors,
+            similar_companies_report: tabDataRef.current.similar,
+            clients_report: tabDataRef.current.clients,
+            analysis_report: tabDataRef.current.analysis,
+            products_report: tabDataRef.current.products,
+            executive_report: tabDataRef.current.executive,
+            __status: getStatuses(), // Salvar status de cada aba
+            __meta: {
+              saved_at: new Date().toISOString(),
+              saved_by: 'user',
+              version: '2.0',
+            },
+          };
+          
+          console.log('[SAVE] 💾 Salvando full_report no banco...', {
+            stcHistoryId,
+            tabs: Object.keys(fullReport).filter(k => !k.startsWith('__')),
+          });
+          
+          const { error: updateError } = await supabase
+            .from('stc_verification_history')
+            .update({ full_report: fullReport })
+            .eq('id', stcHistoryId);
+          
+          if (updateError) throw updateError;
+          
+          console.log('[SAVE] ✅ full_report salvo no banco!');
+        } catch (err) {
+          console.error('[SAVE] ❌ Erro ao salvar full_report:', err);
+          throw err;
+        }
+      }
+      
+      toast.success('✅ Relatório salvo no sistema!', {
+        description: `${successes.length} aba(s) salva(s) com sucesso.`,
+        duration: 5000,
+      });
+      
+      // Invalidar cache para recarregar dados
+      queryClient.invalidateQueries({ queryKey: ['stc-history'] });
+      queryClient.invalidateQueries({ queryKey: ['latest-stc-report'] });
+      
     } catch (error) {
       console.error('[REGISTRY] ❌ Erro crítico ao salvar:', error);
       toast.error('Erro ao salvar relatório', {
@@ -761,23 +807,6 @@ export default function TOTVSCheckCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* 💾 INDICADOR DE RELATÓRIO SALVO */}
-      {hasSaved && (
-        <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border-2 border-green-500 dark:border-green-600 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Save className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <div>
-              <p className="text-sm font-bold text-green-900 dark:text-green-100">
-                ✅ Relatório Salvo no Histórico
-              </p>
-              <p className="text-xs text-green-700 dark:text-green-300">
-                {latestReport?.created_at ? `Salvo em: ${new Date(latestReport.created_at).toLocaleString('pt-BR')}` : 'Dados disponíveis'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-9 mb-6 h-auto">
