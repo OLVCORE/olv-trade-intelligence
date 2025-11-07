@@ -5,6 +5,8 @@ import { FloatingNavigation } from '@/components/common/FloatingNavigation';
 import { toast } from 'sonner';
 import { Package, Sparkles, TrendingUp, CheckCircle, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { useProductGaps } from '@/hooks/useProductGaps';
+import { useEffect } from 'react';
+import { registerTab, unregisterTab } from './tabsRegistry';
 
 interface RecommendedProductsTabProps {
   companyId?: string;
@@ -17,6 +19,7 @@ interface RecommendedProductsTabProps {
   stcResult?: any;
   similarCompanies?: any[];
   savedData?: any;
+  stcHistoryId?: string;
   onDataChange?: (data: any) => void;
 }
 
@@ -31,20 +34,9 @@ export function RecommendedProductsTab({
   stcResult,
   similarCompanies,
   savedData,
+  stcHistoryId,
   onDataChange
 }: RecommendedProductsTabProps) {
-  
-  // 🔄 RESET
-  const handleReset = () => {
-    // Products é query-based, reset não faz sentido
-    toast.info('Retornando ao início');
-  };
-
-  // 💾 SALVAR
-  const handleSave = () => {
-    onDataChange?.(productGapsData);
-    toast.success('✅ Produtos Recomendados Salvos!');
-  };
   
   // Buscar produtos recomendados REAIS via Edge Function
   const { data: productGapsData, isLoading, error } = useProductGaps({
@@ -59,6 +51,36 @@ export function RecommendedProductsTab({
     competitors: stcResult?.competitors || [],
     similarCompanies: similarCompanies || []
   });
+
+  // 🔗 REGISTRY: Registrar aba para SaveBar global
+  useEffect(() => {
+    console.info('[REGISTRY] ✅ Registering: products');
+    
+    registerTab('products', {
+      flushSave: async () => {
+        console.log('[PRODUCTS] 📤 Registry: flushSave() chamado');
+        onDataChange?.(productGapsData);
+        toast.success('✅ Produtos Recomendados Salvos!');
+      },
+      getStatus: () => productGapsData ? 'completed' : 'draft',
+    });
+
+    return () => {
+      console.info('[REGISTRY] 🧹 Unregistered: products');
+      unregisterTab('products');
+    };
+  }, [productGapsData, onDataChange]);
+  
+  // 🔄 RESET
+  const handleReset = () => {
+    toast.info('Retornando ao início');
+  };
+
+  // 💾 SALVAR
+  const handleSave = () => {
+    onDataChange?.(productGapsData);
+    toast.success('✅ Produtos Recomendados Salvos!');
+  };
 
   if (!companyName) {
     return (

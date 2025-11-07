@@ -14,6 +14,8 @@ import {
   Search,
   Globe
 } from 'lucide-react';
+import { useEffect } from 'react';
+import { registerTab, unregisterTab } from './tabsRegistry';
 
 interface ExecutiveSummaryTabProps {
   companyName?: string;
@@ -23,6 +25,7 @@ interface ExecutiveSummaryTabProps {
   clientsCount?: number;
   maturityScore?: number;
   savedData?: any;
+  stcHistoryId?: string;
   onDataChange?: (data: any) => void;
 }
 
@@ -34,16 +37,44 @@ export function ExecutiveSummaryTab({
   clientsCount = 0,
   maturityScore = 0,
   savedData,
+  stcHistoryId,
   onDataChange
 }: ExecutiveSummaryTabProps) {
   
-  // 🔄 RESET: Voltar ao estado inicial
+  // 🔗 REGISTRY: Registrar aba para SaveBar global
+  useEffect(() => {
+    console.info('[REGISTRY] ✅ Registering: executive');
+    
+    registerTab('executive', {
+      flushSave: async () => {
+        const reportData = {
+          stcResult,
+          similarCount,
+          competitorsCount,
+          clientsCount,
+          maturityScore,
+          savedAt: new Date().toISOString(),
+        };
+        
+        console.log('[EXECUTIVE] 📤 Registry: flushSave() chamado');
+        onDataChange?.(reportData);
+        toast.success('✅ Sumário Executivo Salvo!');
+      },
+      getStatus: () => stcResult ? 'completed' : 'draft',
+    });
+
+    return () => {
+      console.info('[REGISTRY] 🧹 Unregistered: executive');
+      unregisterTab('executive');
+    };
+  }, [stcResult, similarCount, competitorsCount, clientsCount, maturityScore, onDataChange]);
+  
+  // 🔄 RESET
   const handleReset = () => {
-    // Executive é read-only, então apenas notifica que voltou
     toast.info('Retornando ao início');
   };
 
-  // 💾 SALVAR: Executive Summary
+  // 💾 SALVAR
   const handleSave = () => {
     const reportData = {
       stcResult,
