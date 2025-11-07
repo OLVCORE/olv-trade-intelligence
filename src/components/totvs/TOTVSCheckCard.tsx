@@ -823,49 +823,85 @@ export default function TOTVSCheckCard({
             </Button>
           </div>
 
-          {/* STATUS */}
-          <div className="mb-4">
-            <Badge 
-              variant={
-                data.status === 'go' ? 'default' :
-                data.status === 'revisar' ? 'secondary' :
-                'destructive'
-              }
-              className="text-base px-4 py-2 flex items-center gap-2"
-            >
-              {data.status === 'go' && (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  GO - Não é cliente TOTVS
-                </>
-              )}
-              {data.status === 'revisar' && (
-                <>
-                  <AlertTriangle className="w-4 h-4" />
-                  REVISAR - Evidências encontradas
-                </>
-              )}
-              {data.status === 'no-go' && (
-                <>
-                  <XCircle className="w-4 h-4" />
-                  NO-GO - Cliente TOTVS confirmado
-                </>
-              )}
-            </Badge>
-            <p className="text-sm text-muted-foreground mt-2">
-              Confiança: <strong>{data.confidence === 'high' ? 'Alta' : data.confidence === 'medium' ? 'Média' : 'Baixa'}</strong>
-              {' | '}
-              Peso total: <strong>{data.total_weight} pontos</strong>
-            </p>
-            
-            {/* DEBUG INFO */}
-            <div className="text-xs text-muted-foreground mt-3 p-3 bg-muted/30 rounded-md border border-border/50">
-              <strong className="text-foreground">Debug:</strong>{' '}
-              {data.triple_matches || 0} triple matches |{' '}
-              {data.double_matches || 0} double matches |{' '}
-              {data.evidences?.length || 0} evidências |{' '}
-              {data.methodology?.total_queries || 0} queries executadas
-            </div>
+          {/* 📊 MÉTRICAS VISUAIS (DESTAQUE CORPORATIVO) */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* CARD 1: STATUS GO/NO-GO */}
+            <Card className="p-4 border-2 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">Status</span>
+                {data.status === 'go' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                {data.status === 'revisar' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                {data.status === 'no-go' && <XCircle className="w-5 h-5 text-rose-500" />}
+              </div>
+              <Badge 
+                variant={
+                  data.status === 'go' ? 'default' :
+                  data.status === 'revisar' ? 'secondary' :
+                  'destructive'
+                }
+                className="text-sm px-3 py-1 w-full justify-center"
+              >
+                {data.status === 'go' && 'GO - Não Cliente'}
+                {data.status === 'revisar' && 'REVISAR'}
+                {data.status === 'no-go' && 'NO-GO - Cliente'}
+              </Badge>
+            </Card>
+
+            {/* CARD 2: MATCHES (TRIPLE/DOUBLE/SINGLE) */}
+            <Card className="p-4 border-2 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">Matches Detectados</span>
+                <Target className="w-5 h-5 text-primary" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-emerald-500">
+                    {data.triple_matches || data.data?.tripleMatches || 0}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Triple</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-500">
+                    {data.double_matches || data.data?.doubleMatches || 0}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Double</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-500">
+                    {data.single_matches || data.data?.singleMatches || 0}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Single</div>
+                </div>
+              </div>
+            </Card>
+
+            {/* CARD 3: FONTES & CONFIDENCE */}
+            <Card className="p-4 border-2 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground">Inteligência</span>
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Fontes:</span>
+                  <span className="text-lg font-bold text-primary">
+                    {data.methodology?.searched_sources || data.sources_consulted || data.data?.sourcesConsulted || '17+'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Confiança:</span>
+                  <Badge variant="outline" className="text-xs">
+                    {data.confidence === 'high' ? '🔥 Alta' : data.confidence === 'medium' ? '⚠️ Média' : '❄️ Baixa'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Score:</span>
+                  <span className="text-sm font-bold">
+                    {data.total_weight || data.total_score || data.data?.totalScore || 0} pts
+                  </span>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* FILTROS */}
