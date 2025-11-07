@@ -28,6 +28,7 @@ import { KeywordsSEOTab } from '@/components/icp/tabs/KeywordsSEOTab';
 import { DecisorsContactsTab } from '@/components/icp/tabs/DecisorsContactsTab';
 import { TabSaveWrapper } from './TabSaveWrapper';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
+import { useSaveRegistry } from '@/hooks/useSaveRegistry';
 import { saveAllTabs, hasNonCompleted, getStatuses, getStatusCounts } from '@/components/icp/tabs/tabsRegistry';
 import { createSnapshotFromFullReport, loadSnapshot, isReportClosed, generatePdfFromSnapshot, type Snapshot } from '@/components/icp/tabs/snapshotReport';
 import SaveBar from './SaveBar';
@@ -114,6 +115,36 @@ export default function TOTVSCheckCard({
   
   // Track de dados por aba (para salvar)
   const tabDataRef = useRef<Record<string, any>>({});
+  
+  // 🔐 REGISTRAR ABA TOTVS no tabsRegistry para SaveBar funcionar
+  const { registerTab, unregisterTab } = useSaveRegistry();
+  const [totvsSaved, setTotvsSaved] = useState(false);
+  
+  useEffect(() => {
+    if (!data) return; // Só registra quando tem dados
+    
+    console.log('[TOTVS-REG] 📝 Registrando aba TOTVS no tabsRegistry');
+    
+    registerTab('detection', {
+      validate: async () => ({ success: true }), // Sempre válido se tem dados
+      save: async () => {
+        console.log('[TOTVS-SAVE] 💾 Salvando aba TOTVS...');
+        // Os dados já foram salvos pelo useSimpleTOTVSCheck, só confirmar
+        setTotvsSaved(true);
+        toast.success('✅ TOTVS Check salvo!', {
+          description: `Status: ${data.status?.toUpperCase()} | ${data.evidences?.length || 0} evidências`,
+          duration: 3000,
+        });
+        return { success: true };
+      },
+      getData: () => data,
+    });
+    
+    return () => {
+      console.log('[TOTVS-REG] 🧹 Desregistrando aba TOTVS');
+      unregisterTab('detection');
+    };
+  }, [data, registerTab, unregisterTab]);
   
   // Compartilhar dados entre abas (Keywords → Competitors)
   const [sharedSimilarCompanies, setSharedSimilarCompanies] = useState<any[]>([]);
@@ -757,57 +788,97 @@ export default function TOTVSCheckCard({
             </div>
             {renderStatusDot('detection')}
           </TabsTrigger>
-          <TabsTrigger value="decisors" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="decisors" 
+            disabled={!totvsSaved} 
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <UserCircle className="w-3 h-3" />
               <span className="text-[10px]">Decisores</span>
             </div>
             {renderStatusDot('decisors')}
           </TabsTrigger>
-          <TabsTrigger value="keywords" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="keywords" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <Globe className="w-3 h-3" />
               <span className="text-[10px]">Digital</span>
             </div>
             {renderStatusDot('keywords')}
           </TabsTrigger>
-          <TabsTrigger value="competitors" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="competitors" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <Target className="w-3 h-3" />
               <span className="text-[10px]">Competitors</span>
             </div>
             {renderStatusDot('competitors')}
           </TabsTrigger>
-          <TabsTrigger value="similar" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="similar" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <Building2 className="w-3 h-3" />
               <span className="text-[10px]">Similar</span>
             </div>
             {renderStatusDot('similar')}
           </TabsTrigger>
-          <TabsTrigger value="clients" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="clients" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <Users className="w-3 h-3" />
               <span className="text-[10px]">Clients</span>
             </div>
             {renderStatusDot('clients')}
           </TabsTrigger>
-          <TabsTrigger value="analysis" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="analysis" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <BarChart3 className="w-3 h-3" />
               <span className="text-[10px]">360°</span>
             </div>
             {renderStatusDot('analysis')}
           </TabsTrigger>
-          <TabsTrigger value="products" className="flex flex-col items-center gap-1 text-xs py-2">
+          <TabsTrigger 
+            value="products" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <Package className="w-3 h-3" />
               <span className="text-[10px]">Products</span>
             </div>
             {renderStatusDot('products')}
           </TabsTrigger>
-          <TabsTrigger value="executive" className="flex flex-col items-center gap-1 text-xs py-2 bg-emerald-500/10 font-bold">
+          <TabsTrigger 
+            value="executive" 
+            disabled={!totvsSaved}
+            className="flex flex-col items-center gap-1 text-xs py-2 bg-emerald-500/10 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             <div className="flex items-center gap-1">
+              {!totvsSaved && <span className="text-[10px] mr-1">🔒</span>}
               <LayoutDashboard className="w-3 h-3" />
               <span className="text-[10px]">Executive</span>
             </div>

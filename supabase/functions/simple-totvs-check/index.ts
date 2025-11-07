@@ -170,40 +170,65 @@ const SHORT_PRODUCT_PATTERNS: Record<string, RegExp> = {
 };
 
 // 🌐 50+ PORTAIS DE VAGAS BRASILEIROS (Categoria 1: Plataformas Nacionais)
+// 💼 PORTAIS DE VAGAS ESTRATÉGICOS (Apenas os que Google indexa SEM login)
 const JOB_PORTALS_NACIONAL = [
-  'br.linkedin.com/jobs', 'br.indeed.com', 'infojobs.com.br',
-  'vagas.com.br', 'catho.com.br', 'portal.gupy.io',
-  'glassdoor.com.br/Vaga', 'vagas.solides.com.br', 'bne.com.br',
-  'trabalhabrasil.com.br', 'empregabrasil.mte.gov.br', 'br.jooble.org',
-  'adzuna.com.br', 'talent.com/pt-br', 'br.jora.com',
-  'br.jobrapido.com', 'br.jobsora.com', 'jobisjob.com.br',
-  'jobatus.com.br', 'empregos.com.br', 'manager.com.br',
-  'curriculum.com.br', 'emprego.net', 'recrutasimples.com.br',
-  'empregoligado.com.br', 'jobbol.com.br', 'elancers.net',
-  'jobs.abler.com.br', 'jobconvo.com/pt-br/vagas', 'trampos.co'
+  'br.linkedin.com/jobs',      // ✅ FUNCIONOU! (LinkedIn Jobs)
+  'br.linkedin.com/posts',     // ✅ FUNCIONOU! (LinkedIn Posts - Golden Cargo)
+  'portal.gupy.io',            // ✅ Google indexa vagas públicas
+  'br.indeed.com'              // ✅ Maior portal mundial, indexado
 ];
 
-// 🎓 PORTAIS DE ESTÁGIO/TRAINEE (Categoria 2)
-const JOB_PORTALS_ESTAGIO = [
-  'portal.ciee.org.br', 'nube.com.br', 'iel.org.br/estagio'
-];
+// 🎓 PORTAIS DE ESTÁGIO/TRAINEE (Removidos - baixa relevância para decisores)
+const JOB_PORTALS_ESTAGIO: string[] = [];
 
-// 📰 FONTES OFICIAIS BRASILEIRAS (Peso Máximo = 100 pts)
+// 📰 TIER 1: FONTES OFICIAIS BRASILEIRAS (Peso Máximo = 100 pts)
 const OFFICIAL_SOURCES_BR = [
-  // Regulatórias
-  'cvm.gov.br', 'rad.cvm.gov.br', 'b3.com.br',
-  'investidor.b3.com.br', 'in.gov.br',
+  // Regulatórias (Capital Aberto)
+  'cvm.gov.br',                 // ✅ Comissão de Valores Mobiliários
+  'rad.cvm.gov.br',             // ✅ Relatórios de Administração
+  'b3.com.br',                  // ✅ FUNCIONOU! (Bolsa de Valores)
+  'investidor.b3.com.br',       // ✅ Formulários de Referência
   
   // Judiciais
-  'esaj.tjsp.jus.br', 'tjrj.jus.br', 'cnj.jus.br',
-  'imprensaoficial.com.br', 'jusbrasil.com.br'
+  'esaj.tjsp.jus.br',           // ✅ FUNCIONOU! (Processos TJSP)
+  'tjrj.jus.br',                // Tribunal RJ
+  'cnj.jus.br',                 // Conselho Nacional de Justiça
+  'jusbrasil.com.br',           // Agregador de processos
+  
+  // Diários Oficiais
+  'imprensaoficial.com.br',     // Diário Oficial SP
+  'in.gov.br'                   // Imprensa Nacional
 ];
 
-// 📰 FONTES DE NOTÍCIAS PREMIUM (Peso Alto = 85 pts)
+// 📰 TIER 2: NOTÍCIAS PREMIUM & FINANCEIRAS (Peso Alto = 85 pts)
 const NEWS_SOURCES_PREMIUM = [
-  'valor.globo.com', 'exame.com', 'folha.uol.com.br',
-  'estadao.com.br/economia', 'infomoney.com.br',
-  'startse.com', 'convergenciadigital.com.br'
+  // Notícias Econômicas Tradicionais
+  'valor.globo.com',            // ✅ Valor Econômico (referência BR)
+  'exame.com',                  // ✅ Exame (negócios)
+  'estadao.com.br/economia',    // Estadão Economia
+  'infomoney.com.br',           // InfoMoney
+  'folha.uol.com.br/mercado',   // Folha Mercado
+  
+  // NOVAS: Fontes Financeiras Internacionais (SUA SUGESTÃO!)
+  'bloomberg.com.br',           // ✨ Bloomberg Brasil
+  'br.investing.com',           // ✨ Investing.com
+  'ftbrasil.com.br',            // ✨ Financial Times Brasil
+  'braziljournal.com',          // Brazil Journal (tech/negócios)
+  
+  // Tech & Negócios
+  'startse.com',                // StartSe (inovação)
+  'convergenciadigital.com.br', // Convergência Digital (TI)
+  'itforum.com.br',             // IT Forum (TI empresarial)
+  'canaltech.com.br',           // Canaltech
+  'revistapegn.globo.com',      // Pequenas Empresas & Grandes Negócios
+  'meioemensagem.com.br'        // Meio & Mensagem (marketing/tech)
+];
+
+// 📘 TIER 3: CASES OFICIAIS TOTVS (Peso Médio-Alto = 80 pts)
+const TOTVS_OFFICIAL_SOURCES = [
+  'totvs.com/blog',             // Blog oficial TOTVS (cases de sucesso)
+  'totvs.com/cases',            // Cases publicados
+  'totvs.com/noticias'          // Notícias oficiais
 ];
 
 // 🎯 SEGMENTOS TOTVS (12 verticais oficiais)
@@ -839,21 +864,21 @@ serve(async (req) => {
       
       console.log(`[SIMPLE-TOTVS] ✅ FASE 1 concluída: ${evidenciasVagas.length} evidências de vagas`);
       
-      // 🎓 FASE 2: BUSCA NOS 3 PORTAIS DE ESTÁGIO/TRAINEE
-      console.log('[SIMPLE-TOTVS] 🎓 FASE 2: Buscando em portais de estágio/trainee...');
-      const evidenciasEstagio = await searchMultiplePortals({
-        portals: JOB_PORTALS_ESTAGIO,
+      // 📘 FASE 2: BUSCA NOS CASES OFICIAIS TOTVS (Blog, Cases, Notícias)
+      console.log('[SIMPLE-TOTVS] 📘 FASE 2: Buscando em fontes oficiais TOTVS...');
+      const evidenciasTotvsCases = await searchMultiplePortals({
+        portals: TOTVS_OFFICIAL_SOURCES,
         companyName: shortSearchTerm,
         serperKey,
-        sourceType: 'job_portals',
-        sourceWeight: SOURCE_WEIGHTS.job_portals,
+        sourceType: 'totvs_cases',
+        sourceWeight: 80, // Peso alto para cases oficiais
         dateRestrict: 'y5',
       });
-      evidencias.push(...evidenciasEstagio);
-      sourcesConsulted += JOB_PORTALS_ESTAGIO.length;
-      totalQueries += JOB_PORTALS_ESTAGIO.length;
+      evidencias.push(...evidenciasTotvsCases);
+      sourcesConsulted += TOTVS_OFFICIAL_SOURCES.length;
+      totalQueries += TOTVS_OFFICIAL_SOURCES.length;
       
-      console.log(`[SIMPLE-TOTVS] ✅ FASE 2 concluída: ${evidenciasEstagio.length} evidências de estágio`);
+      console.log(`[SIMPLE-TOTVS] ✅ FASE 2 concluída: ${evidenciasTotvsCases.length} evidências de cases TOTVS`);
       
       // 📄 FASE 3: BUSCA NAS FONTES OFICIAIS (CVM, B3, TJSP) - PESO 100 = AUTO NO-GO
       console.log('[SIMPLE-TOTVS] 📄 FASE 3: Buscando em fontes oficiais (CVM, B3, TJSP)...');
@@ -1485,10 +1510,11 @@ serve(async (req) => {
         total_queries: totalQueries,
         execution_time: `${executionTime}ms`,
         portals_scanned: {
-          job_portals_nacional: JOB_PORTALS_NACIONAL.length,
-          job_portals_estagio: JOB_PORTALS_ESTAGIO.length,
-          official_sources: OFFICIAL_SOURCES_BR.length,
-          news_premium: NEWS_SOURCES_PREMIUM.length
+          job_portals: JOB_PORTALS_NACIONAL.length,              // 4 portais
+          totvs_cases: TOTVS_OFFICIAL_SOURCES.length,            // 3 cases
+          official_sources: OFFICIAL_SOURCES_BR.length,          // 10 oficiais
+          news_premium: NEWS_SOURCES_PREMIUM.length,             // 15 notícias
+          total: JOB_PORTALS_NACIONAL.length + TOTVS_OFFICIAL_SOURCES.length + OFFICIAL_SOURCES_BR.length + NEWS_SOURCES_PREMIUM.length
         }
       },
       checked_at: new Date().toISOString(),

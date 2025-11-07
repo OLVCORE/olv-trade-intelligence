@@ -70,29 +70,33 @@ export default function SaveBar({
   return (
     <div className={wrapperClass}>
       <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-6 py-3">
-        {/* 📊 Semáforos por aba */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold text-slate-400 mr-2">Status das Abas:</span>
-          {Object.entries(statuses).map(([tab, status]) => (
-            <TooltipProvider key={tab}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-slate-100 transition-colors cursor-help">
-                    <TabIndicator status={status} />
-                    <span className="capitalize font-medium">{tab}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-slate-950 border-slate-700">
-                  <p className="text-xs">
-                    {status === 'completed' && '✅ Aba salva com sucesso'}
-                    {status === 'draft' && '🟡 Aba em rascunho (não salva)'}
-                    {status === 'processing' && '🔵 Processando análise...'}
-                    {status === 'error' && '❌ Erro ao salvar'}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
+        {/* 📊 PROGRESS BAR REAL (Heat Map: Frio → Quente) */}
+        <div className="flex-1 max-w-md">
+          {(() => {
+            const totalTabs = Object.keys(statuses).length || 9;
+            const completedTabs = Object.values(statuses).filter(s => s === 'completed').length;
+            const progressPercent = Math.round((completedTabs / totalTabs) * 100);
+            
+            // Cores baseadas em progresso (Heat Map)
+            let barColor = 'bg-blue-500'; // 0-33% = Frio (Azul)
+            if (progressPercent >= 34 && progressPercent <= 66) barColor = 'bg-amber-500'; // 34-66% = Morno (Amarelo)
+            if (progressPercent >= 67) barColor = 'bg-emerald-500'; // 67-100% = Quente (Verde)
+            
+            return (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-400">Progresso do Relatório</span>
+                  <span className="font-bold text-slate-300">{completedTabs}/{totalTabs} abas ({progressPercent}%)</span>
+                </div>
+                <div className="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden border border-slate-600">
+                  <div 
+                    className={`h-full ${barColor} transition-all duration-500 ${progressPercent === 100 ? 'animate-pulse' : ''}`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* 🎯 Ações Críticas */}
@@ -114,23 +118,13 @@ export default function SaveBar({
             </TooltipProvider>
           )}
 
-          {!readOnly && allCompleted && (
-            <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/30">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="font-semibold">Tudo salvo</span>
-            </div>
-          )}
-
-          {/* 💾 Botão Salvar Relatório (PRIMARY) */}
+          {/* 💾 Botão Salvar Relatório (PRIMARY - Cores Corporativas) */}
           <Button
             onClick={onSaveAll}
-            disabled={readOnly || isSaving || allCompleted}
+            disabled={readOnly || isSaving}
             size="sm"
-            className={`gap-2 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${
-              SAFE_MODE 
-                ? 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800' 
-                : 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800'
-            }`}
+            variant="default"
+            className="gap-2 font-bold shadow-md"
           >
             {isSaving || anyProcessing ? (
               <>
@@ -168,15 +162,16 @@ export default function SaveBar({
             </Button>
           )}
 
-          {/* ✅ Botão Aprovar & Mover para Pool (ACTION) */}
+          {/* ✅ Botão Marcar como Concluído (ACTION - Cores Corporativas) */}
           <Button
             onClick={onApprove}
             disabled={readOnly || !allCompleted || anyError}
             size="sm"
-            className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="default"
+            className="gap-2 font-bold shadow-md bg-emerald-600 hover:bg-emerald-700"
           >
-            <Send className="w-4 h-4" />
-            Aprovar & Mover para Pool
+            <CheckCircle2 className="w-4 h-4" />
+            Marcar como Concluído
           </Button>
         </div>
       </div>
