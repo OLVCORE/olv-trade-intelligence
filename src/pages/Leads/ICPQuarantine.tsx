@@ -21,6 +21,7 @@ import { useReverifyAllCompanies } from '@/hooks/useReverifyAllCompanies';
 import { useRestoreAllBatchDiscarded } from '@/hooks/useRestoreDiscarded';
 import { QuarantineActionsMenu } from '@/components/icp/QuarantineActionsMenu';
 import { QuarantineRowActions } from '@/components/icp/QuarantineRowActions';
+import { DiscardedCompaniesModal } from '@/components/icp/DiscardedCompaniesModal';
 import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
 import { STCAgent } from '@/components/intelligence/STCAgent';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
@@ -39,7 +40,7 @@ import { enrichment360Simplificado } from '@/services/enrichment360';
 export default function ICPQuarantine() {
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState('pendente');
+  const [statusFilter, setStatusFilter] = useState('all'); // ✅ Mostrar TODAS (pendente + analisadas)
   const [tempFilter, setTempFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -54,6 +55,7 @@ export default function ICPQuarantine() {
   const [rejectCompanyData, setRejectCompanyData] = useState<{ id: string; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
   const [rejectCustomReason, setRejectCustomReason] = useState<string>('');
+  const [showDiscardedModal, setShowDiscardedModal] = useState(false);
 
   const { data: companies = [], isLoading, refetch } = useQuarantineCompanies({
     status: statusFilter === 'all' ? undefined : statusFilter,
@@ -1208,6 +1210,16 @@ export default function ICPQuarantine() {
               />
               
               <Button
+                onClick={() => setShowDiscardedModal(true)}
+                variant="outline"
+                className="gap-2"
+                title="Ver empresas descartadas e restaurar se necessário"
+              >
+                <XCircle className="w-4 h-4" />
+                Descartadas
+              </Button>
+              
+              <Button
                 onClick={() => navigate('/leads/stc-history')}
                 variant="outline"
                 className="gap-2"
@@ -1930,6 +1942,12 @@ export default function ICPQuarantine() {
         open={executiveReportOpen}
         onOpenChange={setExecutiveReportOpen}
         companyId={executiveReportCompanyId}
+      />
+      
+      {/* Discarded Companies Modal */}
+      <DiscardedCompaniesModal
+        open={showDiscardedModal}
+        onOpenChange={setShowDiscardedModal}
       />
       
       <ScrollControls />

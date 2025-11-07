@@ -226,7 +226,15 @@ const NEWS_SOURCES_PREMIUM = [
   // 🎥 VÍDEO & CONTEÚDO (Peso 75 pts)
   'youtube.com',                // ✨ YouTube (cases, depoimentos, eventos)
   'vimeo.com',                  // Vimeo (vídeos corporativos)
-  'slideshare.net'              // SlideShare (apresentações)
+  'slideshare.net',             // SlideShare (apresentações)
+  
+  // 📱 REDES SOCIAIS CORPORATIVAS (Peso 70 pts)
+  'instagram.com',              // ✨ Instagram (cases TOTVS regionais)
+  'facebook.com',               // Facebook (páginas empresariais)
+  'linkedin.com/posts',         // LinkedIn posts (depoimentos)
+  
+  // 🤝 PARCEIROS & INTEGRADORES (Peso 80 pts)
+  'fusionbynstech.com.br'       // ✨ Fusion (parceiro TOTVS com cases)
 ];
 
 // 📘 TIER 3: CASES OFICIAIS TOTVS (Peso Médio-Alto = 80 pts)
@@ -937,8 +945,40 @@ serve(async (req) => {
       totalQueries += 2;
       
       console.log(`[SIMPLE-TOTVS] ✅ FASE 5 concluída: ${evidenciasVideos.length} evidências de vídeo`);
+      
+      // 📱 FASE 6: BUSCA EM REDES SOCIAIS (Instagram, Facebook, LinkedIn)
+      console.log('[SIMPLE-TOTVS] 📱 FASE 6: Buscando em redes sociais corporativas...');
+      const evidenciasSocial = await searchMultiplePortals({
+        portals: ['instagram.com', 'facebook.com', 'linkedin.com/posts'],
+        companyName: shortSearchTerm,
+        serperKey,
+        sourceType: 'social_media',
+        sourceWeight: 70, // Peso médio (redes sociais têm menos contexto)
+        dateRestrict: 'y3', // Últimos 3 anos (posts mais recentes)
+      });
+      evidencias.push(...evidenciasSocial);
+      sourcesConsulted += 3; // Instagram + Facebook + LinkedIn
+      totalQueries += 3;
+      
+      console.log(`[SIMPLE-TOTVS] ✅ FASE 6 concluída: ${evidenciasSocial.length} evidências de redes sociais`);
+      
+      // 🤝 FASE 7: BUSCA EM PARCEIROS TOTVS (Fusion, etc)
+      console.log('[SIMPLE-TOTVS] 🤝 FASE 7: Buscando em sites de parceiros TOTVS...');
+      const evidenciasParceiros = await searchMultiplePortals({
+        portals: ['fusionbynstech.com.br'],
+        companyName: shortSearchTerm,
+        serperKey,
+        sourceType: 'totvs_partners',
+        sourceWeight: 80, // Peso alto (parceiros têm cases validados)
+        dateRestrict: 'y5',
+      });
+      evidencias.push(...evidenciasParceiros);
+      sourcesConsulted += 1;
+      totalQueries += 1;
+      
+      console.log(`[SIMPLE-TOTVS] ✅ FASE 7 concluída: ${evidenciasParceiros.length} evidências de parceiros`);
 
-      console.log('[SIMPLE-TOTVS] 📰 FASE 6: Buscando notícias gerais (Google News)...');
+      console.log('[SIMPLE-TOTVS] 📰 FASE 8: Buscando notícias gerais (Google News)...');
       totalQueries++;
 
       try {
