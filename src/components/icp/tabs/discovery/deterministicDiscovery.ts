@@ -63,7 +63,10 @@ function extractRootDomain(url: string): string {
 
 function isPdfOrNews(url: string) {
   if (/\.pdf($|\?)/i.test(url)) return true;
-  if (/news|noticias|g1\.|oglobo\.|uol\.|estadao\.|folha\./i.test(url)) return true;
+  // Portais de notícias e conteúdo
+  if (/news|noticias|g1\.|oglobo\.|uol\.|estadao\.|folha\.|dinheirorural\.|samaisvarejo\.|altacomunicazione\./i.test(url)) return true;
+  // Caminhos de notícias/artigos/posts
+  if (/\/(noticia|reportagem|materia|artigo|post|detalhe\/reportagens)\//i.test(url)) return true;
   return false;
 }
 
@@ -101,8 +104,9 @@ function scoreResult(params: {
   razao: string;
   cnpjDigits: string;
   preferBr: boolean;
+  companyKeywords?: string[]; // palavras-chave da empresa (ex: ["laticinios", "aviacao"])
 }) {
-  const { title, snippet, url, pos, razao, cnpjDigits, preferBr } = params;
+  const { title, snippet, url, pos, razao, cnpjDigits, preferBr, companyKeywords = [] } = params;
   const titleN = norm(title);
   const snipN = norm(snippet);
   const razN = norm(razao);
@@ -126,11 +130,26 @@ function scoreResult(params: {
     s += 15;
   }
 
+  // 🔥 BOOST: Domínio contém palavras-chave da empresa
+  // Ex: "laticiniosaviacao.com.br" para "Gonçalves Salles Laticínios Aviação"
+  try {
+    const domain = extractRootDomain(url);
+    const domainNorm = norm(domain);
+    for (const keyword of companyKeywords) {
+      if (domainNorm.includes(norm(keyword))) {
+        s += 30; // Forte boost para domínio que contém palavra-chave
+      }
+    }
+  } catch {
+    // Ignorar erro
+  }
+
   // Penalizações
   if (isPdfOrNews(url)) s -= 40;
   if (isGovOrRegistry(url)) s -= 30;
   if (isCdnOrAsset(url)) s -= 35;
   if (isInternalPage(url)) s -= 20;
+  if (isDirectoryHost(url)) s -= 45; // Penalização pesada para diretórios
 
   // Bonificação extra para domínio raiz limpo (sem path ou path = '/')
   try {
@@ -232,11 +251,20 @@ const BLOCKLIST_HOSTS = [
   'escavador.com',
   'diariooficial',
   '.gov.br',
-  // News
+  // News e portais de conteúdo
   'economia.uol.com.br',
   'biz.yahoo.com',
   'dun-bradstreet',
   'bloomberg.com',
+  'dinheirorural.com.br',
+  'samaisvarejo.com.br',
+  'altacomunicazione.com.br',
+  'opresenterural.com.br',
+  // Redes sociais genéricas e TikTok
+  'facebook.com/comunicacao',
+  'tiktok.com/@canal',
+  // Cemitérios e outros não-corporativos
+  'cemiteriodoaraca.com',
 ];
 
 function isDirectoryHost(url: string): boolean {
@@ -380,6 +408,19 @@ export async function deterministicDiscovery(input: DiscoveryInputs): Promise<Di
   const preferBr = (input.country ?? 'BR').toUpperCase() === 'BR';
   const cnpjDigits = stripCnpjDigits(input.cnpj);
   const razao = input.razaoSocial;
+  
+  // 🔥 NOVO: Extrair palavras-chave da empresa para boost de domínio
+  // Ex: "Gonçalves Salles S.A. Indústria e Comércio (Laticínios Aviação)"
+  // → ["goncalves", "salles", "laticinios", "aviacao"]
+  const companyKeywords = [
+    ...razao.split(/[\s\(\)]+/),
+    ...(input.companyName ? input.companyName.split(/[\s\(\)]+/) : []),
+  ]
+    .map(w => norm(w))
+    .filter(w => w.length > 3) // Ignorar palavras curtas
+    .filter(w => !/(ltda|eireli|s\.?a\.?|me|epp|industria|comercio|servicos)/.test(w)); // Remover stopwords
+
+  console.log('[DISCOVERY] 🔑 Company keywords:', companyKeywords);
 
   const notes: string[] = [];
   const results: Array<{ title: string; url: string; snippet: string; position: number }> = [];
@@ -421,6 +462,7 @@ export async function deterministicDiscovery(input: DiscoveryInputs): Promise<Di
         razao,
         cnpjDigits,
         preferBr,
+        companyKeywords, // 🔥 NOVO: Passa palavras-chave para boost de domínio
       }),
     }))
     // Tirar PDF/News/Gov/CDN antes de ordenar
