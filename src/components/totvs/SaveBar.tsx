@@ -5,7 +5,7 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send, Shield, History } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Save, FileText, Send, Shield, History, FileDown } from 'lucide-react';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
 import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
 import { SAFE_MODE, BLOCK_WRITES } from '@/lib/flags';
@@ -161,30 +161,30 @@ export default function SaveBar({
             </span>
           )}
 
-          {/* 📜 Botão Histórico (SECONDARY - opcional) */}
+          {/* 📜 Botão Histórico */}
           {onShowHistory && (
             <Button
               onClick={onShowHistory}
               variant="outline"
               size="sm"
-              className="gap-2 font-semibold"
-              title="Ver histórico de relatórios salvos"
+              className="gap-2"
+              title="Ver histórico de relatórios"
             >
               <History className="w-4 h-4" />
               Histórico
             </Button>
           )}
 
-          {/* 📄 Botão Exportar PDF (SECONDARY - opcional) */}
+          {/* 📄 Botão Exportar PDF */}
           {onExportPdf && (
             <Button
               onClick={onExportPdf}
               disabled={!allCompleted || readOnly}
               variant="outline"
               size="sm"
-              className="gap-2 font-semibold"
+              className="gap-2"
             >
-              <FileText className="w-4 h-4" />
+              <FileDown className="w-4 h-4" />
               Exportar PDF
             </Button>
           )}

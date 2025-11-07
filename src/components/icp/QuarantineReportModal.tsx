@@ -305,53 +305,6 @@ export function QuarantineReportModal({
                 </DialogDescription>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2 shrink-0 ml-4">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handlePrintPDF}
-                disabled={isGeneratingPDF}
-                title="Exportar como PDF"
-                className="h-9 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm font-medium">Gerando...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="w-4 h-4" />
-                    <span className="text-sm font-medium">Exportar PDF</span>
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowHistory(true)}
-                title="Ver histórico de relatórios"
-                className="h-9 w-9"
-              >
-                <History className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleToggleExpand}
-                title={isExpanded ? 'Minimizar' : 'Maximizar'}
-                className="h-9 w-9"
-              >
-                {isExpanded ? (
-                  <Minimize2 className="w-4 h-4" />
-                ) : (
-                  <Maximize2 className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
           </div>
 
           {/* Conteúdo scrollable */}
@@ -383,25 +336,42 @@ export function QuarantineReportModal({
               </ul>
             </div>
             
-            <DialogFooter className="gap-2 sm:gap-2">
+            <DialogFooter className="gap-3 flex justify-between items-center">
               <Button 
-                variant="destructive" 
+                variant="ghost" 
                 onClick={() => setShowDiscard(true)} 
-                className="gap-2 flex-1"
+                className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                 size="sm"
               >
                 <XCircle className="w-4 h-4" />
-                Descartar Empresa
+                <span className="text-sm">Descartar</span>
               </Button>
               
-              <Button 
-                variant="outline"
-                onClick={() => onOpenChange(false)} 
-                className="gap-2 flex-1"
-                size="sm"
-              >
-                Fechar
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={handlePrintPDF}
+                  disabled={isGeneratingPDF}
+                  className="gap-2"
+                  size="sm"
+                  title="Exportar PDF"
+                >
+                  {isGeneratingPDF ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileDown className="w-4 h-4" />
+                  )}
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => onOpenChange(false)} 
+                  size="sm"
+                  title="Fechar"
+                >
+                  <XCircle className="w-4 h-4" />
+                </Button>
+              </div>
             </DialogFooter>
           </div>
         </div>
