@@ -287,10 +287,8 @@ export function Analysis360Tab({
       getStatus: () => data ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: 360');
-      unregisterTab('360');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [data, onDataChange]);
 
   const handleRefresh = () => {

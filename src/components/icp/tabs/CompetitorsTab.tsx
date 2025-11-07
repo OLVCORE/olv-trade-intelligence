@@ -41,10 +41,8 @@ export function CompetitorsTab({ companyId, companyName, cnpj, domain, savedData
       getStatus: () => externalData ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: competitors');
-      unregisterTab('competitors');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [externalData, onDataChange]);
   
   // 🔄 RESET

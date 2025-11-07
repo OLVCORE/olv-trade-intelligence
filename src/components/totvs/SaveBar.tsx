@@ -76,8 +76,19 @@ export default function SaveBar({
         <div className="flex-1 max-w-md">
           {(() => {
             const totalTabs = 9; // FIXO: 9 abas no relatório TOTVS completo
+            const registeredTabs = Object.keys(statuses).length;
             const completedTabs = Object.values(statuses).filter(s => s === 'completed').length;
             const progressPercent = Math.round((completedTabs / totalTabs) * 100);
+            
+            // 🔍 DEBUG: Log detalhado do estado
+            console.log('[SaveBar] 📊 Progress Debug:', {
+              totalTabs,
+              registeredTabs,
+              completedTabs,
+              progressPercent,
+              statuses,
+              statusKeys: Object.keys(statuses),
+            });
             
             // Cores baseadas em progresso (Heat Map)
             let barColor = 'bg-blue-500'; // 0-33% = Frio (Azul)

@@ -45,10 +45,8 @@ export function ClientDiscoveryTab({ companyId, companyName, cnpj, domain, saved
       getStatus: () => directClients.length > 0 ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: clients');
-      unregisterTab('clients');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [directClients, wave7Results, onDataChange]);
   
   // 🔄 RESET

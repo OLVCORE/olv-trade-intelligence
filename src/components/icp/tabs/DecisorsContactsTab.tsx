@@ -58,10 +58,8 @@ export function DecisorsContactsTab({
       getStatus: () => analysisData ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: decisores');
-      unregisterTab('decisores');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [analysisData, customLinkedInUrl, customApolloUrl, onDataChange]);
   
   // 🔄 RESET

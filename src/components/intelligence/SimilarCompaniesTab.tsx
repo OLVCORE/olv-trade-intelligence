@@ -283,10 +283,8 @@ export function SimilarCompaniesTab({
       getStatus: () => data?.similar_companies?.length > 0 ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: similar');
-      unregisterTab('similar');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [data, onDataChange]);
   
   const { data, isLoading, error, refetch } = useQuery({
@@ -2401,9 +2399,7 @@ function useSimilarCompaniesRegistry(data: any, onDataChange?: (data: any) => vo
       getStatus: () => data?.similar_companies?.length > 0 ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: similar');
-      unregisterTab('similar');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [data, onDataChange]);
 }

@@ -63,10 +63,8 @@ export function ExecutiveSummaryTab({
       getStatus: () => stcResult ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: executive');
-      unregisterTab('executive');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [stcResult, similarCount, competitorsCount, clientsCount, maturityScore, onDataChange]);
   
   // 🔄 RESET

@@ -133,11 +133,8 @@ export function KeywordsSEOTabEnhanced({
       getStatus: () => autosaveStatus,
     });
 
-    // Cleanup ao desmontar
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: keywords');
-      unregisterTab('keywords');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [
     stcHistoryId,
     seoData,

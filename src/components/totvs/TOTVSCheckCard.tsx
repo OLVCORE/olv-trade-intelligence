@@ -412,10 +412,8 @@ export default function TOTVSCheckCard({
       getStatus: () => totvsSaved ? 'completed' : 'draft',
     });
     
-    return () => {
-      console.log('[TOTVS-REG] 🧹 Desregistrando aba TOTVS');
-      unregisterTabInGlobal('detection');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [data, totvsSaved]);
 
   // 🔒 SNAPSHOT: Carregar snapshot para verificar modo read-only

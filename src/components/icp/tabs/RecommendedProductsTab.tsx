@@ -65,10 +65,8 @@ export function RecommendedProductsTab({
       getStatus: () => productGapsData ? 'completed' : 'draft',
     });
 
-    return () => {
-      console.info('[REGISTRY] 🧹 Unregistered: products');
-      unregisterTab('products');
-    };
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
   }, [productGapsData, onDataChange]);
   
   // 🔄 RESET
