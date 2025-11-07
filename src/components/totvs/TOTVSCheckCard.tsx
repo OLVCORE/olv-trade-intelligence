@@ -94,7 +94,7 @@ export default function TOTVSCheckCard({
   const [copiedTerms, setCopiedTerms] = useState<string | null>(null);
   
   // 🚨 SISTEMA DE SALVAMENTO POR ABA
-  const [activeTab, setActiveTab] = useState('keywords'); // 🔄 NOVA: Começa em Keywords!
+  const [activeTab, setActiveTab] = useState('detection'); // 🔄 NOVA ORDEM: Começa em TOTVS Check!
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
   const queryClient = useQueryClient();
@@ -320,6 +320,9 @@ export default function TOTVSCheckCard({
   const hasKeywordsSaved = !!latestReport?.full_report?.keywords_seo_report;
   const hasDecisorsSaved = !!latestReport?.full_report?.decisors_report;
 
+  // 🔥 Estado para website descoberto pelos decisores (propagar para Digital)
+  const [discoveredWebsite, setDiscoveredWebsite] = useState<string | null>(null);
+
   // 🔥 CRÍTICO: Carregar dados salvos no tabDataRef quando latestReport existir
   useEffect(() => {
     if (latestReport?.full_report) {
@@ -333,6 +336,12 @@ export default function TOTVSCheckCard({
       if (report.analysis_report) tabDataRef.current.analysis = report.analysis_report;
       if (report.products_report) tabDataRef.current.products = report.products_report;
       if (report.executive_report) tabDataRef.current.executive = report.executive_report;
+      
+      // 🔥 NOVO: Propagar website descoberto pelos decisores
+      if (report.decisors_report?.companyData?.website) {
+        setDiscoveredWebsite(report.decisors_report.companyData.website);
+        console.log('[TOTVS] 🌐 Website descoberto pelos decisores:', report.decisors_report.companyData.website);
+      }
       
       console.log('[TOTVS] ✅ Dados salvos carregados em tabDataRef');
     }
@@ -666,21 +675,28 @@ export default function TOTVSCheckCard({
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-9 mb-6 h-auto">
-          {/* 🔄 NOVA ORDEM: Keywords PRIMEIRO, Executive ÚLTIMO */}
-          <TabsTrigger value="keywords" className="flex flex-col items-center gap-1 text-xs py-2">
+          {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
+          <TabsTrigger value="detection" className="flex flex-col items-center gap-1 text-xs py-2 bg-primary/10 font-bold">
             <div className="flex items-center gap-2">
-              <Globe className="w-3 h-3" />
-              <span className="text-[10px]">Keywords</span>
-              <TabIndicator status={latestReport?.full_report?.__status?.keywords?.status || 'draft'} />
-            </div>
-            {renderStatusDot('keywords')}
-          </TabsTrigger>
-          <TabsTrigger value="detection" className="flex flex-col items-center gap-1 text-xs py-2">
-            <div className="flex items-center gap-1">
               <Search className="w-3 h-3" />
               <span className="text-[10px]">TOTVS</span>
+              <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
             </div>
             {renderStatusDot('detection')}
+          </TabsTrigger>
+          <TabsTrigger value="decisors" className="flex flex-col items-center gap-1 text-xs py-2">
+            <div className="flex items-center gap-1">
+              <UserCircle className="w-3 h-3" />
+              <span className="text-[10px]">Decisores</span>
+            </div>
+            {renderStatusDot('decisors')}
+          </TabsTrigger>
+          <TabsTrigger value="keywords" className="flex flex-col items-center gap-1 text-xs py-2">
+            <div className="flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              <span className="text-[10px]">Digital</span>
+            </div>
+            {renderStatusDot('keywords')}
           </TabsTrigger>
           <TabsTrigger value="competitors" className="flex flex-col items-center gap-1 text-xs py-2">
             <div className="flex items-center gap-1">
@@ -703,13 +719,6 @@ export default function TOTVSCheckCard({
             </div>
             {renderStatusDot('clients')}
           </TabsTrigger>
-          <TabsTrigger value="decisors" className="flex flex-col items-center gap-1 text-xs py-2">
-            <div className="flex items-center gap-1">
-              <UserCircle className="w-3 h-3" />
-              <span className="text-[10px]">Decisores</span>
-            </div>
-            {renderStatusDot('decisors')}
-          </TabsTrigger>
           <TabsTrigger value="analysis" className="flex flex-col items-center gap-1 text-xs py-2">
             <div className="flex items-center gap-1">
               <BarChart3 className="w-3 h-3" />
@@ -724,7 +733,7 @@ export default function TOTVSCheckCard({
             </div>
             {renderStatusDot('products')}
           </TabsTrigger>
-          <TabsTrigger value="executive" className="flex flex-col items-center gap-1 text-xs py-2 bg-primary/10 font-bold">
+          <TabsTrigger value="executive" className="flex flex-col items-center gap-1 text-xs py-2 bg-emerald-500/10 font-bold">
             <div className="flex items-center gap-1">
               <LayoutDashboard className="w-3 h-3" />
               <span className="text-[10px]">Executive</span>
@@ -744,19 +753,9 @@ export default function TOTVSCheckCard({
           </div>
         </div>
 
-        {/* ABA 1: EXECUTIVE SUMMARY (NOVA) */}
-        <TabsContent value="executive" className="mt-0 overflow-y-auto">
-          <ExecutiveSummaryTab
-            companyName={companyName}
-            stcResult={data}
-            similarCount={similarCompaniesData?.length || 0}
-            competitorsCount={data?.evidences?.filter((e: any) => e.detected_products?.length > 0).length || 0}
-            clientsCount={Math.floor((similarCompaniesData?.length || 0) * 2.5)}
-            maturityScore={data?.digital_maturity_score || 0}
-          />
-        </TabsContent>
+        {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
-        {/* ABA 2: DETECÇÃO TOTVS */}
+        {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
         <TabsContent value="detection" className="mt-0 overflow-y-auto">
           {/* SE NÃO TEM DADOS DO STC, MOSTRAR BOTÃO VERIFICAR */}
           {!data || !enabled ? (
@@ -1096,7 +1095,51 @@ export default function TOTVSCheckCard({
           )}
         </TabsContent>
 
-        {/* ABA 3: COMPETITORS (NOVA) */}
+        {/* ABA 2: DECISORES & CONTATOS (EXTRAÇÃO APOLLO+LINKEDIN) */}
+        <TabsContent value="decisors" className="mt-0 overflow-y-auto">
+          <DecisorsContactsTab
+            companyId={companyId}
+            companyName={companyName}
+            linkedinUrl={data?.linkedin_url}
+            domain={domain}
+            savedData={latestReport?.full_report?.decisors_report}
+            onWebsiteDiscovered={(website) => {
+              console.log('[TOTVS] 🌐 Website descoberto pelos decisores:', website);
+              setDiscoveredWebsite(website);
+            }}
+          />
+        </TabsContent>
+
+        {/* ABA 3: DIGITAL PRESENCE (KEYWORDS & SEO) */}
+        <TabsContent value="keywords" className="mt-0 overflow-y-auto">
+          <KeywordsSEOTab
+            companyName={companyName}
+            domain={discoveredWebsite || domain}
+            cnpj={cnpj}
+            stcHistoryId={stcHistoryId || undefined}
+            savedData={latestReport?.full_report?.keywords_seo_report}
+            onDataChange={(data) => {
+              tabDataRef.current.keywords = data;
+              setUnsavedChanges(prev => ({ ...prev, keywords: true }));
+              setTabsStatus(prev => ({ ...prev, keywords: 'success' }));
+              // Compartilhar empresas similares com aba Competitors
+              if (data.similarCompaniesOptions) {
+                setSharedSimilarCompanies(data.similarCompaniesOptions);
+              }
+            }}
+            onLoading={(loading) => {
+              if (loading) {
+                setTabsStatus(prev => ({ ...prev, keywords: 'loading' }));
+              }
+            }}
+            onError={(error) => {
+              setTabsStatus(prev => ({ ...prev, keywords: 'error' }));
+              toast.error('❌ Erro na análise SEO', { description: error });
+            }}
+          />
+        </TabsContent>
+
+        {/* ABA 4: COMPETITORS */}
         <TabsContent value="competitors" className="mt-0 overflow-y-auto">
           <CompetitorsTab
             companyId={companyId}
@@ -1107,7 +1150,7 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 4: EMPRESAS SIMILARES (MANTIDO) */}
+        {/* ABA 5: EMPRESAS SIMILARES */}
         <TabsContent value="similar" className="mt-0 overflow-y-auto">
           {companyId && companyName ? (
             <SimilarCompaniesTab
@@ -1125,7 +1168,7 @@ export default function TOTVSCheckCard({
           )}
         </TabsContent>
 
-        {/* ABA 5: CLIENT DISCOVERY (NOVA - EXPANSÃO EXPONENCIAL) */}
+        {/* ABA 6: CLIENT DISCOVERY */}
         <TabsContent value="clients" className="mt-0 overflow-y-auto">
           <ClientDiscoveryTab
             companyId={companyId}
@@ -1135,7 +1178,7 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 6: ANÁLISE 360° (MANTIDO) */}
+        {/* ABA 7: ANÁLISE 360° */}
         <TabsContent value="analysis" className="mt-0 overflow-y-auto">
           {companyId && companyName ? (
             <Analysis360Tab
@@ -1153,7 +1196,7 @@ export default function TOTVSCheckCard({
           )}
         </TabsContent>
 
-        {/* ABA 7: RECOMMENDED PRODUCTS (NOVA) */}
+        {/* ABA 8: RECOMMENDED PRODUCTS */}
         <TabsContent value="products" className="mt-0 overflow-y-auto">
           <RecommendedProductsTab
             companyName={companyName}
@@ -1161,43 +1204,15 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 1: KEYWORDS & SEO (PRIMEIRA - WEBSITE DISCOVERY) */}
-        <TabsContent value="keywords" className="mt-0 overflow-y-auto">
-            <KeywordsSEOTab
-              companyName={companyName}
-              domain={domain}
-              cnpj={cnpj}
-              stcHistoryId={stcHistoryId || undefined}
-              savedData={latestReport?.full_report?.keywords_seo_report}
-              onDataChange={(data) => {
-                tabDataRef.current.keywords = data;
-                setUnsavedChanges(prev => ({ ...prev, keywords: true }));
-                setTabsStatus(prev => ({ ...prev, keywords: 'success' }));
-                // Compartilhar empresas similares com aba Competitors
-                if (data.similarCompaniesOptions) {
-                  setSharedSimilarCompanies(data.similarCompaniesOptions);
-                }
-              }}
-              onLoading={(loading) => {
-                if (loading) {
-                  setTabsStatus(prev => ({ ...prev, keywords: 'loading' }));
-                }
-              }}
-              onError={(error) => {
-                setTabsStatus(prev => ({ ...prev, keywords: 'error' }));
-                toast.error('❌ Erro na análise SEO', { description: error });
-              }}
-            />
-        </TabsContent>
-
-        {/* ABA 9: DECISORES & CONTATOS (NOVA - PHANTOMBUSTER) */}
-        <TabsContent value="decisors" className="mt-0 overflow-y-auto">
-          <DecisorsContactsTab
-            companyId={companyId}
+        {/* ABA 9: EXECUTIVE SUMMARY (ÚLTIMA) */}
+        <TabsContent value="executive" className="mt-0 overflow-y-auto">
+          <ExecutiveSummaryTab
             companyName={companyName}
-            linkedinUrl={data?.linkedin_url}
-            domain={domain}
-            savedData={latestReport?.full_report?.decisors_report}
+            stcResult={data}
+            similarCount={similarCompaniesData?.length || 0}
+            competitorsCount={data?.evidences?.filter((e: any) => e.detected_products?.length > 0).length || 0}
+            clientsCount={Math.floor((similarCompaniesData?.length || 0) * 2.5)}
+            maturityScore={data?.digital_maturity_score || 0}
           />
         </TabsContent>
       </Tabs>
