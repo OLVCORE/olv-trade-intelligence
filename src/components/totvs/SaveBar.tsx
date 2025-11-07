@@ -73,7 +73,7 @@ export default function SaveBar({
         {/* 📊 PROGRESS BAR REAL (Heat Map: Frio → Quente) */}
         <div className="flex-1 max-w-md">
           {(() => {
-            const totalTabs = Object.keys(statuses).length || 9;
+            const totalTabs = 9; // FIXO: 9 abas no relatório TOTVS completo
             const completedTabs = Object.values(statuses).filter(s => s === 'completed').length;
             const progressPercent = Math.round((completedTabs / totalTabs) * 100);
             

@@ -769,9 +769,6 @@ export default function TOTVSCheckCard({
               </p>
             </div>
           </div>
-          <Badge className="bg-green-600 text-white">
-            {Object.keys(latestReport?.full_report || {}).length} abas salvas
-          </Badge>
         </div>
       )}
 
