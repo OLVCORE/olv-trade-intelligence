@@ -415,7 +415,7 @@ export default function TOTVSCheckCard({
     if (onResult && data) onResult(data);
   }, [data, onResult]);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     // 🚨 SE JÁ TEM RELATÓRIO SALVO, PERGUNTAR SE QUER REPROCESSAR
     if (hasSaved) {
       const confirmar = window.confirm(
@@ -424,6 +424,19 @@ export default function TOTVSCheckCard({
         'Deseja realmente reprocessar a análise?'
       );
       if (!confirmar) return;
+      
+      // 🔥 DELETAR CACHE ANTIGO PARA FORÇAR NOVA BUSCA
+      if (companyId) {
+        try {
+          await supabase
+            .from('simple_totvs_checks')
+            .delete()
+            .eq('company_id', companyId);
+          console.log('[TOTVS] 🗑️ Cache deletado, forçando nova verificação');
+        } catch (error) {
+          console.error('[TOTVS] ❌ Erro ao deletar cache:', error);
+        }
+      }
     }
     
     setEnabled(true);
@@ -559,11 +572,24 @@ export default function TOTVSCheckCard({
   // ✅ SEMPRE MOSTRAR AS 8 ABAS (mesmo sem STC)
   // Se não tem dados do STC, mostrar apenas as outras abas funcionando
 
-  const evidences = data?.evidences || [];
+  // 🔥 EXTRAÇÃO ROBUSTA DE EVIDÊNCIAS (tenta múltiplos caminhos)
+  const evidences = data?.evidences || data?.data?.evidences || [];
   const tripleMatches = evidences.filter((e: any) => e.match_type === 'triple');
   const doubleMatches = evidences.filter((e: any) => e.match_type === 'double');
   
   const filteredEvidences = filterMode === 'triple' ? tripleMatches : evidences;
+  
+  // 🐛 DEBUG: Log evidências
+  console.log('[TOTVS-CARD] 📊 Evidences debug:', {
+    totalEvidences: evidences.length,
+    tripleCount: tripleMatches.length,
+    doubleCount: doubleMatches.length,
+    sampleEvidence: evidences[0] ? {
+      title: evidences[0].title?.substring(0, 50),
+      matchType: evidences[0].match_type,
+      source: evidences[0].source
+    } : 'none'
+  });
 
   // 🔍 SPEC #005.D.1: Diagnóstico SaveBar (telemetria centralizada)
   if (isDiagEnabled()) {

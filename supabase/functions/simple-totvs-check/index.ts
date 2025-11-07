@@ -6,16 +6,101 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 🔥 PRODUTOS TOTVS COMPLETOS (v5.0 - 50+ produtos)
 const TOTVS_PRODUCTS = [
-  // Produtos Principais
-  'Protheus', 'RM', 'Datasul', 'Fluig', 'Winthor', 'Microsiga',
-  'TOTVS Gestão', 'TOTVS ERP', 'Carol', 'Techfin', 'Logix',
-  'TOTVS Backoffice', 'TOTVS Manufatura', 'TOTVS Varejo',
-  'TOTVS Educacional', 'TOTVS Saúde',
-  // Fluig (Foco Especial)
-  'Fluig Platform', 'Fluig ECM', 'Fluig BPM',
-  // Variações
-  'ERP TOTVS', 'Sistema TOTVS', 'Solução TOTVS'
+  // ERP Core
+  'Protheus', 'RM', 'Datasul', 'Logix', 'Microsiga', 'Winthor',
+  'TOTVS Gestão', 'TOTVS ERP', 'TOTVS Backoffice',
+  
+  // Plataforma & Integração
+  'Fluig', 'Fluig Platform', 'Fluig ECM', 'Fluig BPM',
+  'Carol', 'IPAAS', 'TOTVS IPAAS',
+  
+  // Vertical
+  'TOTVS Manufatura', 'TOTVS Varejo', 'TOTVS Educacional', 'TOTVS Saúde',
+  
+  // Cloud & Analytics
+  'TOTVS Cloud', 'Cloud TOTVS', 'TOTVS Analytics', 'Analytics TOTVS',
+  
+  // IA & Digital
+  'Inteligência Artificial TOTVS', 'IA TOTVS', 'TOTVS IA',
+  'Transformação Digital TOTVS',
+  
+  // CRM & Vendas
+  'CRM TOTVS', 'TOTVS CRM', 'CRM de Vendas', 'SFA', 'Sales Force Automation',
+  'Força de Vendas TOTVS', 'TOTVS SFA',
+  
+  // RH & Gestão de Pessoas
+  'RH TOTVS', 'TOTVS RH', 'Recursos Humanos TOTVS', 'Gestão de Pessoas TOTVS',
+  
+  // Financeiro & Pagamentos
+  'Techfin', 'TOTVS Techfin', 'Crédito TOTVS', 'Pagamentos TOTVS',
+  'TOTVS Crédito', 'TOTVS Pagamentos',
+  
+  // Marketing & Atendimento
+  'Marketing Digital TOTVS', 'TOTVS Marketing', 'Chatbot TOTVS', 'TOTVS Chatbot',
+  'Atendimento TOTVS', 'TOTVS Atendimento',
+  
+  // Assinatura & Documentos
+  'Assinatura Eletrônica TOTVS', 'TOTVS Assinatura',
+  
+  // Variações Genéricas
+  'ERP TOTVS', 'Sistema TOTVS', 'Solução TOTVS', 'Software TOTVS'
+];
+
+// 🎯 REGEX ESPECIAL para produtos CURTOS (evita falsos positivos)
+const SHORT_PRODUCT_PATTERNS: Record<string, RegExp> = {
+  // RM: só conta se "TOTVS" ou "ERP" ou "sistema" estiver próximo
+  'RM': /\b(TOTVS\s+RM|RM\s+TOTVS|sistema\s+RM|ERP\s+RM|módulo\s+RM)\b/i,
+  
+  // RH: só conta se "TOTVS" ou "sistema" estiver próximo
+  'RH': /\b(TOTVS\s+RH|RH\s+TOTVS|sistema\s+RH|módulo\s+RH|Recursos\s+Humanos\s+TOTVS)\b/i,
+  
+  // IA: só conta se contexto de tecnologia
+  'IA': /\b(Inteligência\s+Artificial|IA\s+TOTVS|TOTVS\s+IA)\b/i,
+  
+  // SFA: geralmente é específico o suficiente
+  'SFA': /\b(SFA|Sales\s+Force\s+Automation|Força\s+de\s+Vendas)\b/i,
+  
+  // CRM: só conta se "TOTVS" ou "vendas" estiver próximo
+  'CRM': /\b(CRM\s+TOTVS|TOTVS\s+CRM|CRM\s+de\s+Vendas)\b/i
+};
+
+// 🌐 50+ PORTAIS DE VAGAS BRASILEIROS (Categoria 1: Plataformas Nacionais)
+const JOB_PORTALS_NACIONAL = [
+  'br.linkedin.com/jobs', 'br.indeed.com', 'infojobs.com.br',
+  'vagas.com.br', 'catho.com.br', 'portal.gupy.io',
+  'glassdoor.com.br/Vaga', 'vagas.solides.com.br', 'bne.com.br',
+  'trabalhabrasil.com.br', 'empregabrasil.mte.gov.br', 'br.jooble.org',
+  'adzuna.com.br', 'talent.com/pt-br', 'br.jora.com',
+  'br.jobrapido.com', 'br.jobsora.com', 'jobisjob.com.br',
+  'jobatus.com.br', 'empregos.com.br', 'manager.com.br',
+  'curriculum.com.br', 'emprego.net', 'recrutasimples.com.br',
+  'empregoligado.com.br', 'jobbol.com.br', 'elancers.net',
+  'jobs.abler.com.br', 'jobconvo.com/pt-br/vagas', 'trampos.co'
+];
+
+// 🎓 PORTAIS DE ESTÁGIO/TRAINEE (Categoria 2)
+const JOB_PORTALS_ESTAGIO = [
+  'portal.ciee.org.br', 'nube.com.br', 'iel.org.br/estagio'
+];
+
+// 📰 FONTES OFICIAIS BRASILEIRAS (Peso Máximo = 100 pts)
+const OFFICIAL_SOURCES_BR = [
+  // Regulatórias
+  'cvm.gov.br', 'rad.cvm.gov.br', 'b3.com.br',
+  'investidor.b3.com.br', 'in.gov.br',
+  
+  // Judiciais
+  'esaj.tjsp.jus.br', 'tjrj.jus.br', 'cnj.jus.br',
+  'imprensaoficial.com.br', 'jusbrasil.com.br'
+];
+
+// 📰 FONTES DE NOTÍCIAS PREMIUM (Peso Alto = 85 pts)
+const NEWS_SOURCES_PREMIUM = [
+  'valor.globo.com', 'exame.com', 'folha.uol.com.br',
+  'estadao.com.br/economia', 'infomoney.com.br',
+  'startse.com', 'convergenciadigital.com.br'
 ];
 
 // SEGMENTOS ICP (Foco Manufatura e Serviços)
@@ -34,22 +119,38 @@ const INTENT_KEYWORDS = [
   'memorando de intenção', 'acordo de intenção'
 ];
 
+// 🎯 PESOS DAS FONTES (v5.0 - Alinhado com classificação 100%/80%/65%)
 const SOURCE_WEIGHTS = {
-  // TIER 1: Documentos Oficiais (Máxima Confiança)
-  cvm_ri_docs: 100,           // Relações com Investidores
-  cvm_balancetes: 95,         // Balanços e demonstrativos
-  apollo_tech_stack: 90,      // Stack tecnológico
-  // TIER 2: Notícias Premium (Alta Confiança)
-  premium_news: 85,           // Valor, Exame, Estadão
-  tech_news: 80,              // Convergência Digital, Canaltech
-  // TIER 3: Documentos Públicos (Média-Alta Confiança)
-  judicial: 75,               // Processos judiciais
-  memorandos: 70,             // Memorandos de intenção
-  // TIER 4: Vagas e Redes Sociais (Média Confiança)
-  linkedin_jobs: 60,          // Vagas LinkedIn
-  google_news: 50,            // Notícias gerais
-  // TIER 5: Busca Geral (Baixa Confiança)
-  google_search: 30           // Busca genérica
+  // TIER 1: Documentos Oficiais (Peso Máximo = 100 pts → Auto NO-GO)
+  cvm_ri_docs: 100,           // CVM/RI = relação comercial comprovada
+  b3_docs: 100,               // B3 = fornecedor listado
+  tjsp_judicial: 100,         // TJSP/CNJ = litígio comercial
+  diario_oficial: 100,        // Diário Oficial = documento público
+  
+  // TIER 2: Notícias Premium (Peso Alto = 85 pts)
+  valor_economico: 85,        // Valor Econômico
+  exame: 85,                  // Exame
+  estadao: 85,                // Estadão Economia
+  infomoney: 85,              // InfoMoney
+  startse: 85,                // StartSe (tech)
+  
+  // TIER 3: Vagas Oficiais (Peso Alto = 80 pts)
+  linkedin_jobs: 80,          // LinkedIn Jobs (empresa atual)
+  indeed_jobs: 80,            // Indeed
+  vagas_com: 80,              // Vagas.com
+  catho: 80,                  // Catho
+  gupy: 80,                   // Gupy
+  job_portals: 75,            // Outros portais de vagas
+  
+  // TIER 4: Profiles LinkedIn (Peso Médio-Alto = 75 pts)
+  linkedin_profiles: 75,      // Skills de funcionários atuais
+  
+  // TIER 5: Notícias Gerais (Peso Médio = 60 pts)
+  google_news: 60,            // Google News
+  tech_blogs: 60,             // Blogs de tecnologia
+  
+  // TIER 6: Busca Geral (Peso Baixo = 40 pts)
+  google_search: 40           // Busca genérica
 };
 
 // GERA VARIAÇÕES DO NOME DA EMPRESA para busca mais flexível
@@ -200,15 +301,36 @@ function isValidLinkedInJobPosting(text: string): boolean {
   return true;
 }
 
+// 🎯 DETECÇÃO INTELIGENTE de Produtos TOTVS (com regex especial para palavras curtas)
 function detectTotvsProducts(text: string): string[] {
-  const textLower = text.toLowerCase();
   const detected: string[] = [];
-  for (const product of TOTVS_PRODUCTS) {
-    if (textLower.includes(product.toLowerCase())) {
-      detected.push(product);
+  
+  // 1. VERIFICAR produtos CURTOS com regex especial (RM, RH, IA, SFA, CRM)
+  for (const [productShort, pattern] of Object.entries(SHORT_PRODUCT_PATTERNS)) {
+    if (pattern.test(text)) {
+      detected.push(productShort);
+      console.log(`[PRODUCT-DETECT] ✅ Produto curto detectado: ${productShort}`);
     }
   }
-  return detected;
+  
+  // 2. VERIFICAR produtos NORMAIS (busca simples case-insensitive)
+  const textLower = text.toLowerCase();
+  for (const product of TOTVS_PRODUCTS) {
+    const productLower = product.toLowerCase();
+    
+    // Pular produtos curtos que já foram verificados acima
+    if (['rm', 'rh', 'ia', 'sfa', 'crm'].includes(productLower)) {
+      continue;
+    }
+    
+    if (textLower.includes(productLower)) {
+      detected.push(product);
+      console.log(`[PRODUCT-DETECT] ✅ Produto detectado: ${product}`);
+    }
+  }
+  
+  // 3. REMOVER DUPLICATAS (ex: "RM" e "TOTVS RM")
+  return [...new Set(detected)];
 }
 
 serve(async (req) => {
