@@ -972,17 +972,16 @@ export default function ICPQuarantine() {
           decisorsCount: decisors?.decisores?.length || 0,
         });
         
-        const { data: savedReport, error: saveError } = await supabase
+        const { data: savedReport, error: saveError} = await supabase
           .from('stc_verification_history')
           .insert({
             company_id: company.company_id || company.id,
             company_name: company.razao_social,
             cnpj: company.cnpj,
             status: totvsResult.status,
-            // ✅ REMOVIDO: confidence (coluna não existe no schema)
-            triple_matches: totvsResult.triple_matches || 0,
-            double_matches: totvsResult.double_matches || 0,
-            single_matches: totvsResult.single_matches || 0,
+            // ✅ REMOVIDO: confidence, double_matches, triple_matches, single_matches
+            // MOTIVO: PGRST204 - Colunas não existem no schema cache
+            // Todos os dados ficam salvos em full_report (incluindo matches)
             total_score: totvsResult.total_weight || 0,
             evidences: totvsResult.evidences || [],
             sources_consulted: totvsResult.methodology?.searched_sources || 0,
