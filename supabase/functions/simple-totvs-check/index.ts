@@ -206,12 +206,141 @@ const NEWS_SOURCES_PREMIUM = [
   'startse.com', 'convergenciadigital.com.br'
 ];
 
-// SEGMENTOS ICP (Foco Manufatura e Serviços)
-const ICP_SEGMENTS = [
-  'manufatura', 'indústria', 'fabricante', 'industrial',
-  'serviços', 'distribuidor', 'distribuição', 'logística',
-  'comércio', 'varejo', 'atacado', 'agronegócio'
-];
+// 🎯 SEGMENTOS TOTVS (12 verticais oficiais)
+const TOTVS_SEGMENTS = {
+  agro: ['agro', 'agronegócio', 'agropecuária', 'agricultura', 'pecuária', 'rural'],
+  construcao: ['construção', 'construtora', 'obras', 'engenharia', 'imóveis'],
+  distribuicao: ['distribuição', 'distribuidor', 'atacado', 'atacadista', 'logística'],
+  educacional: ['educação', 'educacional', 'ensino', 'universidade', 'faculdade', 'escola'],
+  financial: ['financeiro', 'financial services', 'banco', 'fintech', 'crédito', 'seguros'],
+  hotelaria: ['hotel', 'hotelaria', 'hospitalidade', 'turismo', 'pousada'],
+  juridico: ['jurídico', 'advocacia', 'escritório de advocacia', 'legal'],
+  logistica: ['logística', 'transporte', 'transportadora', 'armazenagem'],
+  manufatura: ['manufatura', 'indústria', 'industrial', 'fábrica', 'fabricante'],
+  servicos: ['serviços', 'prestador de serviços', 'consultoria', 'terceirização'],
+  saude: ['saúde', 'hospital', 'clínica', 'laboratório', 'medicina'],
+  varejo: ['varejo', 'loja', 'comércio', 'supermercado', 'e-commerce']
+};
+
+// 🏆 MATRIZ PRODUTOS x SEGMENTOS (Primário/Relevante/Opcional)
+// Baseada na análise oficial do portfólio TOTVS
+const PRODUCT_SEGMENT_MATRIX: Record<string, Record<string, 'primario' | 'relevante' | 'opcional'>> = {
+  // Inteligência Artificial
+  'IA': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // ERP (nuclear em todos)
+  'ERP': {
+    agro: 'primario', construcao: 'primario', distribuicao: 'primario',
+    educacional: 'primario', financial: 'primario', hotelaria: 'primario',
+    juridico: 'relevante', logistica: 'primario', manufatura: 'primario',
+    servicos: 'primario', saude: 'primario', varejo: 'primario'
+  },
+  
+  // Analytics (transversal)
+  'Analytics': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // Assinatura Eletrônica (transversal)
+  'Assinatura Eletrônica': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // Atendimento e Chatbot
+  'Chatbot': {
+    agro: 'opcional', construcao: 'opcional', distribuicao: 'relevante',
+    educacional: 'primario', financial: 'relevante', hotelaria: 'primario',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'opcional',
+    servicos: 'primario', saude: 'primario', varejo: 'primario'
+  },
+  
+  // Cloud (transversal)
+  'Cloud': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // Crédito (Techfin)
+  'Crédito': {
+    agro: 'relevante', construcao: 'opcional', distribuicao: 'primario',
+    educacional: 'relevante', financial: 'primario', hotelaria: 'relevante',
+    juridico: 'opcional', logistica: 'opcional', manufatura: 'relevante',
+    servicos: 'primario', saude: 'relevante', varejo: 'primario'
+  },
+  
+  // CRM de Vendas
+  'CRM': {
+    agro: 'relevante', construcao: 'opcional', distribuicao: 'primario',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'opcional', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'primario', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // Fluig (BPM/ECM)
+  'Fluig': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // iPaaS (Integrações)
+  'IPAAS': {
+    agro: 'relevante', construcao: 'relevante', distribuicao: 'relevante',
+    educacional: 'relevante', financial: 'relevante', hotelaria: 'relevante',
+    juridico: 'relevante', logistica: 'relevante', manufatura: 'relevante',
+    servicos: 'relevante', saude: 'relevante', varejo: 'relevante'
+  },
+  
+  // Marketing Digital
+  'Marketing Digital': {
+    agro: 'opcional', construcao: 'opcional', distribuicao: 'relevante',
+    educacional: 'primario', financial: 'relevante', hotelaria: 'primario',
+    juridico: 'opcional', logistica: 'opcional', manufatura: 'opcional',
+    servicos: 'primario', saude: 'relevante', varejo: 'primario'
+  },
+  
+  // Pagamentos
+  'Pagamentos': {
+    agro: 'relevante', construcao: 'opcional', distribuicao: 'relevante',
+    educacional: 'primario', financial: 'relevante', hotelaria: 'primario',
+    juridico: 'opcional', logistica: 'opcional', manufatura: 'opcional',
+    servicos: 'relevante', saude: 'relevante', varejo: 'primario'
+  },
+  
+  // RH (nuclear em todos)
+  'RH': {
+    agro: 'primario', construcao: 'primario', distribuicao: 'primario',
+    educacional: 'primario', financial: 'primario', hotelaria: 'primario',
+    juridico: 'primario', logistica: 'primario', manufatura: 'primario',
+    servicos: 'primario', saude: 'primario', varejo: 'primario'
+  },
+  
+  // MANUFATURA (específico industrial)
+  'PCP': { manufatura: 'primario' },
+  'MRP': { manufatura: 'primario' },
+  'APS': { manufatura: 'primario' },
+  'MES': { manufatura: 'primario' },
+  'OEE': { manufatura: 'primario' },
+  
+  // VAREJO (específico)
+  'RMS': { varejo: 'primario' },
+  'WMS': { distribuicao: 'primario', logistica: 'primario', varejo: 'relevante' },
+  'PDV': { varejo: 'primario' }
+};
 
 // KEYWORDS DE INTENÇÃO DE COMPRA
 const INTENT_KEYWORDS = [
@@ -221,6 +350,44 @@ const INTENT_KEYWORDS = [
   'investimento em', 'modernização', 'transformação digital',
   'memorando de intenção', 'acordo de intenção'
 ];
+
+// 🎯 DETECTAR SEGMENTO DA EMPRESA (baseado em palavras-chave)
+function detectCompanySegment(companyName: string, industry?: string): string | null {
+  const text = `${companyName} ${industry || ''}`.toLowerCase();
+  
+  for (const [segment, keywords] of Object.entries(TOTVS_SEGMENTS)) {
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        console.log(`[SEGMENT-DETECT] ✅ Segmento detectado: ${segment} (keyword: ${keyword})`);
+        return segment;
+      }
+    }
+  }
+  
+  console.log('[SEGMENT-DETECT] ⚠️ Segmento não detectado, usando genérico');
+  return null;
+}
+
+// 🏆 CALCULAR BOOST DE PESO baseado em Produto x Segmento
+function getProductSegmentBoost(product: string, segment: string | null): number {
+  if (!segment) return 0;
+  
+  const matrix = PRODUCT_SEGMENT_MATRIX[product];
+  if (!matrix) return 0;
+  
+  const relevance = matrix[segment];
+  
+  if (relevance === 'primario') {
+    console.log(`[SEGMENT-BOOST] 🏆 +25 pts: ${product} é PRIMÁRIO para ${segment}`);
+    return 25; // BOOST para produto nuclear do segmento
+  } else if (relevance === 'relevante') {
+    console.log(`[SEGMENT-BOOST] ✅ +10 pts: ${product} é RELEVANTE para ${segment}`);
+    return 10; // BOOST moderado
+  }
+  
+  // 'opcional' ou não mapeado = sem boost
+  return 0;
+}
 
 // 🎯 PESOS DAS FONTES (v5.0 - Alinhado com classificação 100%/80%/65%)
 const SOURCE_WEIGHTS = {
@@ -582,6 +749,10 @@ serve(async (req) => {
     const shortSearchTerm = company_name ? extractShortName(company_name) : searchTerm;
     console.log('[SIMPLE-TOTVS] 🔍 Termo de busca completo:', searchTerm);
     console.log('[SIMPLE-TOTVS] 🔍 Termo de busca curto:', shortSearchTerm);
+    
+    // 🎯 DETECTAR SEGMENTO DA EMPRESA (para boost de peso)
+    const companySegment = detectCompanySegment(company_name || '', '');
+    console.log('[SIMPLE-TOTVS] 🏢 Segmento detectado:', companySegment || 'genérico');
 
     if (company_id) {
       const { data: cached } = await supabase
@@ -1124,13 +1295,25 @@ serve(async (req) => {
     const doubleMatches = evidencias.filter(e => e.match_type === 'double').length;
     const singleMatches = evidencias.filter(e => e.match_type === 'single').length;
     
-    // CALCULAR SCORE PONDERADO
+    // CALCULAR SCORE PONDERADO (com boost de segmento)
     let totalScore = 0;
     let hasOfficialSource = false; // CVM, B3, TJSP (peso 100)
     let hasIntentEvidence = false;
+    let totalSegmentBoost = 0;
 
     for (const evidencia of evidencias) {
-      totalScore += evidencia.weight;
+      let evidenceScore = evidencia.weight;
+      
+      // 🏆 BOOST: Se produto é PRIMÁRIO ou RELEVANTE para o segmento da empresa
+      if (companySegment && evidencia.detected_products?.length > 0) {
+        for (const product of evidencia.detected_products) {
+          const boost = getProductSegmentBoost(product, companySegment);
+          evidenceScore += boost;
+          totalSegmentBoost += boost;
+        }
+      }
+      
+      totalScore += evidenceScore;
       
       // TIER 1: Fontes Oficiais (peso 100 = AUTO NO-GO)
       if (evidencia.weight === 100 || evidencia.source === 'official_docs') {
@@ -1143,6 +1326,8 @@ serve(async (req) => {
         totalScore += 20;  // BONUS por intenção
       }
     }
+    
+    console.log('[SIMPLE-TOTVS] 💎 Boost de segmento aplicado:', totalSegmentBoost, 'pts');
 
     const numEvidencias = evidencias.length;
 
