@@ -314,7 +314,7 @@ export default function TOTVSCheckCard({
   const data = (latestReport?.full_report as any) || liveData?.data || liveData;
   const isLoading = isLoadingLive && !latestReport?.full_report;
   
-  // 🐛 DEBUG: Log para diagnóstico
+  // 🐛 DEBUG: Log para diagnóstico (EXPANDIDO)
   useEffect(() => {
     console.log('[TOTVS-CARD] 🔍 Data sources:', {
       hasLatestReport: !!latestReport?.full_report,
@@ -323,6 +323,16 @@ export default function TOTVSCheckCard({
       dataStructure: data ? Object.keys(data) : null,
       evidencesCount: data?.evidences?.length || 0,
     });
+    
+    // 🔍 EXPANDIR liveData completo
+    if (liveData) {
+      console.log('[TOTVS-CARD] 📦 liveData COMPLETO:', JSON.stringify(liveData, null, 2));
+    }
+    
+    // 🔍 EXPANDIR data completo
+    if (data) {
+      console.log('[TOTVS-CARD] 📦 data COMPLETO:', JSON.stringify(data, null, 2).substring(0, 2000));
+    }
   }, [latestReport, liveData, data]);
 
   // Flags de abas salvas
@@ -579,7 +589,7 @@ export default function TOTVSCheckCard({
   
   const filteredEvidences = filterMode === 'triple' ? tripleMatches : evidences;
   
-  // 🐛 DEBUG: Log evidências
+  // 🐛 DEBUG: Log evidências (EXPANDIDO)
   console.log('[TOTVS-CARD] 📊 Evidences debug:', {
     totalEvidences: evidences.length,
     tripleCount: tripleMatches.length,
@@ -590,6 +600,13 @@ export default function TOTVSCheckCard({
       source: evidences[0].source
     } : 'none'
   });
+  
+  // 🔍 EXPANDIR todas as evidências
+  if (evidences.length > 0) {
+    console.log('[TOTVS-CARD] 📦 TODAS AS EVIDÊNCIAS:', JSON.stringify(evidences, null, 2).substring(0, 3000));
+  } else {
+    console.warn('[TOTVS-CARD] 🚨 ZERO EVIDÊNCIAS! Dados completos:', JSON.stringify(data, null, 2).substring(0, 2000));
+  }
 
   // 🔍 SPEC #005.D.1: Diagnóstico SaveBar (telemetria centralizada)
   if (isDiagEnabled()) {
