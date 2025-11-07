@@ -1218,47 +1218,15 @@ export default function ICPQuarantine() {
                 totalCompanies={filteredCompanies}
               />
               
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleAutoApprove}
-                      disabled={isAutoApproving}
-                      variant="outline"
-                    >
-                      {isAutoApproving ? 'Aprovando...' : 'Auto-aprovar Hot Leads (70+)'}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Detecta hot leads e aprova automaticamente</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleApproveBatch}
-                      disabled={selectedIds.length === 0 || isApproving}
-                      variant="default"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      {isApproving ? 'Aprovando...' : `Aprovar ${selectedIds.length || ''}`}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Aprovar selecionadas e mover para o Pool</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => refetch()}
-                      disabled={isLoading}
-                      aria-label="Atualizar"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Forçar atualização da página</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                onClick={() => navigate('/leads/stc-history')}
+                variant="outline"
+                className="gap-2"
+                title="Ver todos os relatórios TOTVS salvos"
+              >
+                <FileText className="h-4 w-4" />
+                Relatórios
+              </Button>
             </div>
           </div>
         </CardHeader>
