@@ -82,6 +82,17 @@ function isInternalPage(url: string) {
   return /\/produto\/|\/product\/|\/categoria\/|\/category\/|\/blog\/|\/artigo\//i.test(url);
 }
 
+// 🎯 EXTRAIR PRIMEIRAS 2 PALAVRAS (estratégia Apollo/LinkedIn)
+function extractFirstTwoWords(companyName: string): string {
+  const words = companyName
+    .replace(/\b(S\.?A\.?|LTDA\.?|ME|EPP|EIRELI|CIA|INDÚSTRIA|INDÚSTRIA E COMÉRCIO|COMÉRCIO|SERVIÇOS)\b/gi, '')
+    .trim()
+    .split(/\s+/)
+    .filter(w => w.length > 2); // Ignorar "de", "e", "da"
+  
+  return words.slice(0, 2).join(' ');
+}
+
 function scoreResult(params: {
   title: string;
   snippet: string;
@@ -240,42 +251,39 @@ function isDirectoryHost(url: string): boolean {
 function buildQueries(input: DiscoveryInputs) {
   const raz = (input.razaoSocial || '').trim();
   
-  // 🔥 EXTRAIR APENAS NOME PRINCIPAL (primeira palavra significativa)
-  const mainName = raz
-    .replace(/\s+(S\.?A\.?|Ltda\.?|LTDA|ME|EPP|EIRELI)(\s|$)/gi, '')
-    .replace(/\s+(Indústria|Comércio|Serviços|Transportes|Logística|de|e|do|da|dos|das)(\s+)/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ')[0];
+  // 🎯 ESTRATÉGIA APOLLO/LINKEDIN: PRIMEIRAS 2 PALAVRAS
+  const cleanedName = raz
+    .replace(/\b(S\.?A\.?|Ltda\.?|LTDA|ME|EPP|EIRELI|CIA)\b/gi, '')
+    .replace(/\b(Indústria e Comércio|Indústria|Comércio|Serviços)\b/gi, '')
+    .trim();
   
-  console.log(`[QUERY] 🎯 Nome principal: "${mainName}" (razão social: "${raz}")`);
+  const words = cleanedName
+    .split(/\s+/)
+    .filter(w => w.length > 2) // Remove "de", "e", "da", "do"
+    .filter(w => !['das', 'dos', 'para', 'com'].includes(w.toLowerCase()));
   
-  // Blocklist EXPLÍCITO nas queries
+  // PRIMEIRAS 2 PALAVRAS (ex: "Gonçalves Salles" de "Gonçalves Salles S.A.")
+  const firstTwo = words.slice(0, 2).join(' ');
+  const firstOne = words[0] || ''; // Fallback
+  
+  console.log(`[QUERY] 🎯 Primeiras 2 palavras: "${firstTwo}" (razão: "${raz}")`);
+  
+  // Blocklist EXPLÍCITO
   const blocklist = [
-    '-jusbrasil',
-    '-escavador',
-    '-econodata',
-    '-serasa',
-    '-cnpj',
-    '-telelistas',
-    '-guiadeempresas',
-    '-salario.com.br',
-    '-pesquisaempresas',
-    '-enderecofiscal',
-    '-diariooficial',
+    '-jusbrasil', '-escavador', '-econodata', '-serasa', '-cnpj',
+    '-telelistas', '-guiadeempresas', '-salario.com.br', '-pesquisaempresas',
+    '-enderecofiscal', '-diariooficial', '-prefeitura', '-turismo',
+    '-tripadvisor', '-google.com/maps', '-bing.com/maps',
+    '-portaldastransportadoras', '-vagas', '-emprego'
   ].join(' ');
   
-  // 🎯 STRATEGY: Igual a busca manual no Google
-  // Query 1: Nome principal + "site oficial" (encontra o domínio)
-  const q1 = `"${mainName}" "site oficial" ${blocklist}`;
+  // 🎯 QUERIES OTIMIZADAS (primeiras 2 palavras)
+  const q1 = `"${firstTwo}" "site oficial" ${blocklist}`;
+  const q2 = `"${firstTwo}" site:*.com.br ${blocklist}`;
+  const q3 = `"${firstOne}" site:*.com.br ${blocklist}`; // Fallback com 1 palavra
+  const q4 = `"${firstTwo}" (site:linkedin.com/company OR site:instagram.com OR site:facebook.com)`;
   
-  // Query 2: Nome principal com TLD brasileiro
-  const q2 = `"${mainName}" site:*.com.br ${blocklist}`;
-  
-  // Query 3: Redes sociais (validação)
-  const q3 = `"${mainName}" (site:linkedin.com OR site:instagram.com OR site:facebook.com)`;
-  
-  return [q1, q2, q3];
+  return [q1, q2, q3, q4];
 }
 
 // -------------------- integração com Serper --------------------

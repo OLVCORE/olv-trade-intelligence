@@ -802,21 +802,6 @@ export function KeywordsSEOTabEnhanced({
           )}
           
           {/* 📝 BOTÃO EDITAR WEBSITE - FICA NA BARRA EXTRA */}
-          {(discoveredDomain || domain) && !isEditingWebsite && (
-            <div className="flex justify-end -mt-2">
-              <Button
-                onClick={() => {
-                  setIsEditingWebsite(true);
-                  setEditedWebsite(discoveredDomain || domain || '');
-                }}
-                variant="outline"
-                size="sm"
-                className="gap-2 hover:bg-yellow-100 dark:hover:bg-yellow-900"
-              >
-                <Edit className="w-4 h-4" /> Editar Website
-              </Button>
-            </div>
-          )}
         </>
       )}
       
@@ -1012,25 +997,57 @@ export function KeywordsSEOTabEnhanced({
                 className="flex-1 px-3 py-2 border-2 border-yellow-400 dark:border-yellow-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-semibold"
               />
               <Button
-                onClick={() => {
+                onClick={async () => {
                   const cleanDomain = editedWebsite.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
                   if (cleanDomain) {
                     setDiscoveredDomain(cleanDomain);
                     setIsEditingWebsite(false);
                     
-                    // 🚨 LIMPAR análises anteriores para forçar re-análise
+                    // 🚨 LIMPAR análises anteriores
                     setSeoData(null);
                     setIntelligenceReport(null);
                     
+                    // 🔥 AUTO-DESCOBRIR redes sociais com novo domínio
+                    console.log('[EDIT-WEBSITE] 🔄 Re-descobrindo redes sociais com novo domínio:', cleanDomain);
+                    
+                    try {
+                      const presenca = await discoverFullDigitalPresence(companyName || '', cnpj);
+                      if (presenca) {
+                        setDigitalPresence({
+                          ...presenca,
+                          website: `https://${cleanDomain}`,
+                        });
+                        console.log('[EDIT-WEBSITE] ✅ Redes sociais atualizadas:', presenca);
+                      }
+                    } catch (err) {
+                      console.warn('[EDIT-WEBSITE] ⚠️ Erro ao re-descobrir redes:', err);
+                    }
+                    
+                    // 🔥 SALVAR automaticamente
+                    const updatedData = {
+                      discoveredDomain: cleanDomain,
+                      seoData,
+                      digitalPresence,
+                      intelligenceReport,
+                      allWebsiteResults,
+                      similarCompaniesOptions,
+                    };
+                    
+                    onDataChange?.(updatedData);
+                    
+                    if (stcHistoryId) {
+                      await flushSave(updatedData, 'completed');
+                    }
+                    
                     toast({
-                      title: '✅ Website atualizado com sucesso!',
-                      description: `🌐 Novo website: ${cleanDomain}\n🔄 Análises anteriores foram limpas.\n📊 Execute "Análise SEO Completa" e "Análise Inteligente (IA)" novamente com o novo website.`,
-                      duration: 8000,
+                      title: '✅ Website atualizado e salvo!',
+                      description: `🌐 ${cleanDomain}\n🔄 Redes sociais re-descobertas\n💾 Dados salvos automaticamente`,
+                      duration: 5000,
                     });
                   }
                 }}
                 disabled={!editedWebsite}
-                className="bg-green-600 hover:bg-green-700 font-bold"
+                variant="default"
               >
                 <Save className="w-4 h-4 mr-2" /> Salvar e Analisar
               </Button>
@@ -1047,17 +1064,33 @@ export function KeywordsSEOTabEnhanced({
           </div>
         )}
         
-        {/* 📋 WEBSITE ATUAL EM USO */}
+        {/* 📋 WEBSITE ATUAL EM USO - com botão Editar INLINE */}
         {(discoveredDomain || domain) && !isEditingWebsite && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400 dark:border-blue-600 rounded-lg">
-            <p className="text-sm font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              🌐 Website em uso para análises:
-            </p>
-            <p className="text-base font-black text-blue-700 dark:text-blue-300 mt-1">
-              {discoveredDomain || domain}
-            </p>
-          </div>
+          <Card className="mt-4 p-4 bg-card border-border">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  Website em uso para análises:
+                </p>
+                <p className="text-lg font-bold text-primary">
+                  {discoveredDomain || domain}
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setIsEditingWebsite(true);
+                  setEditedWebsite(discoveredDomain || domain || '');
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Editar
+              </Button>
+            </div>
+          </Card>
         )}
 
         {/* 📋 DROPDOWN TOP 20 - ALTERNATIVAS SCROLLÁVEIS */}
