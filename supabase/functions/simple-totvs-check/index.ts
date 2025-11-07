@@ -647,11 +647,23 @@ async function searchMultiplePortals(params: {
         const results = data.organic || [];
         processedPortals++;
         
+        // 🐛 DEBUG: Sempre logar, mesmo se 0 resultados
+        console.log(`[MULTI-PORTAL] 📊 ${portal}: ${results.length} resultados brutos`);
+        
+        if (results.length === 0) {
+          console.log(`[MULTI-PORTAL] ⚠️ ${portal}: NENHUM resultado encontrado pelo Serper`);
+        }
+        
         if (results.length > 0) {
-          console.log(`[MULTI-PORTAL] ✅ ${portal}: ${results.length} resultados brutos`);
+          // Mostrar sample dos primeiros 2 títulos
+          console.log(`[MULTI-PORTAL] 📋 ${portal} - Sample:`, 
+            results.slice(0, 2).map((r: any) => r.title?.substring(0, 60)).join(' | ')
+          );
         }
         
         let validCount = 0;
+        let rejectedCount = 0;
+        
         for (const result of results) {
           const title = result.title || '';
           const snippet = result.snippet || '';
@@ -660,6 +672,11 @@ async function searchMultiplePortals(params: {
           const validation = isValidTOTVSEvidence(snippet, title, companyName);
           
           if (!validation.valid) {
+            rejectedCount++;
+            // 🐛 DEBUG: Mostrar POR QUE foi rejeitado (só os primeiros 3)
+            if (rejectedCount <= 3) {
+              console.log(`[MULTI-PORTAL] ❌ ${portal} - REJEITADO (${validation.matchType}): ${title.substring(0, 70)}`);
+            }
             continue;
           }
           
@@ -688,9 +705,14 @@ async function searchMultiplePortals(params: {
           console.log(`[MULTI-PORTAL] ✅ ${portal}: ${validation.matchType.toUpperCase()} - ${title.substring(0, 50)}`);
         }
         
+        // 📊 RESUMO DO PORTAL
         if (validCount > 0) {
-          console.log(`[MULTI-PORTAL] 📊 ${portal}: ${validCount} evidências VÁLIDAS`);
+          console.log(`[MULTI-PORTAL] ✅ ${portal}: ${validCount} evidências VÁLIDAS de ${results.length} resultados`);
+        } else if (results.length > 0) {
+          console.log(`[MULTI-PORTAL] ⚠️ ${portal}: ${results.length} resultados mas 0 VÁLIDOS (todos rejeitados)`);
         }
+      } else {
+        console.error(`[MULTI-PORTAL] ❌ ${portal}: Serper retornou status ${response.status}`);
       }
     } catch (error) {
       console.error(`[MULTI-PORTAL] ❌ Erro em ${portal}:`, error);
@@ -699,6 +721,14 @@ async function searchMultiplePortals(params: {
   
   console.log(`[MULTI-PORTAL] 🏁 Busca concluída: ${processedPortals}/${portals.length} portais processados`);
   console.log(`[MULTI-PORTAL] 📊 Total de evidências encontradas: ${evidencias.length}`);
+  
+  if (evidencias.length === 0) {
+    console.warn(`[MULTI-PORTAL] 🚨 ZERO EVIDÊNCIAS encontradas! Verificar:`);
+    console.warn(`[MULTI-PORTAL]    1. Serper API retorna resultados?`);
+    console.warn(`[MULTI-PORTAL]    2. Validação isValidTOTVSEvidence está muito restritiva?`);
+    console.warn(`[MULTI-PORTAL]    3. Nome da empresa está correto?`);
+  }
+  
   return evidencias;
 }
 
@@ -774,12 +804,30 @@ serve(async (req) => {
     console.log('[SIMPLE-TOTVS] 🔍 Cache expirado, iniciando busca...');
     console.log('[SIMPLE-TOTVS] 🎯 Empresa:', searchTerm);
     console.log('[SIMPLE-TOTVS] 🎯 Nome curto:', shortSearchTerm);
+    console.log('[SIMPLE-TOTVS] 🎯 Segmento detectado:', companySegment || 'genérico');
+    console.log('[SIMPLE-TOTVS] 🔑 Serper API Key presente:', !!serperKey);
 
     const evidencias: any[] = [];
     let totalQueries = 0;
     let sourcesConsulted = 0;
 
+    if (!serperKey) {
+      console.error('[SIMPLE-TOTVS] ❌ SERPER_API_KEY não configurada! Busca cancelada.');
+      return new Response(
+        JSON.stringify({ 
+          error: 'SERPER_API_KEY não configurada',
+          status: 'error',
+          evidences: [],
+          triple_matches: 0,
+          double_matches: 0
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (serperKey) {
+      console.log('[SIMPLE-TOTVS] ✅ Serper API Key OK, iniciando busca massiva...');
+      
       // 🌐 FASE 1: BUSCA NOS 30+ PORTAIS DE VAGAS NACIONAIS (últimos 5 anos)
       const evidenciasVagas = await searchMultiplePortals({
         portals: JOB_PORTALS_NACIONAL,
