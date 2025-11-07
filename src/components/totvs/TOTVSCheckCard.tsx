@@ -310,7 +310,8 @@ export default function TOTVSCheckCard({
   });
 
   // Usar relatório salvo como fonte principal se existir
-  const data = (latestReport?.full_report as any) || liveData;
+  // 🔥 CRÍTICO: liveData vem como { data: {...} } do Supabase Edge Function
+  const data = (latestReport?.full_report as any) || liveData?.data || liveData;
   const isLoading = isLoadingLive && !latestReport?.full_report;
 
   // Flags de abas salvas
