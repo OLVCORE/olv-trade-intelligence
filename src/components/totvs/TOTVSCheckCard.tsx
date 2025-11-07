@@ -116,34 +116,8 @@ export default function TOTVSCheckCard({
   // Track de dados por aba (para salvar)
   const tabDataRef = useRef<Record<string, any>>({});
   
-  // 🔐 REGISTRAR ABA TOTVS no tabsRegistry para SaveBar funcionar
+  // 🔐 Estado de salvamento (usado para bloqueio sequencial)
   const [totvsSaved, setTotvsSaved] = useState(false);
-  
-  useEffect(() => {
-    if (!data) return; // Só registra quando tem dados
-    
-    console.log('[TOTVS-REG] 📝 Registrando aba TOTVS no tabsRegistry');
-    
-    registerTabInGlobal('detection', {
-      validate: async () => ({ success: true }), // Sempre válido se tem dados
-      save: async () => {
-        console.log('[TOTVS-SAVE] 💾 Salvando aba TOTVS...');
-        // Os dados já foram salvos pelo useSimpleTOTVSCheck, só confirmar
-        setTotvsSaved(true);
-        toast.success('✅ TOTVS Check salvo!', {
-          description: `Status: ${data.status?.toUpperCase()} | ${data.evidences?.length || 0} evidências`,
-          duration: 3000,
-        });
-        return { success: true };
-      },
-      getData: () => data,
-    });
-    
-    return () => {
-      console.log('[TOTVS-REG] 🧹 Desregistrando aba TOTVS');
-      unregisterTabInGlobal('detection');
-    };
-  }, [data]);
   
   // Compartilhar dados entre abas (Keywords → Competitors)
   const [sharedSimilarCompanies, setSharedSimilarCompanies] = useState<any[]>([]);
@@ -414,6 +388,33 @@ export default function TOTVSCheckCard({
       console.log('[TOTVS] ✅ Dados salvos carregados em tabDataRef');
     }
   }, [latestReport]);
+
+  // 🔐 REGISTRAR ABA TOTVS no tabsRegistry para SaveBar funcionar
+  useEffect(() => {
+    if (!data) return; // Só registra quando tem dados
+    
+    console.log('[TOTVS-REG] 📝 Registrando aba TOTVS no tabsRegistry');
+    
+    registerTabInGlobal('detection', {
+      validate: async () => ({ success: true }), // Sempre válido se tem dados
+      save: async () => {
+        console.log('[TOTVS-SAVE] 💾 Salvando aba TOTVS...');
+        // Os dados já foram salvos pelo useSimpleTOTVSCheck, só confirmar
+        setTotvsSaved(true);
+        toast.success('✅ TOTVS Check salvo!', {
+          description: `Status: ${data.status?.toUpperCase()} | ${data.evidences?.length || 0} evidências`,
+          duration: 3000,
+        });
+        return { success: true };
+      },
+      getData: () => data,
+    });
+    
+    return () => {
+      console.log('[TOTVS-REG] 🧹 Desregistrando aba TOTVS');
+      unregisterTabInGlobal('detection');
+    };
+  }, [data]);
 
   // 🔒 SNAPSHOT: Carregar snapshot para verificar modo read-only
   useEffect(() => {
