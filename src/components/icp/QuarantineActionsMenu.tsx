@@ -187,6 +187,30 @@ export function QuarantineActionsMenu({
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
+        <DropdownMenuLabel>Verificação TOTVS em Massa</DropdownMenuLabel>
+        
+        <DropdownMenuGroup>
+          {onBulkTotvsCheck && (
+            <DropdownMenuItem 
+              onClick={() => {
+                if (selectedCount === 0 || !onBulkTotvsCheck) return;
+                onBulkTotvsCheck();
+              }}
+              disabled={selectedCount === 0 || isProcessing}
+              className="transition-all duration-200 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 hover:shadow-md hover:border-l-2 hover:border-red-500"
+            >
+              <Target className="h-4 w-4 mr-2 text-red-600" />
+              <div className="flex flex-col">
+                <span className="font-semibold">Processar TOTVS em Lote</span>
+                <span className="text-xs text-muted-foreground">
+                  Verifica + Decisores + Digital (3 abas automáticas)
+                </span>
+              </div>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
         <DropdownMenuLabel>Enriquecimento em Massa</DropdownMenuLabel>
         
         <DropdownMenuGroup>

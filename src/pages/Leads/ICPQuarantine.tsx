@@ -865,27 +865,166 @@ export default function ICPQuarantine() {
       return;
     }
     
-    toast.loading(`Executando TOTVS Check em ${selectedIds.length} empresa(s)...`, { id: 'bulk-totvs' });
+    const selectedCompanies = companies.filter(c => selectedIds.includes(c.id));
     
-    let success = 0;
+    const confirmacao = window.confirm(
+      `🎯 PROCESSAMENTO TOTVS EM LOTE\n\n` +
+      `Empresas selecionadas: ${selectedIds.length}\n\n` +
+      `O que será processado:\n` +
+      `✅ TOTVS Check (GO/NO-GO)\n` +
+      `✅ Decisores (se GO)\n` +
+      `✅ Digital (se GO)\n` +
+      `✅ Relatório completo salvo automaticamente\n\n` +
+      `Custo estimado:\n` +
+      `- Créditos: ~${selectedIds.length * 150}\n` +
+      `- Valor: ~R$ ${selectedIds.length}\n` +
+      `- Tempo: ~${Math.round(selectedIds.length * 35 / 60)} minutos\n\n` +
+      `Continuar?`
+    );
+    
+    if (!confirmacao) return;
+    
+    toast.loading(`🔄 Processando empresa 0/${selectedIds.length}...`, { 
+      id: 'bulk-totvs',
+      duration: Infinity,
+    });
+    
+    let noGo = 0;
+    let go = 0;
     let errors = 0;
     
-    for (const id of selectedIds) {
+    for (let i = 0; i < selectedCompanies.length; i++) {
+      const company = selectedCompanies[i];
+      
       try {
-        await enrichTotvsCheckMutation.mutateAsync(id);
-        success++;
-      } catch (error) {
+        toast.loading(
+          `🔄 ${i + 1}/${selectedIds.length}: ${company.razao_social}`, 
+          { id: 'bulk-totvs' }
+        );
+        
+        console.log(`[BATCH] 📊 Processando ${i + 1}/${selectedIds.length}: ${company.razao_social}`);
+        
+        // 1. TOTVS Check
+        const { data: totvsResult, error: totvsError } = await supabase.functions.invoke('simple-totvs-check', {
+          body: {
+            company_name: company.razao_social,
+            cnpj: company.cnpj,
+            domain: company.domain || company.website,
+            company_id: company.company_id || company.id,
+          },
+        });
+        
+        if (totvsError) throw totvsError;
+        
+        const isNoGo = totvsResult?.status === 'no-go';
+        const isGo = totvsResult?.status === 'go';
+        
+        // 2. Decisores (só se GO)
+        let decisors = null;
+        if (isGo) {
+          try {
+            const { data: decisorsData } = await supabase.functions.invoke('enrich-apollo-decisores', {
+              body: {
+                companyName: company.razao_social,
+                linkedinUrl: company.linkedin_url || '',
+              },
+            });
+            decisors = decisorsData;
+          } catch (err) {
+            console.warn(`[BATCH] ⚠️ Decisores falhou (continuando):`, err);
+          }
+        }
+        
+        // 3. Digital (se tem website)
+        let digital = null;
+        if (isGo && decisors?.companyData?.website) {
+          digital = {
+            website: decisors.companyData.website,
+            linkedin: decisors.companyData.linkedinUrl,
+            discovered_at: new Date().toISOString(),
+          };
+        }
+        
+        // 4. Salvar relatório completo
+        await supabase
+          .from('stc_verification_history')
+          .insert({
+            company_id: company.company_id || company.id,
+            company_name: company.razao_social,
+            cnpj: company.cnpj,
+            status: totvsResult.status,
+            confidence: totvsResult.confidence,
+            triple_matches: totvsResult.triple_matches || 0,
+            double_matches: totvsResult.double_matches || 0,
+            single_matches: totvsResult.single_matches || 0,
+            total_score: totvsResult.total_weight || 0,
+            evidences: totvsResult.evidences || [],
+            sources_consulted: totvsResult.methodology?.searched_sources || 0,
+            queries_executed: totvsResult.methodology?.total_queries || 0,
+            full_report: {
+              detection_report: totvsResult,
+              decisors_report: decisors,
+              keywords_seo_report: digital,
+              __status: {
+                detection: { status: 'completed' },
+                decisors: { status: decisors ? 'completed' : 'skipped' },
+                keywords: { status: digital ? 'completed' : 'skipped' },
+              },
+              __meta: {
+                saved_at: new Date().toISOString(),
+                batch_processing: true,
+                version: '2.0',
+              },
+            },
+          });
+        
+        // 5. Auto-descartar se NO-GO
+        if (isNoGo) {
+          await supabase.from('discarded_companies').insert({
+            company_id: company.company_id || company.id,
+            company_name: company.razao_social,
+            cnpj: company.cnpj,
+            discard_reason_id: 'totvs_client',
+            discard_reason_label: '⚠️ Já é cliente TOTVS (Batch Automático)',
+            discard_category: 'blocker',
+            stc_status: totvsResult.status,
+            stc_triple_matches: totvsResult.triple_matches || 0,
+            stc_double_matches: totvsResult.double_matches || 0,
+            stc_total_score: totvsResult.total_weight || 0,
+          });
+          
+          // Marcar como descartada na quarentena
+          await supabase
+            .from('icp_analysis_results')
+            .update({ status: 'descartada' })
+            .eq('id', company.id);
+          
+          noGo++;
+        } else {
+          go++;
+        }
+        
+        console.log(`[BATCH] ✅ ${company.razao_social}: ${totvsResult.status} (${totvsResult.evidences?.length || 0} evidências)`);
+        
+      } catch (error: any) {
         errors++;
-        console.error(`Erro no TOTVS Check ${id}:`, error);
+        console.error(`[BATCH] ❌ Erro em ${company.razao_social}:`, error);
+      }
+      
+      // Delay entre empresas (evitar rate limit)
+      if (i < selectedCompanies.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
     toast.dismiss('bulk-totvs');
-    if (errors === 0) {
-      toast.success(`✅ TOTVS Check concluído em ${success} empresa(s)!`);
-    } else {
-      toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
-    }
+    toast.success(`🎉 Processamento em lote concluído!`, {
+      description: `✅ ${go} GO (prospects prontos) | ❌ ${noGo} NO-GO (auto-descartados) | ⚠️ ${errors} erros`,
+      duration: 10000,
+    });
+    
+    // Recarregar lista
+    queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
   };
 
   const handleBulkDiscoverCNPJ = async () => {
