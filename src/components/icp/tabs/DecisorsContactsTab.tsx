@@ -162,6 +162,7 @@ export function DecisorsContactsTab({
     },
     onSuccess: (data) => {
       setAnalysisData(data);
+      onDataChange?.(data); // 🔥 NOTIFICAR MUDANÇA PARA SALVAMENTO
       
       const emailsFound = data.decisorsWithEmails.filter(d => d.email).length;
       

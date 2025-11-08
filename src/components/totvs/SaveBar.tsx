@@ -90,23 +90,52 @@ export default function SaveBar({
               statusKeys: Object.keys(statuses),
             });
             
-            // Cores baseadas em progresso (Heat Map)
-            let barColor = 'bg-blue-500'; // 0-33% = Frio (Azul)
-            if (progressPercent >= 34 && progressPercent <= 66) barColor = 'bg-amber-500'; // 34-66% = Morno (Amarelo)
-            if (progressPercent >= 67) barColor = 'bg-emerald-500'; // 67-100% = Quente (Verde)
+            // 🎨 GRADIENTE PROGRESSIVO INTELIGENTE
+            // 0-33%: Azul claríssimo → Azul médio (início da jornada)
+            // 34-55%: Azul → Verde transição (metade do caminho)
+            // 56-88%: Verde médio → Verde forte (quase lá)
+            // 89-100%: Verde limão brilhante (COMPLETO!)
+            
+            let gradient = 'from-blue-300 via-blue-400 to-blue-500'; // 0-33%
+            let textColor = 'text-blue-600';
+            let emoji = '🔵';
+            
+            if (progressPercent >= 34 && progressPercent <= 55) {
+              gradient = 'from-blue-500 via-cyan-500 to-green-400'; // 34-55% (transição)
+              textColor = 'text-cyan-600';
+              emoji = '🔄';
+            } else if (progressPercent >= 56 && progressPercent <= 88) {
+              gradient = 'from-green-400 via-green-500 to-green-600'; // 56-88% (avançando)
+              textColor = 'text-green-600';
+              emoji = '📈';
+            } else if (progressPercent >= 89) {
+              gradient = 'from-green-400 via-lime-400 to-lime-500'; // 89-100% (COMPLETO!)
+              textColor = 'text-lime-500';
+              emoji = '✅';
+            }
             
             return (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-bold text-foreground">Progresso do Relatório</span>
-                  <span className="font-bold text-foreground font-mono text-base">{completedTabs}/{totalTabs} abas ({progressPercent}%)</span>
+                  <span className="font-bold text-foreground flex items-center gap-2">
+                    <span>{emoji}</span>
+                    <span>Completude da Análise</span>
+                  </span>
+                  <span className={`font-bold font-mono text-base ${textColor}`}>
+                    {completedTabs}/{totalTabs} abas ({progressPercent}%)
+                  </span>
                 </div>
-                <div className="w-full h-4 bg-slate-700/50 rounded-full overflow-hidden border-2 border-slate-600 shadow-lg">
+                <div className="w-full h-5 bg-slate-800/80 rounded-full overflow-hidden border-2 border-slate-600/50 shadow-lg">
                   <div 
-                    className={`h-full ${barColor} transition-all duration-500 ${progressPercent === 100 ? 'animate-pulse' : ''} shadow-xl`}
+                    className={`h-full bg-gradient-to-r ${gradient} transition-all duration-700 ease-in-out ${progressPercent === 100 ? 'animate-pulse shadow-2xl' : ''}`}
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
+                {progressPercent === 100 && (
+                  <p className="text-xs text-lime-500 font-semibold text-center animate-pulse">
+                    🎉 Análise 100% completa!
+                  </p>
+                )}
               </div>
             );
           })()}

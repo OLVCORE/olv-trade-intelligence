@@ -144,6 +144,14 @@ export default function DigitalIntelligenceTab({
     staleTime: 5 * 60 * 1000,
   });
 
+  // 🔥 NOTIFICAR MUDANÇAS PARA SALVAMENTO
+  useEffect(() => {
+    if (data) {
+      console.log('[DIGITAL-INTEL] 📤 Dados mudaram, notificando parent...');
+      onDataChange?.(data);
+    }
+  }, [data, onDataChange]);
+
   const getTemperatureIcon = (temp: string) => {
     if (temp === 'hot') return <Flame className="w-6 h-6 text-red-500" />;
     if (temp === 'warm') return <ThermometerSun className="w-6 h-6 text-orange-500" />;

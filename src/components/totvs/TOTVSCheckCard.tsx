@@ -105,15 +105,15 @@ export default function TOTVSCheckCard({
   
   // Track de mudanças não salvas por aba
   const [unsavedChanges, setUnsavedChanges] = useState<Record<string, boolean>>({
-    executive: false,
-    detection: false,
-    competitors: false,
-    similar: false,
-    clients: false,
-    analysis: false,
-    products: false,
-    keywords: false,
-    decisors: false,
+    detection: false,   // 1. TOTVS (auto)
+    decisors: false,    // 2. Decisores (manual)
+    digital: false,     // 3. Digital Intelligence (manual) - RENOMEADO de keywords
+    products: false,    // 4. Produtos Recomendados (manual)
+    competitors: false, // 5. Competidores (manual)
+    clients: false,     // 6. Cliente Discovery (manual)
+    similar: false,     // 7. Empresas Similares (manual)
+    analysis: false,    // 8. Analysis 360 (manual)
+    executive: false,   // 9. Sumário Executivo (manual)
   });
   
   // Track de dados por aba (para salvar)
@@ -591,21 +591,22 @@ export default function TOTVSCheckCard({
         try {
           // Montar full_report com dados de todas as abas
           const fullReport = {
-            detection_report: data, // Dados do TOTVS Check
+            detection_report: data, // Dados do TOTVS Check (auto)
             decisors_report: tabDataRef.current.decisors,
-            keywords_seo_report: tabDataRef.current.keywords,
-            competitors_report: tabDataRef.current.competitors,
-            similar_companies_report: tabDataRef.current.similar,
-            clients_report: tabDataRef.current.clients,
-            analysis_report: tabDataRef.current.analysis,
+            digital_report: tabDataRef.current.digital, // 🔥 Digital Intelligence (substitui keywords)
             products_report: tabDataRef.current.products,
+            competitors_report: tabDataRef.current.competitors,
+            clients_report: tabDataRef.current.clients,
+            similar_companies_report: tabDataRef.current.similar,
+            analysis_report: tabDataRef.current.analysis,
             executive_report: tabDataRef.current.executive,
-            digital_report: tabDataRef.current.digital, // 🔥 ADICIONAR DIGITAL!
             __status: getStatuses(), // Salvar status de cada aba
             __meta: {
               saved_at: new Date().toISOString(),
               saved_by: 'user',
               version: '2.0',
+              tabs_completed: Object.values(getStatuses()).filter(s => s === 'completed').length,
+              total_tabs: 9,
             },
           };
           
@@ -821,12 +822,21 @@ export default function TOTVSCheckCard({
               <div className="text-base">
                 Você tem <strong>alterações não salvas</strong> nesta aba.
               </div>
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="text-sm font-semibold text-red-800 dark:text-red-200 mb-2">
-                  🚨 ATENÇÃO: PERDA DAS INFORMAÇÕES COLETADAS!
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border-2 border-red-500 dark:border-red-600">
+                <div className="flex items-center gap-2 text-base font-bold text-red-800 dark:text-red-200 mb-3">
+                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                  🚨 ATENÇÃO: PERDA DE DADOS E CRÉDITOS!
                 </div>
-                <div className="text-sm text-red-700 dark:text-red-300">
-                  Se você não salvar, <strong>todas as informações coletadas nesta aba serão perdidas</strong> e será necessário <strong>reprocessar a análise novamente</strong>, consumindo tempo e recursos adicionais.
+                <div className="space-y-2 text-sm text-red-700 dark:text-red-300">
+                  <p>
+                    ❌ <strong>Todas as informações coletadas nesta aba serão PERDIDAS permanentemente</strong>
+                  </p>
+                  <p>
+                    💸 <strong>Créditos de API já consumidos NÃO serão reembolsados</strong>
+                  </p>
+                  <p>
+                    🔄 <strong>Será necessário reprocessar a análise do zero</strong>, consumindo mais créditos
+                  </p>
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
@@ -906,14 +916,14 @@ export default function TOTVSCheckCard({
             )}
           </TabsTrigger>
           <TabsTrigger 
-            value="keywords" 
+            value="digital" 
             disabled={!totvsSaved}
             className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <Globe className="w-4 h-4" />
             <span>Digital</span>
-            {getStatuses().keywords === 'completed' && (
+            {getStatuses().digital === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
             )}
           </TabsTrigger>
@@ -1354,7 +1364,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 3: DIGITAL INTELLIGENCE (AI-POWERED) - NOVA IMPLEMENTAÇÃO */}
-        <TabsContent value="keywords" className="mt-0 flex-1 overflow-hidden">
+        <TabsContent value="digital" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Digital Intelligence">
           <DigitalIntelligenceTab
             companyId={companyId}
@@ -1364,9 +1374,9 @@ export default function TOTVSCheckCard({
             sector={latestReport?.full_report?.icp_score?.sector}
             stcStatus={data?.status}
             onDataChange={(dataChange) => {
-              tabDataRef.current.keywords = dataChange;
-              setUnsavedChanges(prev => ({ ...prev, keywords: true }));
-              setTabsStatus(prev => ({ ...prev, keywords: 'success' }));
+              tabDataRef.current.digital = dataChange;
+              setUnsavedChanges(prev => ({ ...prev, digital: true }));
+              setTabsStatus(prev => ({ ...prev, digital: 'success' }));
             }}
           />
           {/* 
