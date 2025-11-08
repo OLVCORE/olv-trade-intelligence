@@ -204,14 +204,26 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
           companyId = existing.id;
           console.log('✅ Empresa já existe no banco:', existing.company_name);
         } else {
-          // Buscar dados da Receita Federal
+          // Buscar dados da Receita Federal via Edge Function
           try {
-            const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${clean}`);
-            if (!response.ok) throw new Error('API ReceitaWS retornou erro');
-            receitaData = await response.json();
-            if (receitaData.status === 'ERROR') throw new Error(receitaData.message || 'CNPJ não encontrado');
+            const { data: rfResponse, error: rfError } = await supabase.functions.invoke('enrich-receitaws', {
+              body: { cnpj: clean }
+            });
+            
+            if (rfError) throw rfError;
+            receitaData = rfResponse?.data || rfResponse;
+            if (!receitaData || receitaData.status === 'ERROR') {
+              throw new Error(receitaData?.message || 'CNPJ não encontrado');
+            }
           } catch (err: any) {
-            throw new Error('Erro ao buscar Receita Federal: ' + err.message);
+            // FALLBACK: Aceitar entrada manual se Edge Function falhar
+            console.warn('Edge Function falhou, permitindo entrada manual');
+            receitaData = {
+              nome: formData.company_name || `Empresa ${clean}`,
+              fantasia: formData.company_name,
+              cnpj: clean,
+              atividade_principal: [{ text: formData.industry }]
+            };
           }
           
           // 🔥 PASSO 3: CRIAR EMPRESA COM DADOS REAIS DA RECEITA FEDERAL
