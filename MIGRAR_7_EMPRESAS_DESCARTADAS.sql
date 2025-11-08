@@ -5,7 +5,16 @@
 -- Executa DEPOIS do TRIGGER_AUTO_DISCARD.sql
 -- ========================================
 
--- Migrar empresas que já estão com status='descartada'
+-- PASSO 1: Garantir constraint UNIQUE (se ainda não existe)
+ALTER TABLE discarded_companies
+  DROP CONSTRAINT IF EXISTS discarded_companies_cnpj_key;
+
+ALTER TABLE discarded_companies
+  ADD CONSTRAINT discarded_companies_cnpj_key UNIQUE (cnpj);
+
+SELECT '=== ✅ Constraint UNIQUE em CNPJ criada! ===' AS passo1;
+
+-- PASSO 2: Migrar empresas que já estão com status='descartada'
 INSERT INTO discarded_companies (
   company_id,
   company_name,

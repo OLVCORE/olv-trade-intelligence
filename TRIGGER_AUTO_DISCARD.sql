@@ -72,11 +72,7 @@ CREATE TRIGGER trigger_auto_discard
   FOR EACH ROW
   EXECUTE FUNCTION auto_move_to_discarded();
 
--- PASSO 3: Adicionar constraint UNIQUE em discarded_companies (evitar duplicatas)
-ALTER TABLE discarded_companies 
-ADD CONSTRAINT unique_discarded_cnpj UNIQUE (cnpj);
-
--- PASSO 4: Trigger para RESTAURAR (quando status muda de 'descartada' para outro)
+-- PASSO 3: Trigger para RESTAURAR (quando status muda de 'descartada' para outro)
 CREATE OR REPLACE FUNCTION auto_restore_from_discarded()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -101,7 +97,7 @@ CREATE TRIGGER trigger_auto_restore
   FOR EACH ROW
   EXECUTE FUNCTION auto_restore_from_discarded();
 
--- PASSO 5: Validar
+-- PASSO 4: Validar
 SELECT '=== ✅ TRIGGERS CRIADOS COM SUCESSO! ===' AS resultado;
 SELECT 'TRIGGER 1: Descartar → move para discarded_companies' AS info1;
 SELECT 'TRIGGER 2: Restaurar → remove de discarded_companies' AS info2;
