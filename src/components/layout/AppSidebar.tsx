@@ -96,19 +96,26 @@ type MenuGroup = {
 const menuGroups: MenuGroup[] = [
   {
     label: "Comando",
-    icon: LayoutDashboard,
+    icon: Rocket,
     items: [
+      {
+        title: "Central de Comando",
+        icon: Rocket,
+        url: "/comando",
+        description: "Visão completa do funil: Importadas → Quarentena → Aprovadas → Pipeline",
+        highlighted: true,
+      },
       {
         title: "Dashboard Executivo",
         icon: LayoutDashboard,
         url: "/dashboard",
-        description: "Visão geral consolidada de métricas e performance de vendas"
+        description: "Métricas e performance consolidadas"
       },
       {
         title: "Busca Global",
         icon: Search,
         url: "/search",
-        description: "Busca unificada de empresas, contatos e inteligência competitiva"
+        description: "Importar empresas (CSV ou CNPJ individual)"
       }
     ]
   },
@@ -142,68 +149,33 @@ const menuGroups: MenuGroup[] = [
   },
   {
     label: "ICP",
-    icon: Target,
+    icon: Filter,
     items: [
       {
-        title: "Central ICP Home",
-        icon: Target,
-        url: "/central-icp",
-        description: "Painel central de qualificação de leads ICP"
-      },
-      {
-        title: "Descoberta de Empresas",
-        icon: Search,
-        url: "/company-discovery",
-        description: "Buscar e descobrir novas empresas no seu ICP ideal"
-      },
-      {
-        title: "Análise Individual",
-        icon: FileText,
-        url: "/central-icp/individual",
-        description: "Qualifique empresas uma por vez com análise detalhada"
-      },
-      {
-        title: "Análise em Massa",
-        icon: Zap,
-        url: "/central-icp/batch",
-        description: "Processe centenas de empresas automaticamente"
-      },
-      {
-        title: "Empresas em Quarentena",
+        title: "Quarentena ICP",
         icon: Inbox,
         url: "/leads/icp-quarantine",
-        description: "Aprove empresas analisadas antes de movê-las para o pool de leads"
+        highlighted: true,
+        description: "Analisar e aprovar empresas importadas"
+      },
+      {
+        title: "Leads Aprovados",
+        icon: CheckCircle2,
+        url: "/leads/approved",
+        highlighted: true,
+        description: "Empresas qualificadas prontas para criar deals"
       },
       {
         title: "Empresas Descartadas",
         icon: XCircle,
         url: "/leads/discarded",
-        description: "Histórico de empresas descartadas com motivos e analytics"
+        description: "Histórico de empresas descartadas"
       },
       {
         title: "Histórico STC",
         icon: Target,
         url: "/leads/stc-history",
-        description: "Registro completo de todas as verificações TOTVS realizadas"
-      },
-      {
-        title: "Dashboard de Resultados",
-        icon: BarChart3,
-        url: "/central-icp/dashboard",
-        description: "Visualize empresas qualificadas e desqualificadas"
-      },
-      {
-        title: "Auditoria e Compliance",
-        icon: Shield,
-        url: "/central-icp/audit",
-        description: "Logs de validação e checkpoints de qualidade"
-      },
-      {
-        title: "Inteligência Competitiva",
-        icon: TrendingUp,
-        url: "/competitive-intelligence",
-        competitive: true,
-        description: "Battle Cards, Win-Loss Analysis e Monitoramento"
+        description: "Verificações TOTVS realizadas"
       },
     ]
   },

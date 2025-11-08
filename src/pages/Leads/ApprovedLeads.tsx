@@ -1,0 +1,336 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { 
+  CheckCircle2, 
+  Rocket, 
+  Search,
+  Building2,
+  TrendingUp,
+  Users,
+  Zap,
+  Filter
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { toast } from 'sonner';
+import { DealFormDialog } from '@/components/sdr/DealFormDialog';
+
+interface ApprovedLead {
+  id: string;
+  company_id: string;
+  cnpj: string;
+  razao_social: string;
+  icp_score: number;
+  temperatura: 'hot' | 'warm' | 'cold';
+  segmento: string;
+  status: string;
+  created_at: string;
+}
+
+export default function ApprovedLeads() {
+  const navigate = useNavigate();
+  const [leads, setLeads] = useState<ApprovedLead[]>([]);
+  const [filteredLeads, setFilteredLeads] = useState<ApprovedLead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [temperatureFilter, setTemperatureFilter] = useState<string>('all');
+  const [selectedLead, setSelectedLead] = useState<ApprovedLead | null>(null);
+  const [dealFormOpen, setDealFormOpen] = useState(false);
+
+  useEffect(() => {
+    loadApprovedLeads();
+  }, []);
+
+  useEffect(() => {
+    filterLeads();
+  }, [searchTerm, temperatureFilter, leads]);
+
+  const loadApprovedLeads = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('icp_analysis_results')
+        .select('*')
+        .eq('status', 'aprovado')
+        .order('icp_score', { ascending: false });
+
+      if (error) throw error;
+      setLeads(data || []);
+    } catch (error) {
+      console.error('Error loading approved leads:', error);
+      toast.error('Erro ao carregar leads aprovados');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterLeads = () => {
+    let filtered = [...leads];
+
+    if (searchTerm) {
+      filtered = filtered.filter(lead =>
+        lead.razao_social?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.cnpj?.includes(searchTerm)
+      );
+    }
+
+    if (temperatureFilter !== 'all') {
+      filtered = filtered.filter(lead => lead.temperatura === temperatureFilter);
+    }
+
+    setFilteredLeads(filtered);
+  };
+
+  const handleCreateDeal = (lead: ApprovedLead) => {
+    setSelectedLead(lead);
+    setDealFormOpen(true);
+  };
+
+  const getTemperatureColor = (temp: string) => {
+    switch (temp) {
+      case 'hot': return 'bg-red-500';
+      case 'warm': return 'bg-yellow-500';
+      case 'cold': return 'bg-blue-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getTemperatureLabel = (temp: string) => {
+    switch (temp) {
+      case 'hot': return 'QUENTE';
+      case 'warm': return 'MORNO';
+      case 'cold': return 'FRIO';
+      default: return 'N/A';
+    }
+  };
+
+  return (
+    <AppLayout>
+      <div className="p-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold flex items-center gap-3">
+              <CheckCircle2 className="h-10 w-10 text-green-500" />
+              Leads Aprovados
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Empresas qualificadas pelo ICP, prontas para criar deals
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/comando')}
+            >
+              ← Voltar ao Comando
+            </Button>
+            <Button 
+              onClick={() => navigate('/sdr/workspace')}
+              className="bg-gradient-to-r from-purple-600 to-blue-600"
+            >
+              <Rocket className="mr-2 h-4 w-4" />
+              Ir para Pipeline
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Aprovados</p>
+                  <p className="text-3xl font-bold">{leads.length}</p>
+                </div>
+                <CheckCircle2 className="h-10 w-10 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Leads Quentes</p>
+                  <p className="text-3xl font-bold text-red-500">
+                    {leads.filter(l => l.temperatura === 'hot').length}
+                  </p>
+                </div>
+                <TrendingUp className="h-10 w-10 text-red-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Score Médio</p>
+                  <p className="text-3xl font-bold">
+                    {leads.length > 0
+                      ? Math.round(leads.reduce((sum, l) => sum + (l.icp_score || 0), 0) / leads.length)
+                      : 0}
+                  </p>
+                </div>
+                <Users className="h-10 w-10 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Deals Criados</p>
+                  <p className="text-3xl font-bold text-purple-500">0</p>
+                </div>
+                <Zap className="h-10 w-10 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filtros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Filtros</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Buscar por nome ou CNPJ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                  icon={<Search className="h-4 w-4" />}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={temperatureFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setTemperatureFilter('all')}
+                  size="sm"
+                >
+                  Todos
+                </Button>
+                <Button
+                  variant={temperatureFilter === 'hot' ? 'default' : 'outline'}
+                  onClick={() => setTemperatureFilter('hot')}
+                  size="sm"
+                  className={temperatureFilter === 'hot' ? 'bg-red-500' : ''}
+                >
+                  🔥 Quentes
+                </Button>
+                <Button
+                  variant={temperatureFilter === 'warm' ? 'default' : 'outline'}
+                  onClick={() => setTemperatureFilter('warm')}
+                  size="sm"
+                  className={temperatureFilter === 'warm' ? 'bg-yellow-500' : ''}
+                >
+                  ⚡ Mornos
+                </Button>
+                <Button
+                  variant={temperatureFilter === 'cold' ? 'default' : 'outline'}
+                  onClick={() => setTemperatureFilter('cold')}
+                  size="sm"
+                  className={temperatureFilter === 'cold' ? 'bg-blue-500' : ''}
+                >
+                  ❄️ Frios
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lista de Leads */}
+        <div className="grid grid-cols-1 gap-4">
+          {loading ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Carregando leads aprovados...
+              </CardContent>
+            </Card>
+          ) : filteredLeads.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhum lead aprovado encontrado
+                </p>
+                <Button 
+                  variant="link" 
+                  onClick={() => navigate('/icp/quarantine')}
+                  className="mt-2"
+                >
+                  Ir para Quarentena ICP →
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredLeads.map((lead) => (
+              <Card 
+                key={lead.id}
+                className="hover:border-primary/50 transition-all cursor-pointer"
+                onClick={() => handleCreateDeal(lead)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <Building2 className="h-10 w-10 text-primary" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{lead.razao_social}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          CNPJ: {lead.cnpj} • {lead.segmento || 'Segmento não identificado'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">ICP Score</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {lead.icp_score || 0}
+                        </p>
+                      </div>
+
+                      <Badge className={getTemperatureColor(lead.temperatura)}>
+                        {getTemperatureLabel(lead.temperatura)}
+                      </Badge>
+
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateDeal(lead);
+                        }}
+                        className="bg-gradient-to-r from-green-600 to-blue-600"
+                      >
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Criar Deal
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Dialog para criar deal */}
+        <DealFormDialog
+          open={dealFormOpen}
+          onOpenChange={setDealFormOpen}
+          mode="icp"
+          preSelectedLead={selectedLead}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+

@@ -86,6 +86,8 @@ const ICPQuarantinePage = lazy(() => import("./pages/Leads/ICPQuarantine"));
 const DiscardedCompaniesPage = lazy(() => import("./pages/Leads/DiscardedCompanies"));
 const STCHistoryPage = lazy(() => import("./pages/Leads/STCHistory"));
 const SystemHealthPage = lazy(() => import("./pages/Leads/SystemHealth"));
+const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const ApprovedLeads = lazy(() => import("./pages/Leads/ApprovedLeads"));
 const EmailSequencesPage = lazy(() => import("./pages/EmailSequencesPage"));
 const SmartTasksPage = lazy(() => import("./pages/SmartTasksPage"));
 const CSVUploadWithMapping = lazy(() => import("./components/leads/CSVUploadWithMapping"));
@@ -200,6 +202,22 @@ const App = () => (
                     <AppLayout>
                       <Dashboard />
                     </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/comando"
+                element={
+                  <ProtectedRoute>
+                    <CommandCenter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads/approved"
+                element={
+                  <ProtectedRoute>
+                    <ApprovedLeads />
                   </ProtectedRoute>
                 }
               />
