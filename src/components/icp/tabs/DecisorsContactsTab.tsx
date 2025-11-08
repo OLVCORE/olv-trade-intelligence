@@ -73,6 +73,76 @@ export function DecisorsContactsTab({
     sonnerToast.success('✅ Decisores & Contatos Salvos!');
   };
 
+  // 🚀 Enriquecimento Apollo (Emails + Telefones)
+  const apolloMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyName) throw new Error('Nome da empresa não disponível');
+      if (!analysisData?.decisors) throw new Error('Extraia decisores primeiro');
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-apollo-decisores`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          companyName,
+          domain,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao enriquecer com Apollo');
+      }
+
+      return await response.json();
+    },
+    onSuccess: (apolloData) => {
+      // Merge Apollo data com dados existentes
+      const enrichedDecisors = analysisData.decisors.map((decisor: any) => {
+        const apolloMatch = apolloData.find((a: any) => 
+          a.name.toLowerCase().includes(decisor.name.toLowerCase()) ||
+          decisor.name.toLowerCase().includes(a.name.toLowerCase())
+        );
+
+        if (apolloMatch) {
+          return {
+            ...decisor,
+            email: apolloMatch.email || decisor.email,
+            phone: apolloMatch.phone_numbers?.[0] || decisor.phone,
+            enriched_with_apollo: true,
+          };
+        }
+
+        return decisor;
+      });
+
+      const updatedData = {
+        ...analysisData,
+        decisors: enrichedDecisors,
+        apollo_enriched: true,
+      };
+
+      setAnalysisData(updatedData);
+      onDataChange?.(updatedData);
+
+      const emailsFound = enrichedDecisors.filter((d: any) => d.email).length;
+      const phonesFound = enrichedDecisors.filter((d: any) => d.phone).length;
+
+      toast({
+        title: '✅ Enriquecimento Apollo concluído!',
+        description: `${emailsFound} emails | ${phonesFound} telefones encontrados`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: '❌ Erro no enriquecimento Apollo',
+        description: error.message,
+      });
+    },
+  });
+  
   // 🔥 Análise LinkedIn completa
   const linkedinMutation = useMutation({
     mutationFn: async () => {
@@ -148,18 +218,36 @@ export function DecisorsContactsTab({
             </div>
           </div>
 
-          <Button
-            onClick={() => linkedinMutation.mutate()}
-            disabled={linkedinMutation.isPending}
-            variant="default"
-          >
-            {linkedinMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => linkedinMutation.mutate()}
+              disabled={linkedinMutation.isPending}
+              variant="default"
+            >
+              {linkedinMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Extrair Decisores
+            </Button>
+            
+            {analysisData && analysisData.decisors?.length > 0 && (
+              <Button
+                onClick={() => apolloMutation.mutate()}
+                disabled={apolloMutation.isPending}
+                variant="secondary"
+                className="gap-2"
+              >
+                {apolloMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                Enriquecer com Apollo (Emails + Telefones)
+              </Button>
             )}
-            Extrair Decisores
-          </Button>
+          </div>
         </div>
         
         {/* Campos editáveis - LinkedIn e Apollo URLs */}
