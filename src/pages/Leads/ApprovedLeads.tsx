@@ -92,10 +92,10 @@ export default function ApprovedLeads() {
 
   const getTemperatureColor = (temp: string) => {
     switch (temp) {
-      case 'hot': return 'bg-red-500';
-      case 'warm': return 'bg-yellow-500';
-      case 'cold': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+      case 'hot': return 'bg-red-600';
+      case 'warm': return 'bg-yellow-600';
+      case 'cold': return 'bg-blue-600';
+      default: return 'bg-slate-600';
     }
   };
 
@@ -114,8 +114,8 @@ export default function ApprovedLeads() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold flex items-center gap-3">
-              <CheckCircle2 className="h-10 w-10 text-green-500" />
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
               Leads Aprovados
             </h1>
             <p className="text-muted-foreground mt-2">
@@ -131,7 +131,7 @@ export default function ApprovedLeads() {
             </Button>
             <Button 
               onClick={() => navigate('/sdr/workspace')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600"
+              className="bg-blue-600 hover:bg-blue-700"
             >
               <Rocket className="mr-2 h-4 w-4" />
               Ir para Pipeline
@@ -141,56 +141,56 @@ export default function ApprovedLeads() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-l-4 border-l-green-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Aprovados</p>
-                  <p className="text-3xl font-bold">{leads.length}</p>
+                  <p className="text-2xl font-bold">{leads.length}</p>
                 </div>
-                <CheckCircle2 className="h-10 w-10 text-green-500" />
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-red-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Leads Quentes</p>
-                  <p className="text-3xl font-bold text-red-500">
+                  <p className="text-2xl font-bold text-red-600">
                     {leads.filter(l => l.temperatura === 'hot').length}
                   </p>
                 </div>
-                <TrendingUp className="h-10 w-10 text-red-500" />
+                <TrendingUp className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-blue-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Score Médio</p>
-                  <p className="text-3xl font-bold">
+                  <p className="text-2xl font-bold">
                     {leads.length > 0
                       ? Math.round(leads.reduce((sum, l) => sum + (l.icp_score || 0), 0) / leads.length)
                       : 0}
                   </p>
                 </div>
-                <Users className="h-10 w-10 text-blue-500" />
+                <Users className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-slate-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Deals Criados</p>
-                  <p className="text-3xl font-bold text-purple-500">0</p>
+                  <p className="text-2xl font-bold text-slate-600">0</p>
                 </div>
-                <Zap className="h-10 w-10 text-purple-500" />
+                <Zap className="h-8 w-8 text-slate-600" />
               </div>
             </CardContent>
           </Card>
@@ -224,25 +224,25 @@ export default function ApprovedLeads() {
                   variant={temperatureFilter === 'hot' ? 'default' : 'outline'}
                   onClick={() => setTemperatureFilter('hot')}
                   size="sm"
-                  className={temperatureFilter === 'hot' ? 'bg-red-500' : ''}
+                  className={temperatureFilter === 'hot' ? 'bg-red-600 hover:bg-red-700' : ''}
                 >
-                  🔥 Quentes
+                  Quentes
                 </Button>
                 <Button
                   variant={temperatureFilter === 'warm' ? 'default' : 'outline'}
                   onClick={() => setTemperatureFilter('warm')}
                   size="sm"
-                  className={temperatureFilter === 'warm' ? 'bg-yellow-500' : ''}
+                  className={temperatureFilter === 'warm' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
                 >
-                  ⚡ Mornos
+                  Mornos
                 </Button>
                 <Button
                   variant={temperatureFilter === 'cold' ? 'default' : 'outline'}
                   onClick={() => setTemperatureFilter('cold')}
                   size="sm"
-                  className={temperatureFilter === 'cold' ? 'bg-blue-500' : ''}
+                  className={temperatureFilter === 'cold' ? 'bg-blue-600 hover:bg-blue-700' : ''}
                 >
-                  ❄️ Frios
+                  Frios
                 </Button>
               </div>
             </div>
@@ -266,7 +266,7 @@ export default function ApprovedLeads() {
                 </p>
                 <Button 
                   variant="link" 
-                  onClick={() => navigate('/icp/quarantine')}
+                  onClick={() => navigate('/leads/icp-quarantine')}
                   className="mt-2"
                 >
                   Ir para Quarentena ICP →
@@ -309,7 +309,7 @@ export default function ApprovedLeads() {
                           e.stopPropagation();
                           handleCreateDeal(lead);
                         }}
-                        className="bg-gradient-to-r from-green-600 to-blue-600"
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         <Rocket className="mr-2 h-4 w-4" />
                         Criar Deal
