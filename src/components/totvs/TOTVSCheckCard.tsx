@@ -25,7 +25,7 @@ import { CompetitorsTab } from '@/components/icp/tabs/CompetitorsTab';
 import { ClientDiscoveryTab } from '@/components/icp/tabs/ClientDiscoveryTab';
 import { RecommendedProductsTab } from '@/components/icp/tabs/RecommendedProductsTab';
 import { KeywordsSEOTab } from '@/components/icp/tabs/KeywordsSEOTab';
-import { DigitalIntelligenceTab } from '@/components/intelligence/DigitalIntelligenceTab';
+import DigitalIntelligenceTab from '@/components/intelligence/DigitalIntelligenceTab';
 import { DecisorsContactsTab } from '@/components/icp/tabs/DecisorsContactsTab';
 import { TabSaveWrapper } from './TabSaveWrapper';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
