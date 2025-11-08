@@ -488,6 +488,81 @@ export default function SearchPage() {
       if (estado) searchBody.estado = estado;
       if (pais && pais !== "Brasil") searchBody.pais = pais;
 
+      // 🔥 SE FOR CNPJ, BUSCAR DIRETO COM TRIPLE FALLBACK
+      if (cnpj) {
+        const clean = cnpj.replace(/\D/g, '');
+        let empresaData: any = null;
+
+        // Triple fallback: API Brasil → ReceitaWS → Error
+        try {
+          console.log('📡 Busca Global: Tentando API Brasil...');
+          const apiBrasilResponse = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${clean}`);
+          if (apiBrasilResponse.ok) {
+            empresaData = await apiBrasilResponse.json();
+            console.log('✅ API Brasil: Sucesso!', empresaData.razao_social);
+          } else {
+            throw new Error('API Brasil falhou');
+          }
+        } catch (apiBrasilError) {
+          console.warn('⚠️ API Brasil falhou, tentando ReceitaWS...');
+          try {
+            const receitawsResponse = await fetch(`https://www.receitaws.com.br/v1/cnpj/${clean}`);
+            if (receitawsResponse.ok) {
+              const data = await receitawsResponse.json();
+              if (data.status !== 'ERROR') {
+                empresaData = data;
+                console.log('✅ ReceitaWS: Sucesso!', empresaData.nome);
+              } else {
+                throw new Error('ReceitaWS retornou erro');
+              }
+            } else {
+              throw new Error('ReceitaWS falhou');
+            }
+          } catch (receitawsError) {
+            throw new Error('Não foi possível buscar dados do CNPJ. Todas as APIs falharam.');
+          }
+        }
+
+        // Montar previewData no formato esperado
+        const previewData = {
+          success: true,
+          company: {
+            name: empresaData.razao_social || empresaData.nome || empresaData.fantasia,
+            cnpj: empresaData.cnpj,
+            website: website || null,
+            domain: website ? new URL(website).hostname : null,
+            industry: empresaData.cnae_fiscal_descricao || empresaData.atividade_principal?.[0]?.text,
+            employees: empresaData.qsa?.length || null,
+            location: {
+              city: empresaData.municipio,
+              state: empresaData.uf,
+              country: 'Brasil',
+              address: [
+                empresaData.logradouro,
+                empresaData.numero,
+                empresaData.complemento,
+                empresaData.bairro
+              ].filter(Boolean).join(', '),
+              cep: empresaData.cep
+            }
+          },
+          cnpj_status: empresaData.situacao === 'ATIVA' ? 'ativo' : 'inativo',
+          cnpj_status_message: empresaData.situacao,
+          decision_makers: [],
+          digital_maturity: null
+        };
+
+        setPreviewData(previewData);
+        setShowPreview(true);
+        
+        toast({
+          title: "✅ Empresa encontrada!",
+          description: `${previewData.company.name} - CNPJ ${previewData.cnpj_status === 'ativo' ? 'ATIVO' : 'INATIVO'}`,
+        });
+        return;
+      }
+
+      // 🔥 SE NÃO FOR CNPJ, USAR EDGE FUNCTION (busca múltipla por nome)
       const { data, error } = await supabase.functions.invoke('search-companies', {
         body: searchBody,
       });
