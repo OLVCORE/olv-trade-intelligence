@@ -294,7 +294,7 @@ export function DecisorsContactsTab({
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground uppercase">Decisores</span>
               </div>
-              <div className="text-2xl font-bold">{analysisData.decisors.length}</div>
+              <div className="text-2xl font-bold">{analysisData?.decisors?.length || 0}</div>
               <Badge variant="outline" className="text-xs mt-1">identificados</Badge>
             </Card>
 
@@ -304,7 +304,7 @@ export function DecisorsContactsTab({
                 <span className="text-xs font-medium text-muted-foreground uppercase">Emails</span>
               </div>
               <div className="text-2xl font-bold">
-                {analysisData.decisorsWithEmails.filter((d: any) => d.email).length}
+                {analysisData?.decisorsWithEmails?.filter((d: any) => d.email).length || 0}
               </div>
               <Badge variant="outline" className="text-xs mt-1">encontrados</Badge>
             </Card>
@@ -315,8 +315,8 @@ export function DecisorsContactsTab({
                 <span className="text-xs font-medium text-muted-foreground uppercase">Taxa Sucesso</span>
               </div>
               <div className="text-2xl font-bold">
-                {analysisData.decisors.length > 0
-                  ? Math.round((analysisData.decisorsWithEmails.filter((d: any) => d.email).length / analysisData.decisors.length) * 100)
+                {(analysisData?.decisors?.length || 0) > 0
+                  ? Math.round(((analysisData?.decisorsWithEmails?.filter((d: any) => d.email).length || 0) / (analysisData?.decisors?.length || 1)) * 100)
                   : 0}%
               </div>
               <Badge variant="outline" className="text-xs mt-1">emails/decisores</Badge>
