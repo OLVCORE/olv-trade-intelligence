@@ -41,9 +41,9 @@ export function DecisorsContactsTab({
   
   // 🔗 REGISTRY: Registrar aba para SaveBar global
   useEffect(() => {
-    console.info('[REGISTRY] ✅ Registering: decisores');
+    console.info('[REGISTRY] ✅ Registering: decisors');
     
-    registerTab('decisores', {
+    registerTab('decisors', {
       flushSave: async () => {
         const currentData = {
           analysisData,
@@ -371,16 +371,20 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* Lista de Decisores */}
+          {/* Lista de Decisores - DESTAQUE COM BALÃO COLORIDO */}
           {analysisData.decisorsWithEmails.length > 0 && (
-            <Card className="p-6">
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-muted-foreground" />
-                Decisores Identificados
-                <Badge variant="default" className="bg-muted">
+            <Card className="p-6 border-2 border-emerald-500/30 bg-emerald-500/5">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="font-bold text-xl flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-emerald-500/20">
+                    <Users className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <span className="text-foreground">Decisores Identificados</span>
+                </h4>
+                <Badge variant="default" className="bg-emerald-600 text-white text-lg px-4 py-2 shadow-lg">
                   {analysisData.decisorsWithEmails.length} pessoas
                 </Badge>
-              </h4>
+              </div>
 
               <div className="space-y-4">
                 {analysisData.decisorsWithEmails.map((decisor: any, idx: number) => (
@@ -407,29 +411,57 @@ export function DecisorsContactsTab({
                       <Badge variant="outline" className="text-xs">Apollo</Badge>
                     </div>
 
-                    {/* Contatos */}
-                    <div className="space-y-2 mb-3">
-                      {decisor.email && decisor.email !== 'email_not_unlocked@domain.com' && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-                          <Mail className="w-4 h-4 text-slate-400" />
-                          <a href={`mailto:${decisor.email}`} className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer">
-                            {decisor.email}
-                          </a>
-                          <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                    {/* Contatos - DESTAQUE MAIOR */}
+                    <div className="space-y-3 mb-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+                      {decisor.email && decisor.email !== 'email_not_unlocked@domain.com' ? (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-emerald-500/20">
+                            <Mail className="w-5 h-5 text-emerald-500" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Email Corporativo</p>
+                            <a 
+                              href={`mailto:${decisor.email}`} 
+                              className="text-blue-400 hover:text-blue-300 font-semibold text-base hover:underline" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              {decisor.email}
+                            </a>
+                          </div>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                         </div>
-                      )}
-                      {decisor.email === 'email_not_unlocked@domain.com' && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <AlertCircle className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground text-xs">Email bloqueado - upgrade Apollo necessário</span>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 bg-amber-500/10 rounded border border-amber-500/30">
+                          <AlertCircle className="w-5 h-5 text-amber-500" />
+                          <span className="text-amber-200 text-sm font-medium">
+                            Email bloqueado - Clique em "Enriquecer com Apollo"
+                          </span>
                         </div>
                       )}
                       
-                      {decisor.phone && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="w-4 h-4 text-muted-foreground" />
-                          <a href={`tel:${decisor.phone}`} className="text-primary hover:underline font-medium">{decisor.phone}</a>
+                      {decisor.phone ? (
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-blue-500/20">
+                            <Phone className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Telefone Verificado</p>
+                            <a 
+                              href={`tel:${decisor.phone}`} 
+                              className="text-blue-400 hover:text-blue-300 font-semibold text-base hover:underline"
+                            >
+                              {decisor.phone}
+                            </a>
+                          </div>
+                          <CheckCircle2 className="w-5 h-5 text-blue-500" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded border border-slate-600">
+                          <Phone className="w-5 h-5 text-muted-foreground" />
+                          <span className="text-muted-foreground text-sm">
+                            Telefone não disponível - Enriquecer com Apollo
+                          </span>
                         </div>
                       )}
                       

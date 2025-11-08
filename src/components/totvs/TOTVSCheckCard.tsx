@@ -873,28 +873,37 @@ export default function TOTVSCheckCard({
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-9 mb-6 h-auto bg-muted/30 p-1 rounded-lg">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
-          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold">
+          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative">
             <Search className="w-4 h-4" />
             <span>TOTVS</span>
             <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
+            {tabsStatus.detection === 'success' && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
+            )}
           </TabsTrigger>
           <TabsTrigger 
             value="decisors" 
             disabled={!totvsSaved} 
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <UserCircle className="w-4 h-4" />
             <span>Decisores</span>
+            {tabsStatus.decisors === 'success' && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
+            )}
           </TabsTrigger>
           <TabsTrigger 
             value="keywords" 
             disabled={!totvsSaved}
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <Globe className="w-4 h-4" />
             <span>Digital</span>
+            {tabsStatus.keywords === 'success' && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
+            )}
           </TabsTrigger>
           <TabsTrigger 
             value="competitors" 
