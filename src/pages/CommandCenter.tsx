@@ -179,7 +179,7 @@ export default function CommandCenter() {
               {/* ETAPA 2: QUARENTENA */}
               <div 
                 className="relative group cursor-pointer"
-                onClick={() => navigate('/icp/quarantine')}
+                onClick={() => navigate('/leads/icp-quarantine')}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-lg -z-10 group-hover:from-yellow-500/20 group-hover:to-yellow-600/10 transition-all" />
                 <div className="p-6 space-y-4">
@@ -298,7 +298,7 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => navigate('/icp/quarantine')}>
+          <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => navigate('/leads/icp-quarantine')}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Filter className="h-5 w-5 text-yellow-500" />
@@ -387,7 +387,7 @@ export default function CommandCenter() {
                       variant="link" 
                       size="sm" 
                       className="text-yellow-500 p-0 h-auto"
-                      onClick={() => navigate('/icp/quarantine')}
+                      onClick={() => navigate('/leads/icp-quarantine')}
                     >
                       Analisar agora →
                     </Button>
