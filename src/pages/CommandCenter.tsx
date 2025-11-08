@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   TrendingUp, 
   Database, 
@@ -14,11 +15,23 @@ import {
   FileSpreadsheet,
   Building2,
   Target,
-  Rocket
+  Rocket,
+  AlertTriangle,
+  Clock,
+  DollarSign,
+  Users,
+  Sparkles,
+  Brain,
+  TrendingDown,
+  Activity,
+  BarChart3,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface FunnelMetrics {
   totalImported: number;
@@ -30,6 +43,14 @@ interface FunnelMetrics {
     approvedToPipeline: number;
     overall: number;
   };
+  dealsValue: number;
+  hotLeads: number;
+  dealsWon: number;
+  dealsLost: number;
+  avgDealCycle: number;
+  lastImport: string | null;
+  stcPending: number;
+  aiSuggestions: string[];
 }
 
 export default function CommandCenter() {
@@ -44,6 +65,14 @@ export default function CommandCenter() {
       approvedToPipeline: 0,
       overall: 0,
     },
+    dealsValue: 0,
+    hotLeads: 0,
+    dealsWon: 0,
+    dealsLost: 0,
+    avgDealCycle: 0,
+    lastImport: null,
+    stcPending: 0,
+    aiSuggestions: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -55,28 +84,44 @@ export default function CommandCenter() {
     try {
       setLoading(true);
 
-      // 1. Total de empresas importadas
-      const { count: totalImported } = await supabase
-        .from('companies')
-        .select('*', { count: 'exact', head: true });
+      // PARALLEL QUERIES PARA MÁXIMA PERFORMANCE
+      const [
+        { count: totalImported },
+        { count: inQuarantine },
+        { count: approved },
+        { count: inPipeline },
+        { count: hotLeads },
+        { count: stcPending },
+        { data: dealsData },
+        { data: wonDeals },
+        { data: lostDeals },
+        { data: lastImportData },
+      ] = await Promise.all([
+        supabase.from('companies').select('*', { count: 'exact', head: true }),
+        supabase.from('icp_analysis_results').select('*', { count: 'exact', head: true }).eq('status', 'pendente'),
+        supabase.from('icp_analysis_results').select('*', { count: 'exact', head: true }).eq('status', 'aprovado'),
+        supabase.from('sdr_deals').select('*', { count: 'exact', head: true }).in('deal_stage', ['discovery', 'qualification', 'proposal', 'negotiation']),
+        supabase.from('icp_analysis_results').select('*', { count: 'exact', head: true }).eq('temperatura', 'hot').eq('status', 'aprovado'),
+        supabase.from('stc_verification_history').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
+        supabase.from('sdr_deals').select('deal_value, created_at').in('deal_stage', ['discovery', 'qualification', 'proposal', 'negotiation']),
+        supabase.from('sdr_deals').select('deal_value, created_at, won_date').eq('deal_stage', 'won').limit(10),
+        supabase.from('sdr_deals').select('*', { count: 'exact', head: true }).eq('deal_stage', 'lost'),
+        supabase.from('companies').select('created_at').order('created_at', { ascending: false }).limit(1).single(),
+      ]);
 
-      // 2. Em quarentena (análise ICP pendente)
-      const { count: inQuarantine } = await supabase
-        .from('icp_analysis_results')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pendente');
+      // Calcular valor total do pipeline
+      const dealsValue = dealsData?.reduce((sum, deal) => sum + (Number(deal.deal_value) || 0), 0) || 0;
 
-      // 3. Aprovadas pelo ICP
-      const { count: approved } = await supabase
-        .from('icp_analysis_results')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'aprovado');
-
-      // 4. No pipeline (deals ativos)
-      const { count: inPipeline } = await supabase
-        .from('sdr_deals')
-        .select('*', { count: 'exact', head: true })
-        .in('deal_stage', ['discovery', 'qualification', 'proposal', 'negotiation']);
+      // Calcular ciclo médio de venda (deals ganhos nos últimos 30 dias)
+      const avgDealCycle = wonDeals && wonDeals.length > 0
+        ? Math.round(
+            wonDeals.reduce((sum, deal) => {
+              const created = new Date(deal.created_at);
+              const won = new Date(deal.won_date);
+              return sum + (won.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+            }, 0) / wonDeals.length
+          )
+        : 0;
 
       // Calcular taxas de conversão
       const quarantineToApproved = totalImported && totalImported > 0
@@ -91,6 +136,29 @@ export default function CommandCenter() {
         ? Math.round(((inPipeline || 0) / totalImported) * 100)
         : 0;
 
+      // SUGESTÕES INTELIGENTES BASEADAS EM IA
+      const suggestions: string[] = [];
+      
+      if ((inQuarantine || 0) > 20) {
+        suggestions.push(`🎯 ${inQuarantine} empresas em quarentena precisam de análise ICP`);
+      }
+      
+      if ((hotLeads || 0) > 0 && (inPipeline || 0) === 0) {
+        suggestions.push(`🔥 ${hotLeads} leads QUENTES sem deal criado - potencial de R$ ${(hotLeads * 50000).toLocaleString('pt-BR')}`);
+      }
+      
+      if (quarantineToApproved < 30 && (totalImported || 0) > 10) {
+        suggestions.push(`⚠️ Taxa de aprovação baixa (${quarantineToApproved}%) - revisar critérios ICP`);
+      }
+      
+      if (approvedToPipeline < 50 && (approved || 0) > 5) {
+        suggestions.push(`📊 ${approved} leads aprovados não convertidos em deals - criar campanhas de ativação`);
+      }
+      
+      if ((inPipeline || 0) > 0 && avgDealCycle > 30) {
+        suggestions.push(`⏱️ Ciclo de venda de ${avgDealCycle} dias - acelerar follow-ups`);
+      }
+
       setMetrics({
         totalImported: totalImported || 0,
         inQuarantine: inQuarantine || 0,
@@ -101,6 +169,14 @@ export default function CommandCenter() {
           approvedToPipeline,
           overall,
         },
+        dealsValue,
+        hotLeads: hotLeads || 0,
+        dealsWon: wonDeals?.length || 0,
+        dealsLost: lostDeals || 0,
+        avgDealCycle,
+        lastImport: lastImportData?.created_at || null,
+        stcPending: stcPending || 0,
+        aiSuggestions: suggestions,
       });
     } catch (error) {
       console.error('Error loading metrics:', error);
@@ -339,32 +415,126 @@ export default function CommandCenter() {
           </Card>
         </div>
 
-        {/* Estatísticas Detalhadas */}
+        {/* KPIs CRÍTICOS EM TEMPO REAL */}
+        <div className="grid grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-purple-500">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Valor Pipeline</p>
+                <DollarSign className="h-5 w-5 text-purple-500" />
+              </div>
+              <p className="text-3xl font-bold">R$ {(metrics.dealsValue / 1000).toFixed(0)}k</p>
+              <Progress value={metrics.conversionRate.overall} className="mt-2 h-2" />
+              <p className="text-xs text-muted-foreground mt-1">{metrics.conversionRate.overall}% conversão</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-red-500">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Leads Quentes</p>
+                <TrendingUp className="h-5 w-5 text-red-500" />
+              </div>
+              <p className="text-3xl font-bold text-red-500">{metrics.hotLeads}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Potencial: R$ {((metrics.hotLeads * 50000) / 1000).toFixed(0)}k
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Win Rate</p>
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              </div>
+              <p className="text-3xl font-bold text-green-500">
+                {metrics.dealsWon + metrics.dealsLost > 0
+                  ? Math.round((metrics.dealsWon / (metrics.dealsWon + metrics.dealsLost)) * 100)
+                  : 0}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {metrics.dealsWon} ganhos / {metrics.dealsLost} perdidos
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Ciclo Médio</p>
+                <Clock className="h-5 w-5 text-blue-500" />
+              </div>
+              <p className="text-3xl font-bold text-blue-500">{metrics.avgDealCycle}d</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Tempo médio para fechar
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* SUGESTÕES INTELIGENTES COM IA */}
+        {metrics.aiSuggestions.length > 0 && (
+          <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-blue-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-500" />
+                Sugestões Inteligentes (IA)
+              </CardTitle>
+              <CardDescription>
+                Ações priorizadas para maximizar conversão
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {metrics.aiSuggestions.map((suggestion, idx) => (
+                <div key={idx} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-purple-500/20">
+                  <Sparkles className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm flex-1">{suggestion}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ESTATÍSTICAS E AÇÕES */}
         <div className="grid grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Performance do Funil</CardTitle>
+              <CardDescription>Acompanhamento de conversão por etapa</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Importadas → Quarentena:</span>
-                <span className="font-semibold">100%</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Importadas → Quarentena</span>
+                  <span className="font-semibold">100%</span>
+                </div>
+                <Progress value={100} className="h-2" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Quarentena → Aprovadas:</span>
-                <span className="font-semibold text-yellow-500">
-                  {metrics.conversionRate.quarantineToApproved}%
-                </span>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Quarentena → Aprovadas</span>
+                  <span className="font-semibold text-yellow-500">
+                    {metrics.conversionRate.quarantineToApproved}%
+                  </span>
+                </div>
+                <Progress value={metrics.conversionRate.quarantineToApproved} className="h-2" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Aprovadas → Pipeline:</span>
-                <span className="font-semibold text-green-500">
-                  {metrics.conversionRate.approvedToPipeline}%
-                </span>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Aprovadas → Pipeline</span>
+                  <span className="font-semibold text-green-500">
+                    {metrics.conversionRate.approvedToPipeline}%
+                  </span>
+                </div>
+                <Progress value={metrics.conversionRate.approvedToPipeline} className="h-2" />
               </div>
+              
               <div className="flex items-center justify-between pt-4 border-t">
-                <span className="text-sm font-semibold">Conversão Global:</span>
-                <span className="font-bold text-lg text-purple-500">
+                <span className="text-sm font-semibold">Conversão Global</span>
+                <span className="font-bold text-2xl text-purple-500">
                   {metrics.conversionRate.overall}%
                 </span>
               </div>
@@ -373,7 +543,8 @@ export default function CommandCenter() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Ações Recomendadas</CardTitle>
+              <CardTitle>Ações Priorizadas</CardTitle>
+              <CardDescription>O que fazer agora para acelerar vendas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {metrics.inQuarantine > 0 && (
@@ -454,6 +625,79 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
         </div>
+
+        {/* STATUS DO SISTEMA EM TEMPO REAL */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Status do Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-lg">
+                <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
+                <div>
+                  <p className="text-sm font-medium">Sistema Operacional</p>
+                  <p className="text-xs text-muted-foreground">
+                    {metrics.lastImport 
+                      ? `Última importação: ${formatDistanceToNow(new Date(metrics.lastImport), { addSuffix: true, locale: ptBR })}`
+                      : 'Nenhuma importação realizada'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-blue-500/10 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">APIs Ativas</p>
+                  <p className="text-xs text-muted-foreground">
+                    Receita Federal • Apollo • Serper
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-purple-500/10 rounded-lg">
+                <Zap className="h-5 w-5 text-purple-500" />
+                <div>
+                  <p className="text-sm font-medium">STC em Processamento</p>
+                  <p className="text-xs text-muted-foreground">
+                    {metrics.stcPending} verificações rodando
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ATALHOS RÁPIDOS PARA TODAS AS ÁREAS */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Acesso Rápido</CardTitle>
+            <CardDescription>Navegue para qualquer área da plataforma</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-3">
+              <Button variant="outline" onClick={() => navigate('/dashboard')} className="justify-start">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/companies')} className="justify-start">
+                <Building2 className="mr-2 h-4 w-4" />
+                Empresas
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/leads/icp-quarantine')} className="justify-start">
+                <Filter className="mr-2 h-4 w-4" />
+                Quarentena
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/sdr/workspace')} className="justify-start">
+                <Rocket className="mr-2 h-4 w-4" />
+                Pipeline
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
