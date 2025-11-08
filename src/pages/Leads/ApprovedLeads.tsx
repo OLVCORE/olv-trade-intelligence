@@ -38,8 +38,10 @@ export default function ApprovedLeads() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [temperatureFilter, setTemperatureFilter] = useState<string>('all');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [selectedLead, setSelectedLead] = useState<ApprovedLead | null>(null);
   const [dealFormOpen, setDealFormOpen] = useState(false);
+  const [uniqueSources, setUniqueSources] = useState<string[]>([]);
 
   useEffect(() => {
     loadApprovedLeads();
@@ -47,7 +49,13 @@ export default function ApprovedLeads() {
 
   useEffect(() => {
     filterLeads();
-  }, [searchTerm, temperatureFilter, leads]);
+  }, [searchTerm, temperatureFilter, sourceFilter, leads]);
+
+  useEffect(() => {
+    // Extrair origens únicas dos leads
+    const sources = Array.from(new Set(leads.map(l => l.source_name).filter(Boolean)));
+    setUniqueSources(sources as string[]);
+  }, [leads]);
 
   const loadApprovedLeads = async () => {
     try {
@@ -80,6 +88,10 @@ export default function ApprovedLeads() {
 
     if (temperatureFilter !== 'all') {
       filtered = filtered.filter(lead => lead.temperatura === temperatureFilter);
+    }
+
+    if (sourceFilter !== 'all') {
+      filtered = filtered.filter(lead => lead.source_name === sourceFilter);
     }
 
     setFilteredLeads(filtered);
@@ -212,38 +224,64 @@ export default function ApprovedLeads() {
                   icon={<Search className="h-4 w-4" />}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={temperatureFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setTemperatureFilter('all')}
-                  size="sm"
-                >
-                  Todos
-                </Button>
-                <Button
-                  variant={temperatureFilter === 'hot' ? 'default' : 'outline'}
-                  onClick={() => setTemperatureFilter('hot')}
-                  size="sm"
-                  className={temperatureFilter === 'hot' ? 'bg-red-600 hover:bg-red-700' : ''}
-                >
-                  Quentes
-                </Button>
-                <Button
-                  variant={temperatureFilter === 'warm' ? 'default' : 'outline'}
-                  onClick={() => setTemperatureFilter('warm')}
-                  size="sm"
-                  className={temperatureFilter === 'warm' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
-                >
-                  Mornos
-                </Button>
-                <Button
-                  variant={temperatureFilter === 'cold' ? 'default' : 'outline'}
-                  onClick={() => setTemperatureFilter('cold')}
-                  size="sm"
-                  className={temperatureFilter === 'cold' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                >
-                  Frios
-                </Button>
+              <div className="flex gap-4">
+                <div className="flex gap-2">
+                  <Button
+                    variant={temperatureFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setTemperatureFilter('all')}
+                    size="sm"
+                  >
+                    Todos
+                  </Button>
+                  <Button
+                    variant={temperatureFilter === 'hot' ? 'default' : 'outline'}
+                    onClick={() => setTemperatureFilter('hot')}
+                    size="sm"
+                    className={temperatureFilter === 'hot' ? 'bg-red-600 hover:bg-red-700' : ''}
+                  >
+                    Quentes
+                  </Button>
+                  <Button
+                    variant={temperatureFilter === 'warm' ? 'default' : 'outline'}
+                    onClick={() => setTemperatureFilter('warm')}
+                    size="sm"
+                    className={temperatureFilter === 'warm' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
+                  >
+                    Mornos
+                  </Button>
+                  <Button
+                    variant={temperatureFilter === 'cold' ? 'default' : 'outline'}
+                    onClick={() => setTemperatureFilter('cold')}
+                    size="sm"
+                    className={temperatureFilter === 'cold' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                  >
+                    Frios
+                  </Button>
+                </div>
+                
+                {/* FILTRO POR ORIGEM */}
+                {uniqueSources.length > 0 && (
+                  <div className="flex gap-2 border-l pl-4">
+                    <Button
+                      variant={sourceFilter === 'all' ? 'default' : 'outline'}
+                      onClick={() => setSourceFilter('all')}
+                      size="sm"
+                    >
+                      Todas Origens
+                    </Button>
+                    {uniqueSources.map(source => (
+                      <Button
+                        key={source}
+                        variant={sourceFilter === source ? 'default' : 'outline'}
+                        onClick={() => setSourceFilter(source)}
+                        size="sm"
+                        className={sourceFilter === source ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                      >
+                        {source}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -286,9 +324,19 @@ export default function ApprovedLeads() {
                       <Building2 className="h-10 w-10 text-primary" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{lead.razao_social}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          CNPJ: {lead.cnpj} • {lead.segmento || 'Segmento não identificado'}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-muted-foreground">
+                            CNPJ: {lead.cnpj} • {lead.segmento || 'Segmento não identificado'}
+                          </p>
+                          {lead.source_name && (
+                            <Badge 
+                              variant="secondary" 
+                              className="bg-blue-600/10 text-blue-600 border-blue-600/30 text-xs"
+                            >
+                              {lead.source_name}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
 
