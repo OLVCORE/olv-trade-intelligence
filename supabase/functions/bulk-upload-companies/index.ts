@@ -22,11 +22,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { companies } = await req.json() as { companies: CompanyRow[] };
+    const { companies, metadata } = await req.json() as { 
+      companies: CompanyRow[], 
+      metadata?: {
+        source_name?: string,
+        campaign?: string,
+        import_batch_id?: string,
+        destination?: string
+      }
+    };
 
     if (!companies || !Array.isArray(companies)) {
       throw new Error('Invalid companies data');
     }
+    
+    console.log(`📦 METADATA RECEBIDA:`, metadata);
 
     console.log(`📊 Processing ${companies.length} companies with 87-column format...`);
 
@@ -57,7 +67,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Prepara dados completos da empresa (TODOS OS 87 CAMPOS)
+        // Prepara dados completos da empresa (TODOS OS 87 CAMPOS + RASTREABILIDADE)
         const companyData: any = {
           name: name || 'Empresa Importada',
           cnpj: cnpj,
@@ -65,6 +75,18 @@ serve(async (req) => {
           employees: (row.funcionarios_presumido_matriz_cnpj || row['Funcion ários']) ? parseInt(String(row.funcionarios_presumido_matriz_cnpj || row['Funcionários'] || '0')) : null,
           revenue: row.faturamento_presumido_matriz_cnpj || row['Faturamento Estimado'] || null,
           digital_maturity_score: row['Score Maturidade Digital'] ? parseFloat(String(row['Score Maturidade Digital'])) : null,
+          
+          // 🏷️ CAMPOS DE RASTREABILIDADE
+          source_type: row.source_type || 'csv',
+          source_name: row.source_name || metadata?.source_name || null,
+          import_batch_id: row.import_batch_id || metadata?.import_batch_id || null,
+          import_date: row.import_date || new Date().toISOString(),
+          source_metadata: row.source_metadata || {
+            campaign: metadata?.campaign || null,
+            destination: metadata?.destination || 'companies',
+            uploaded_at: new Date().toISOString()
+          },
+          
           raw_data: {
             imported_at: new Date().toISOString(),
             csv_row: i + 2,
@@ -276,6 +298,31 @@ serve(async (req) => {
         }
 
         console.log(`✅ Successfully saved company: ${company.name} (${company.id})`);
+        
+        // 🎯 SE DESTINO FOR QUARENTENA, CRIAR EM ICP_ANALYSIS_RESULTS
+        if (metadata?.destination === 'quarantine') {
+          const { error: icpError } = await supabaseClient
+            .from('icp_analysis_results')
+            .upsert({
+              company_id: company.id,
+              cnpj: company.cnpj,
+              razao_social: company.name,
+              segmento: company.industry,
+              status: 'pendente',
+              source_type: company.source_type,
+              source_name: company.source_name,
+              import_batch_id: company.import_batch_id,
+            }, {
+              onConflict: 'company_id',
+              ignoreDuplicates: false
+            });
+          
+          if (icpError) {
+            console.warn(`⚠️ Erro ao criar entrada ICP para ${company.name}:`, icpError);
+          } else {
+            console.log(`✅ Empresa ${company.name} adicionada à Quarentena ICP`);
+          }
+        }
         
         // Processa decisores se houver
         const decisores = [];
