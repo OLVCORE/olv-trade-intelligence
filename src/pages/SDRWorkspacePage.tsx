@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +33,14 @@ import { Link } from 'react-router-dom';
 
 
 export default function SDRWorkspacePage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('pipeline');
+  
+  // 🔥 LIMPAR CACHE AO MONTAR (forçar refetch com novo código)
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['sdr_deals'] });
+  }, []);
+  
   const { data: deals } = useDeals({ status: 'open' });
   const { data: stages } = usePipelineStages();
   const { data: automations, isLoading: automationsLoading } = useSDRAutomations();
