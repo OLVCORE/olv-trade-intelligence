@@ -79,7 +79,7 @@ export function DraggableDealCard({ deal, isDragging, isSelected, onSelect, onCl
             }}
           >
             {/* Title */}
-            <h4 className="font-medium text-sm leading-tight">{deal.title}</h4>
+            <h4 className="font-medium text-sm leading-tight">{deal.deal_title}</h4>
 
             {/* Company */}
             {deal.companies && (
@@ -130,7 +130,7 @@ export function DraggableDealCard({ deal, isDragging, isSelected, onSelect, onCl
           
           <DealCardActions
             dealId={deal.id}
-            dealTitle={deal.title}
+            dealTitle={deal.deal_title}
             companyId={deal.company_id}
           />
         </div>

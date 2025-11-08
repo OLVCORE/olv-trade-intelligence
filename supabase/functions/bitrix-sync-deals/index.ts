@@ -64,7 +64,7 @@ serve(async (req) => {
         for (const deal of deals) {
           try {
             const bitrixDeal = {
-              TITLE: deal.title,
+              TITLE: deal.deal_title,
               OPPORTUNITY: deal.value || 0,
               STAGE_ID: mapStageToBitrix(deal.stage_id),
               COMPANY_ID: deal.company_id,

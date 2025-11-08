@@ -37,7 +37,7 @@ export function useSDRAutomations() {
             dealId: deal.id,
             type: 'stale_deal',
             priority: daysInStage > 14 ? 'urgent' : 'high',
-            message: `Deal "${deal.title}" está há ${daysInStage} dias no mesmo estágio`,
+            message: `Deal "${deal.deal_title}" está há ${daysInStage} dias no mesmo estágio`,
             action: 'Definir próxima ação',
             actionUrl: `/sdr/workspace?deal=${deal.id}`,
           });
@@ -49,7 +49,7 @@ export function useSDRAutomations() {
             dealId: deal.id,
             type: 'sla_alert',
             priority: daysToClose < 3 ? 'urgent' : 'high',
-            message: `Deal "${deal.title}" fecha em ${daysToClose} dias`,
+            message: `Deal "${deal.deal_title}" fecha em ${daysToClose} dias`,
             action: 'Acelerar fechamento',
             actionUrl: `/sdr/workspace?deal=${deal.id}`,
           });
@@ -61,7 +61,7 @@ export function useSDRAutomations() {
             dealId: deal.id,
             type: 'next_action',
             priority: 'medium',
-            message: `Sugiro agendar demo para "${deal.title}"`,
+            message: `Sugiro agendar demo para "${deal.deal_title}"`,
             action: 'Agendar demo',
             actionUrl: `/sdr/workspace?deal=${deal.id}`,
           });
@@ -72,7 +72,7 @@ export function useSDRAutomations() {
             dealId: deal.id,
             type: 'follow_up',
             priority: 'high',
-            message: `Follow-up necessário em "${deal.title}"`,
+            message: `Follow-up necessário em "${deal.deal_title}"`,
             action: 'Enviar follow-up',
             actionUrl: `/sdr/inbox`,
           });

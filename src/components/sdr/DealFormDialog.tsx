@@ -527,7 +527,7 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
       const { error: dealError } = await supabase
         .from('sdr_deals')
         .insert({
-          title: formData.title,
+          deal_title: formData.title,
           company_id: companyId,
           deal_stage: formData.stage || 'discovery',
           priority: formData.priority || 'medium',

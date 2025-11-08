@@ -85,7 +85,7 @@ export function PredictiveScoring() {
 
         return {
           dealId: deal.id,
-          dealTitle: deal.title,
+          dealTitle: deal.deal_title,
           currentStage: deal.stage,
           winProbability: Math.max(0, Math.min(100, winProbability)),
           predictedCloseDate: deal.expected_close_date || 'Não definida',

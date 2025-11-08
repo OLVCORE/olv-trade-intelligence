@@ -5,7 +5,7 @@ import { toastMessages } from '@/lib/utils/toastMessages';
 
 export interface Deal {
   id: string;
-  title: string;
+  deal_title: string; // FIX: Usar deal_title (nome real da coluna no banco)
   description?: string | null;
   company_id?: string | null;
   deal_stage: string; // FIX: Usar deal_stage (nome real da coluna no banco)
@@ -58,7 +58,7 @@ export function useDeals(filters?: { stage?: string; status?: string }) {
 export function useCreateDeal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (deal: { title: string; description?: string; company_id?: string; stage?: string; value?: number; priority?: string }) => {
+    mutationFn: async (deal: { deal_title: string; description?: string; company_id?: string; deal_stage?: string; value?: number; priority?: string }) => {
       const { data, error} = await supabase.from('sdr_deals').insert([deal]).select().single();
       if (error) throw error;
       return data;
