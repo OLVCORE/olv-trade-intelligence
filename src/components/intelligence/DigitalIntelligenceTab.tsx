@@ -206,13 +206,14 @@ export default function DigitalIntelligenceTab({
     return (
       <div className="space-y-4">
         {isExistingClient && (
-          <Alert variant="destructive">
-            <AlertTriangle className="w-4 h-4" />
-            <AlertDescription>
-              <strong>⚠️ ATENÇÃO: Empresa já é cliente TOTVS (NO-GO)</strong>
+          <Alert className="border-amber-500/50 bg-amber-500/10 text-amber-200">
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <AlertDescription className="text-amber-100">
+              <strong className="text-amber-300">💡 INFORMATIVO:</strong> Esta empresa já é cliente TOTVS.
               <br />
-              Esta análise deve focar em <strong>Upsell/Cross-sell</strong>, não em nova venda.
-              A temperatura e probabilidade serão ajustadas automaticamente.
+              <span className="text-sm">
+                A análise digital irá mapear a presença web e identificar oportunidades de <strong>Upsell/Cross-sell</strong>.
+              </span>
             </AlertDescription>
           </Alert>
         )}
@@ -220,19 +221,25 @@ export default function DigitalIntelligenceTab({
         <Card>
           <CardContent className="py-12">
             <div className="text-center space-y-4">
-              <Target className="w-16 h-16 mx-auto text-muted-foreground" />
-              <h3 className="text-lg font-semibold">Análise de Inteligência Digital</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                {isExistingClient ? (
-                  'Análise focada em oportunidades de Upsell e Cross-sell para cliente existente TOTVS.'
-                ) : (
-                  'Clique no botão abaixo para iniciar uma análise profunda da presença digital desta empresa usando IA. Serão analisadas 50-100 fontes de dados.'
-                )}
+              <Target className="w-16 h-16 mx-auto text-primary" />
+              <h3 className="text-2xl font-bold">Análise de Inteligência Digital</h3>
+              <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Análise profunda da presença digital usando <strong>IA (GPT-4o-mini)</strong>.
+                <br />
+                Serão analisadas <strong>50-100 URLs</strong> em:
+                <span className="block mt-2 text-sm">
+                  🌐 Website oficial • 💼 LinkedIn • 📸 Instagram • 📘 Facebook • ▶️ YouTube • 🐦 Twitter/X
+                  <br />
+                  📰 Portais de notícias • 💬 Avaliações • 📋 Cadastros empresariais
+                </span>
               </p>
-              <Button onClick={() => refetch()} size="lg" className="gap-2">
+              <Button onClick={() => refetch()} size="lg" className="gap-2 mt-4">
                 <RefreshCw className="w-4 h-4" />
-                {isExistingClient ? 'Analisar Oportunidades Upsell' : 'Gerar Análise com IA'}
+                Gerar Análise com IA (GPT-4o-mini)
               </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                ⏱️ Tempo estimado: 60-90 segundos | 💰 Custo: ~20 queries Serper + 50 análises GPT-4o-mini
+              </p>
             </div>
           </CardContent>
         </Card>
