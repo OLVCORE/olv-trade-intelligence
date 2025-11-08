@@ -38,7 +38,7 @@ export function useSmartTasks(filters?: {
     queryFn: async () => {
       let query = supabase
         .from('smart_tasks')
-        .select('*, companies(name), decision_makers(name)')
+        .select('*, companies(company_name), decision_makers(name)')
         .order('due_date', { ascending: true });
 
       if (filters?.status) {
@@ -144,3 +144,4 @@ export function useCompleteSmartTask() {
     },
   });
 }
+

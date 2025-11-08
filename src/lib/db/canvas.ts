@@ -32,7 +32,7 @@ export const canvasRepository = {
       .from('canvas')
       .select(`
         *,
-        companies (name)
+        companies(company_name)
       `)
       .order('updated_at', { ascending: false });
 
@@ -188,3 +188,4 @@ export const canvasCommentsRepository = {
     return true;
   }
 };
+

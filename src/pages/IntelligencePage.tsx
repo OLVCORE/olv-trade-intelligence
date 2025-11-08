@@ -31,7 +31,7 @@ export default function IntelligencePage() {
         .from('decision_makers')
         .select(`
           *,
-          companies (name, industry)
+          companies(company_name, industry)
         `)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -46,7 +46,7 @@ export default function IntelligencePage() {
         .from('governance_signals')
         .select(`
           *,
-          companies (name)
+          companies(company_name)
         `)
         .order('detected_at', { ascending: false })
         .limit(10);
@@ -197,3 +197,4 @@ export default function IntelligencePage() {
     </div>
   );
 }
+

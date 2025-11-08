@@ -67,7 +67,7 @@ export default function ActivitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('activities')
-        .select('*, companies(name)')
+        .select('*, companies(company_name)')
         .order('activity_date', { ascending: false });
       
       if (error) throw error;
@@ -372,3 +372,4 @@ export default function ActivitiesPage() {
     </div>
   );
 }
+

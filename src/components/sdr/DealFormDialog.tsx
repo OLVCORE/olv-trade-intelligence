@@ -1355,3 +1355,4 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
     </DraggableDialog>
   );
 }
+

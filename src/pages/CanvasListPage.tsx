@@ -32,7 +32,7 @@ export default function CanvasListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('canvas')
-        .select('*, companies(name, cnpj)')
+        .select('*, companies(company_name, cnpj)')
         .eq('status', 'active')
         .order('updated_at', { ascending: false });
 

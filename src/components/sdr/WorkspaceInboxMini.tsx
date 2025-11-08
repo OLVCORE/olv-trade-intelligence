@@ -22,7 +22,7 @@ export function WorkspaceInboxMini() {
     try {
       const { data } = await supabase
         .from('conversations')
-        .select('*, contact:contacts(name), company:companies(name)')
+        .select('*, contact:contacts(name), company:companies(company_name)')
         .in('status', ['open', 'pending'])
         .order('last_message_at', { ascending: false })
         .limit(10);
@@ -56,3 +56,4 @@ export function WorkspaceInboxMini() {
     </div>
   );
 }
+

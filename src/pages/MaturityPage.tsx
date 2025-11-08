@@ -43,7 +43,7 @@ export default function MaturityPage() {
         .from('digital_maturity')
         .select(`
           *,
-          companies (name, industry)
+          companies(company_name, industry)
         `)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -241,3 +241,4 @@ export default function MaturityPage() {
     </div>
   );
 }
+
