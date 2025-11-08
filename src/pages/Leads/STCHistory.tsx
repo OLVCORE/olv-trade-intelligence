@@ -372,113 +372,152 @@ export default function STCHistory() {
       </Card>
 
       {/* Modal de Detalhes */}
-      <Dialog open={!!selectedVerification} onOpenChange={() => setSelectedVerification(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+      <Dialog open={!!selectedVerification} onOpenChange={() => {
+        setSelectedVerification(null);
+        setEvidenceFilter('all');
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+          {/* Botão Expandir - Discreto ao lado do X */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowFullReport(true)}
+            title="Expandir Relatório Completo (9 abas)"
+            className="absolute right-12 top-4 h-8 w-8 rounded-full hover:bg-accent z-50"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </Button>
+          
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
               Detalhes da Verificação STC
             </DialogTitle>
-            <DialogDescription>
-              {selectedVerification?.company_name}
-              {selectedVerification?.cnpj && ` - ${selectedVerification.cnpj}`}
+            <DialogDescription className="space-y-1">
+              <div>{selectedVerification?.company_name}</div>
+              {selectedVerification?.cnpj && (
+                <div className="text-xs text-muted-foreground">CNPJ: {selectedVerification.cnpj}</div>
+              )}
+              {selectedVerification && (
+                <div className="text-sm font-semibold text-primary mt-2">
+                  {getStatusMessage(
+                    selectedVerification.status,
+                    calculateConfidence(selectedVerification.evidences),
+                    calculateTotalScore(selectedVerification.evidences)
+                  )}
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-1">
 
           {selectedVerification && (
             <div className="space-y-6">
-              {/* Resumo */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Status</p>
-                    <Badge
-                      variant={
-                        selectedVerification.status === 'go'
-                          ? 'secondary'
-                          : selectedVerification.status === 'revisar'
-                          ? 'default'
-                          : 'destructive'
-                      }
-                      className="text-base px-3 py-1"
-                    >
-                      {selectedVerification.status === 'go' && '✅ GO'}
-                      {selectedVerification.status === 'revisar' && '⚠️ Revisar'}
-                      {selectedVerification.status === 'no-go' && '❌ NO-GO'}
-                    </Badge>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Confiança</p>
-                    <Badge
-                      variant={
-                        calculateConfidence(selectedVerification.evidences) === 'high'
-                          ? 'default'
-                          : calculateConfidence(selectedVerification.evidences) === 'medium'
-                          ? 'secondary'
-                          : 'outline'
-                      }
-                      className="text-base px-3 py-1"
-                    >
-                      {calculateConfidence(selectedVerification.evidences) === 'high' && '🔥 Alta'}
-                      {calculateConfidence(selectedVerification.evidences) === 'medium' && '⚡ Média'}
-                      {calculateConfidence(selectedVerification.evidences) === 'low' && '❄️ Baixa'}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Métricas - CLICÁVEIS PARA FILTRAR */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center justify-between">
-                    Métricas da Verificação
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowFullReport(true)}
-                      className="gap-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Expandir Relatório Completo
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div 
-                      className="cursor-pointer hover:bg-accent/50 p-3 rounded-lg transition-all hover:scale-105"
-                      onClick={() => setEvidenceFilter(evidenceFilter === 'triple' ? 'all' : 'triple')}
-                      title="Click para filtrar apenas Triple Matches"
-                    >
-                      <p className="text-sm text-muted-foreground">Triple Matches</p>
-                      <p className={`text-2xl font-bold ${evidenceFilter === 'triple' ? 'text-primary' : ''}`}>
-                        {selectedVerification.triple_matches || 0}
+              {/* 🎯 HERO CARD - Design World-Class Executivo */}
+              <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-background via-background to-accent/10 p-6 shadow-lg">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                
+                <div className="relative space-y-4">
+                  {/* Status Principal + Mensagem Contextual */}
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            selectedVerification.status === 'go'
+                              ? 'secondary'
+                              : selectedVerification.status === 'revisar'
+                              ? 'default'
+                              : 'destructive'
+                          }
+                          className="text-lg px-4 py-2 font-semibold"
+                        >
+                          {selectedVerification.status === 'go' && '✅ GO'}
+                          {selectedVerification.status === 'revisar' && '⚠️ REVISAR'}
+                          {selectedVerification.status === 'no-go' && '❌ NO-GO'}
+                        </Badge>
+                        
+                        <Badge
+                          variant={
+                            calculateConfidence(selectedVerification.evidences) === 'high'
+                              ? 'default'
+                              : calculateConfidence(selectedVerification.evidences) === 'medium'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className="text-base px-3 py-1.5"
+                        >
+                          {calculateConfidence(selectedVerification.evidences) === 'high' && '🔥 Confiança Alta'}
+                          {calculateConfidence(selectedVerification.evidences) === 'medium' && '⚡ Confiança Média'}
+                          {calculateConfidence(selectedVerification.evidences) === 'low' && '❄️ Confiança Baixa'}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground font-medium max-w-2xl">
+                        {getStatusMessage(
+                          selectedVerification.status,
+                          calculateConfidence(selectedVerification.evidences),
+                          calculateTotalScore(selectedVerification.evidences)
+                        )}
                       </p>
                     </div>
-                    <div 
-                      className="cursor-pointer hover:bg-accent/50 p-3 rounded-lg transition-all hover:scale-105"
-                      onClick={() => setEvidenceFilter(evidenceFilter === 'double' ? 'all' : 'double')}
-                      title="Click para filtrar apenas Double Matches"
-                    >
-                      <p className="text-sm text-muted-foreground">Double Matches</p>
-                      <p className={`text-2xl font-bold ${evidenceFilter === 'double' ? 'text-primary' : ''}`}>
-                        {selectedVerification.double_matches || 0}
+                    
+                    {/* Score Total - Destaque */}
+                    <div className="text-right">
+                      <p className="text-4xl font-bold text-primary">
+                        {calculateTotalScore(selectedVerification.evidences)}
                       </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Score Total</p>
-                      <p className="text-2xl font-bold text-primary">
-                        {calculateTotalScore(selectedVerification.evidences)} pts
-                      </p>
+                      <p className="text-sm text-muted-foreground">pontos</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                  
+                  {/* Métricas Clicáveis - Grid Elegante */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div 
+                      className="group cursor-pointer bg-background/60 backdrop-blur-sm border rounded-lg p-4 transition-all hover:scale-[1.02] hover:shadow-md hover:border-orange-500/50"
+                      onClick={() => setEvidenceFilter(evidenceFilter === 'triple' ? 'all' : 'triple')}
+                      title="Clique para filtrar evidências Triple Match"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Triple Matches</p>
+                          <p className={`text-3xl font-bold transition-colors ${
+                            evidenceFilter === 'triple' ? 'text-orange-500' : 'text-foreground group-hover:text-orange-500'
+                          }`}>
+                            {selectedVerification.triple_matches || 0}
+                          </p>
+                        </div>
+                        <div className="text-2xl opacity-60 group-hover:opacity-100 transition-opacity">
+                          🎯
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div 
+                      className="group cursor-pointer bg-background/60 backdrop-blur-sm border rounded-lg p-4 transition-all hover:scale-[1.02] hover:shadow-md hover:border-blue-500/50"
+                      onClick={() => setEvidenceFilter(evidenceFilter === 'double' ? 'all' : 'double')}
+                      title="Clique para filtrar evidências Double Match"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Double Matches</p>
+                          <p className={`text-3xl font-bold transition-colors ${
+                            evidenceFilter === 'double' ? 'text-blue-500' : 'text-foreground group-hover:text-blue-500'
+                          }`}>
+                            {selectedVerification.double_matches || 0}
+                          </p>
+                        </div>
+                        <div className="text-2xl opacity-60 group-hover:opacity-100 transition-opacity">
+                          🔍
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-              {/* Evidências - FILTRADAS E COM HIGHLIGHT */}
+              {/* Evidências - Design Compacto e Profissional */}
               {selectedVerification.evidences && selectedVerification.evidences.length > 0 && (() => {
                 const filteredEvidences = selectedVerification.evidences.filter((e: any) => {
                   if (evidenceFilter === 'all') return true;
@@ -486,40 +525,58 @@ export default function STCHistory() {
                 });
                 
                 return (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center justify-between">
-                        <span>
-                          Evidências ({filteredEvidences.length}
-                          {evidenceFilter !== 'all' && ` de ${selectedVerification.evidences.length}`})
-                        </span>
-                        {evidenceFilter !== 'all' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEvidenceFilter('all')}
-                            className="gap-1"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            Limpar Filtro
-                          </Button>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <span className="text-2xl">📋</span>
+                        Evidências
+                        <Badge variant="outline" className="ml-2">
+                          {filteredEvidences.length}
+                          {evidenceFilter !== 'all' && ` de ${selectedVerification.evidences.length}`}
+                        </Badge>
+                      </h3>
+                      {evidenceFilter !== 'all' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEvidenceFilter('all')}
+                          className="gap-2"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Limpar Filtro
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                       {filteredEvidences.map((evidence: any, idx: number) => (
-                        <div key={idx} className="border rounded-lg p-4 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <Badge variant={evidence.match_type === 'triple' ? 'default' : 'secondary'}>
-                              {evidence.match_type === 'triple' ? '🎯 TRIPLE' : '🔍 DOUBLE'}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {evidence.weight} pts
+                        <div 
+                          key={idx} 
+                          className="group bg-background/60 backdrop-blur-sm border rounded-lg p-4 hover:shadow-md transition-all hover:border-primary/30"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={evidence.match_type === 'triple' ? 'default' : 'secondary'}
+                                className={evidence.match_type === 'triple' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-500 hover:bg-blue-600'}
+                              >
+                                {evidence.match_type === 'triple' ? '🎯 TRIPLE' : '🔍 DOUBLE'}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {new URL(evidence.url || 'https://example.com').hostname.replace('www.', '')}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className="text-xs font-mono">
+                              +{evidence.weight} pts
                             </Badge>
                           </div>
-                          <h4 className="font-semibold text-sm">{evidence.title}</h4>
+                          
+                          <h4 className="font-medium text-sm mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+                            {evidence.title}
+                          </h4>
+                          
                           <p 
-                            className="text-sm text-muted-foreground" 
+                            className="text-xs text-muted-foreground line-clamp-2 mb-3" 
                             dangerouslySetInnerHTML={{ 
                               __html: highlightTerms(
                                 evidence.content, 
@@ -528,58 +585,52 @@ export default function STCHistory() {
                               ) 
                             }}
                           />
-                        {evidence.url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7"
-                            asChild
-                          >
-                            <a href={evidence.url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Ver Fonte
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                          
+                          {evidence.url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs gap-1 opacity-70 group-hover:opacity-100"
+                              asChild
+                            >
+                              <a href={evidence.url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-3 h-3" />
+                                Abrir Fonte
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 );
               })()}
 
-              {/* Informações Técnicas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Informações Técnicas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Fontes Consultadas:</span>
-                      <span className="font-mono">{selectedVerification.sources_consulted || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Queries Executadas:</span>
-                      <span className="font-mono">{selectedVerification.queries_executed || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Duração:</span>
-                      <span className="font-mono">
-                        {selectedVerification.verification_duration_ms
-                          ? `${(selectedVerification.verification_duration_ms / 1000).toFixed(2)}s`
-                          : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Data da Verificação:</span>
-                      <span className="font-mono">
-                        {new Date(selectedVerification.created_at).toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Footer - Informações Técnicas Compactas */}
+              <div className="grid grid-cols-4 gap-3 text-center pt-4 border-t">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Fontes</p>
+                  <p className="text-lg font-bold font-mono">{selectedVerification.sources_consulted || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Queries</p>
+                  <p className="text-lg font-bold font-mono">{selectedVerification.queries_executed || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Duração</p>
+                  <p className="text-lg font-bold font-mono">
+                    {selectedVerification.verification_duration_ms
+                      ? `${(selectedVerification.verification_duration_ms / 1000).toFixed(1)}s`
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Data</p>
+                  <p className="text-xs font-mono">
+                    {new Date(selectedVerification.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
