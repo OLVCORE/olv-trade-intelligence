@@ -36,7 +36,18 @@ export function useCompanies(options?: {
 
       const { data, error, count } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('[useCompanies] ❌ Query error:', error);
+        console.error('[useCompanies] 📝 Query details:', { search, sortBy, sortOrder, page, pageSize });
+        // Retornar vazio em vez de quebrar
+        return { 
+          data: [] as Company[], 
+          count: 0,
+          page,
+          pageSize,
+          totalPages: 0
+        };
+      }
       return { 
         data: data as Company[], 
         count: count || 0,
