@@ -190,40 +190,80 @@ export default function CommandCenter() {
   return (
     <AppLayout>
       <div className="p-8 space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold flex items-center gap-3">
-              <Rocket className="h-10 w-10 text-primary" />
-              Central de Comando
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Visão completa do funil de prospecção e vendas
-            </p>
+        {/* Header Enterprise com IA */}
+        <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-blue-950/30 via-purple-950/20 to-slate-950/30 p-8">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-purple-500/10 blur-3xl -z-10" />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 border-0">
+                <Sparkles className="mr-1 h-3 w-3" />
+                Live Intelligence
+              </Badge>
+              
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Mission Control
+              </h1>
+              
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                Cockpit inteligente com IA em tempo real para decisões estratégicas
+              </p>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Activity className="h-4 w-4 text-green-500 animate-pulse" />
+                <span>Sistema operacional • Atualizado há {metrics.lastImport ? formatDistanceToNow(new Date(metrics.lastImport), { locale: ptBR }) : 'N/A'}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={() => navigate('/search')}
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+              >
+                <Upload className="mr-2 h-5 w-5" />
+                Importar Empresas
+              </Button>
+              
+              <Button 
+                onClick={async () => {
+                  toast.loading('IA analisando dashboard...');
+                  await loadMetrics();
+                  toast.success('Dashboard atualizado!');
+                }}
+                variant="outline"
+                className="border-purple-500/50 hover:bg-purple-500/10"
+              >
+                <Brain className="mr-2 h-4 w-4 text-purple-500" />
+                Atualizar IA
+              </Button>
+            </div>
           </div>
-          <Button 
-            onClick={() => navigate('/search')}
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            <Upload className="mr-2 h-5 w-5" />
-            Importar Empresas
-          </Button>
         </div>
 
-        {/* Funil Visual */}
-        <Card className="border-2 border-primary/20">
+        {/* Funil Visual Enterprise */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-slate-950/50 to-slate-900/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Funil de Conversão Completo
-            </CardTitle>
-            <CardDescription>
-              Acompanhe a jornada das empresas desde a importação até o fechamento
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <TrendingUp className="h-6 w-6" />
+                  Funil de Conversão Inteligente
+                </CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Jornada completa: Importação → Qualificação → Ativação → Fechamento
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Conversão Global</p>
+                <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                  {metrics.conversionRate.overall}%
+                </p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-4 gap-6">
+            <div className="grid grid-cols-7 gap-2 items-center">
               {/* ETAPA 1: IMPORTADAS */}
               <div 
                 className="relative group cursor-pointer"
@@ -474,25 +514,70 @@ export default function CommandCenter() {
           </Card>
         </div>
 
-        {/* SUGESTÕES INTELIGENTES COM IA */}
+        {/* SUGESTÕES INTELIGENTES COM IA - ACIONÁVEIS */}
         {metrics.aiSuggestions.length > 0 && (
           <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-blue-500/5">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-purple-500" />
-                Sugestões Inteligentes (IA)
-              </CardTitle>
-              <CardDescription>
-                Ações priorizadas para maximizar conversão
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-purple-500 animate-pulse" />
+                    Recomendações Estratégicas (IA)
+                  </CardTitle>
+                  <CardDescription>
+                    Ações priorizadas por machine learning
+                  </CardDescription>
+                </div>
+                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 border-0">
+                  {metrics.aiSuggestions.length} ações
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {metrics.aiSuggestions.map((suggestion, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border border-purple-500/20">
-                  <Sparkles className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm flex-1">{suggestion}</p>
-                </div>
-              ))}
+              {metrics.aiSuggestions.map((suggestion, idx) => {
+                // DETECTAR AÇÃO E CRIAR BOTÃO INTELIGENTE
+                let actionButton = null;
+                let actionUrl = '';
+                
+                if (suggestion.includes('quarentena')) {
+                  actionUrl = '/leads/icp-quarantine';
+                  actionButton = 'Ir para Quarentena';
+                } else if (suggestion.includes('leads QUENTES')) {
+                  actionUrl = '/leads/approved';
+                  actionButton = 'Ver Leads Quentes';
+                } else if (suggestion.includes('aprovados não convertidos')) {
+                  actionUrl = '/leads/approved';
+                  actionButton = 'Criar Deals';
+                } else if (suggestion.includes('Ciclo de venda')) {
+                  actionUrl = '/sdr/workspace';
+                  actionButton = 'Acelerar Pipeline';
+                } else if (suggestion.includes('Taxa de aprovação baixa')) {
+                  actionUrl = '/leads/icp-quarantine';
+                  actionButton = 'Revisar Critérios';
+                }
+                
+                return (
+                  <div key={idx} className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-all group">
+                    <Sparkles className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm font-medium">{suggestion}</p>
+                      {actionButton && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="text-purple-500 hover:text-purple-400 hover:bg-purple-500/10 p-0 h-auto"
+                          onClick={() => navigate(actionUrl)}
+                        >
+                          {actionButton} →
+                        </Button>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      Prioridade {idx + 1}
+                    </Badge>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         )}
