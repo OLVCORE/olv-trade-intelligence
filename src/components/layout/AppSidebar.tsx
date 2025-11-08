@@ -39,7 +39,8 @@ import {
   Award,
   DollarSign,
   History,
-  XCircle
+  XCircle,
+  Filter
 } from "lucide-react";
 import {
   Sidebar,
