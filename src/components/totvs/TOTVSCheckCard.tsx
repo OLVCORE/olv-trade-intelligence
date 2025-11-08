@@ -150,6 +150,21 @@ export default function TOTVSCheckCard({
 
   // 🔗 REGISTRY: Estado para diálogo de confirmação ao fechar
   const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
+  
+  // 🚨 INTERCEPTAR FECHAMENTO/NAVEGAÇÃO COM DADOS NÃO SALVOS
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasUnsaved = Object.values(unsavedChanges).some(v => v === true);
+      if (hasUnsaved) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        return '🚨 ATENÇÃO: Você tem alterações não salvas! Sair agora resultará em PERDA DE DADOS E CRÉDITOS JÁ CONSUMIDOS.';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [unsavedChanges]);
 
   // 📜 HISTÓRICO: Estado para modal de histórico de relatórios
   const [showHistoryModal, setShowHistoryModal] = useState(false);
