@@ -952,16 +952,6 @@ export default function TOTVSCheckCard({
           </TabsTrigger>
         </TabsList>
         
-        {/* LEGENDA DOS SEMÁFOROS */}
-        <div className="mb-4 flex items-center justify-between text-xs bg-muted/30 p-2 rounded-lg">
-          <span className="font-semibold">{companyName || 'Empresa não especificada'}</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1"><Circle className="w-2 h-2 fill-gray-500 text-gray-500" /> Não iniciado</div>
-            <div className="flex items-center gap-1"><Circle className="w-2 h-2 fill-yellow-500 text-yellow-500 animate-pulse" /> Processando</div>
-            <div className="flex items-center gap-1"><Circle className="w-2 h-2 fill-green-500 text-green-500" /> Concluído</div>
-            <div className="flex items-center gap-1"><Circle className="w-2 h-2 fill-red-500 text-red-500" /> Erro</div>
-          </div>
-        </div>
 
         {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
@@ -988,7 +978,8 @@ export default function TOTVSCheckCard({
                 Verificação TOTVS
               </h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Verifica se a empresa já é cliente TOTVS através de 40+ portais de vagas, documentos financeiros e evidências públicas.
+                Verifica se a empresa já é cliente TOTVS através de <strong>47 fontes premium</strong>:<br/>
+                📋 30 portais de vagas | 📰 26 notícias & tech | 🎥 6 vídeos & social | 🤝 1 parceiro
               </p>
               <Button onClick={handleVerify} size="lg" disabled={isLoading}>
                 {isLoading ? (

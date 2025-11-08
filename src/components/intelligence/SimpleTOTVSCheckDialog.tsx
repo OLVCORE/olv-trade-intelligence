@@ -120,7 +120,7 @@ export function SimpleTOTVSCheckDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={`Verificação TOTVS - ${companyName || 'Empresa'}`}
-      description="Análise de detecção TOTVS em 17 fontes premium"
+      description="Análise de detecção TOTVS em 47 fontes premium (vagas, tech, vídeos, social)"
       className="max-w-4xl"
       maxWidth="max-h-[85vh]"
     >

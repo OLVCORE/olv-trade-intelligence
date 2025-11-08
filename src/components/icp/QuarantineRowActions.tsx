@@ -236,7 +236,7 @@ export function QuarantineRowActions({
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs bg-primary text-primary-foreground">
               <p className="font-semibold text-sm">⭐ STC - TOTVS Checker (Prioritário)</p>
-              <p className="text-xs mt-1">Verifica em 17 fontes premium (CVM, notícias, deep web) se empresa já é cliente TOTVS. Detecta triple/double/single match com highlight de termos encontrados</p>
+              <p className="text-xs mt-1">Verifica em <strong>47 fontes premium</strong>: 30 portais vagas, 26 notícias/tech (Baguete, CIO, Exame), 6 vídeos/social (YouTube, Instagram), 1 parceiro (Fusion). Detecta triple/double/single match com highlight de termos encontrados</p>
             </TooltipContent>
           </Tooltip>
 
