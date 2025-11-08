@@ -1588,6 +1588,49 @@ export default function ICPQuarantine() {
                         onEnrichCompleto={handleEnrichCompleto}
                         onEnrichTotvsCheck={handleEnrichTotvsCheck}
                         onDiscoverCNPJ={handleDiscoverCNPJ}
+                        onRestoreIndividual={async (cnpj) => {
+                          // Restaurar empresa individual
+                          try {
+                            // 1. Buscar empresa descartada
+                            const { data: discarded } = await supabase
+                              .from('discarded_companies')
+                              .select('*')
+                              .eq('cnpj', cnpj)
+                              .single();
+                            
+                            if (!discarded) {
+                              toast.error('Empresa não encontrada em descartadas');
+                              return;
+                            }
+                            
+                            // 2. Verificar se já existe na quarentena
+                            const { data: existing } = await supabase
+                              .from('icp_analysis_results')
+                              .select('id')
+                              .eq('cnpj', cnpj)
+                              .maybeSingle();
+                            
+                            if (existing) {
+                              // Atualizar status
+                              await supabase
+                                .from('icp_analysis_results')
+                                .update({ status: 'pendente' })
+                                .eq('id', existing.id);
+                            }
+                            
+                            // 3. Remover de descartadas
+                            await supabase
+                              .from('discarded_companies')
+                              .delete()
+                              .eq('cnpj', cnpj);
+                            
+                            toast.success('✅ Empresa restaurada!');
+                            refetch();
+                          } catch (error: any) {
+                            console.error('[RESTORE] Erro:', error);
+                            toast.error('Erro ao restaurar', { description: error.message });
+                          }
+                        }}
                         onOpenExecutiveReport={() => {
                           if (company.company_id) {
                             setExecutiveReportCompanyId(company.company_id);

@@ -1,4 +1,4 @@
-import { Settings, CheckCircle, XCircle, Eye, Trash2, RefreshCw, Target, Edit, Search, Building2, Sparkles, Zap, ExternalLink, Loader2, FileText } from 'lucide-react';
+import { Settings, CheckCircle, XCircle, Eye, Trash2, RefreshCw, Target, Edit, Search, Building2, Sparkles, Zap, ExternalLink, Loader2, FileText, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -37,6 +37,7 @@ interface QuarantineRowActionsProps {
   onDiscoverCNPJ?: (id: string) => void;
   onOpenExecutiveReport?: () => void;
   onEnrichCompleto?: (id: string) => Promise<void>;
+  onRestoreIndividual?: (cnpj: string) => Promise<void>;
 }
 
 export function QuarantineRowActions({
@@ -54,6 +55,7 @@ export function QuarantineRowActions({
   onDiscoverCNPJ,
   onOpenExecutiveReport,
   onEnrichCompleto,
+  onRestoreIndividual,
 }: QuarantineRowActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
@@ -61,6 +63,7 @@ export function QuarantineRowActions({
   const [enrichmentProgress, setEnrichmentProgress] = useState(0);
   const [showReport, setShowReport] = useState(false);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const navigate = useNavigate();
 
   const handleApprove = () => {
@@ -80,6 +83,22 @@ export function QuarantineRowActions({
     if (confirmed) {
       onDelete(company.id);
       setIsOpen(false);
+    }
+  };
+  
+  const handleRestore = async () => {
+    if (!onRestoreIndividual || !company.cnpj) return;
+    
+    try {
+      setIsRestoring(true);
+      await onRestoreIndividual(company.cnpj);
+      setIsOpen(false);
+      toast.success(`✅ ${company.razao_social} restaurada para quarentena!`);
+    } catch (error: any) {
+      console.error('[ROW-ACTION] ❌ Erro ao restaurar:', error);
+      toast.error('Erro ao restaurar empresa', { description: error.message });
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -491,22 +510,48 @@ export function QuarantineRowActions({
                 </TooltipContent>
               </Tooltip>
 
-              {/* Descartar */}
-              <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem 
-                    onClick={handleReject}
-                    className="hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-l-4 hover:border-orange-500 transition-all cursor-pointer"
-                  >
-                    <XCircle className="h-4 w-4 mr-2 text-orange-600" />
-                    Descartar (Não qualificado)
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p className="font-semibold text-sm">Descartar Lead</p>
-                  <p className="text-xs text-muted-foreground mt-1">Remove empresa da quarentena por não atender critérios ICP. Move para histórico de descartados com motivo registrado para auditoria</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Descartar (só se NÃO está descartada) */}
+              {company.status !== 'descartada' && (
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuItem 
+                      onClick={handleReject}
+                      className="hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-l-4 hover:border-orange-500 transition-all cursor-pointer"
+                    >
+                      <XCircle className="h-4 w-4 mr-2 text-orange-600" />
+                      Descartar (Não qualificado)
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-semibold text-sm">Descartar Lead</p>
+                    <p className="text-xs text-muted-foreground mt-1">Remove empresa da quarentena por não atender critérios ICP. Move para histórico de descartados com motivo registrado para auditoria</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              
+              {/* Restaurar (só se ESTÁ descartada) */}
+              {company.status === 'descartada' && onRestoreIndividual && (
+                <Tooltip delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuItem 
+                      onClick={handleRestore}
+                      disabled={isRestoring}
+                      className="hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:border-l-4 hover:border-blue-500 transition-all cursor-pointer"
+                    >
+                      {isRestoring ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Undo2 className="h-4 w-4 mr-2 text-blue-600" />
+                      )}
+                      Restaurar para Quarentena
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p className="font-semibold text-sm">Restaurar Empresa</p>
+                    <p className="text-xs text-muted-foreground mt-1">Move empresa de volta para a quarentena (status pendente) para reanálise</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </>
           )}
 

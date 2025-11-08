@@ -293,28 +293,6 @@ export function QuarantineActionsMenu({
             </DropdownMenuItem>
           )}
           
-          {onRestoreDiscarded && (
-            <DropdownMenuItem 
-              onClick={async () => {
-                if (!onRestoreDiscarded || isRestoring) return;
-                setIsRestoring(true);
-                try {
-                  await onRestoreDiscarded();
-                } finally {
-                  setIsRestoring(false);
-                }
-              }}
-              disabled={isRestoring || isProcessing}
-              className="transition-all duration-200 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/20 hover:shadow-md hover:border-l-2 hover:border-blue-500"
-            >
-              {isRestoring ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Undo2 className="h-4 w-4 mr-2 text-blue-600" />
-              )}
-              Restaurar Empresas Descartadas
-            </DropdownMenuItem>
-          )}
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

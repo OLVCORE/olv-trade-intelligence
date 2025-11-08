@@ -28,20 +28,28 @@ export function useRestoreDiscarded() {
 
         console.log(`[RESTORE] 📦 Restaurando: ${discarded.company_name}`);
 
-        // 2. Restaurar para quarentena
-        if (discarded.company_id) {
-          // Se tem company_id, atualizar status em icp_analysis_results
+        // 2. Verificar se JÁ EXISTE na quarentena (evitar duplicatas)
+        const { data: existing } = await supabase
+          .from('icp_analysis_results')
+          .select('id, status')
+          .eq('cnpj', discarded.cnpj)
+          .maybeSingle();
+
+        if (existing) {
+          // JÁ EXISTE: apenas mudar status para 'pendente'
           const { error: updateError } = await supabase
             .from('icp_analysis_results')
             .update({ status: 'pendente' })
-            .eq('company_id', discarded.company_id);
+            .eq('id', existing.id);
 
           if (updateError) {
-            console.error(`[RESTORE] ❌ Erro ao restaurar ${discarded.company_name}:`, updateError);
+            console.error(`[RESTORE] ❌ Erro ao atualizar ${discarded.company_name}:`, updateError);
             continue;
           }
+          
+          console.log(`[RESTORE] ✅ ${discarded.company_name} atualizada (status → pendente)`);
         } else {
-          // Se não tem company_id, criar novo registro na quarentena
+          // NÃO EXISTE: criar novo registro na quarentena
           const { error: insertError } = await supabase
             .from('icp_analysis_results')
             .insert({
@@ -58,9 +66,11 @@ export function useRestoreDiscarded() {
             });
 
           if (insertError) {
-            console.error(`[RESTORE] ❌ Erro ao criar registro de ${discarded.company_name}:`, insertError);
+            console.error(`[RESTORE] ❌ Erro ao criar ${discarded.company_name}:`, insertError);
             continue;
           }
+          
+          console.log(`[RESTORE] ✅ ${discarded.company_name} criada na quarentena`);
         }
 
         // 3. Remover de descartadas
