@@ -25,6 +25,7 @@ import { CompetitorsTab } from '@/components/icp/tabs/CompetitorsTab';
 import { ClientDiscoveryTab } from '@/components/icp/tabs/ClientDiscoveryTab';
 import { RecommendedProductsTab } from '@/components/icp/tabs/RecommendedProductsTab';
 import { KeywordsSEOTab } from '@/components/icp/tabs/KeywordsSEOTab';
+import { DigitalIntelligenceTab } from '@/components/intelligence/DigitalIntelligenceTab';
 import { DecisorsContactsTab } from '@/components/icp/tabs/DecisorsContactsTab';
 import { TabSaveWrapper } from './TabSaveWrapper';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
@@ -1347,8 +1348,21 @@ export default function TOTVSCheckCard({
           />
         </TabsContent>
 
-        {/* ABA 3: DIGITAL PRESENCE (KEYWORDS & SEO) */}
+        {/* ABA 3: DIGITAL INTELLIGENCE (AI-POWERED) */}
         <TabsContent value="keywords" className="mt-0 overflow-y-auto">
+          <DigitalIntelligenceTab
+            companyId={companyId}
+            companyName={companyName}
+            cnpj={cnpj}
+            domain={discoveredWebsite || domain}
+            sector={latestReport?.full_report?.icp_score?.sector}
+            onDataChange={(data) => {
+              tabDataRef.current.keywords = data;
+              setUnsavedChanges(prev => ({ ...prev, keywords: true }));
+              setTabsStatus(prev => ({ ...prev, keywords: 'success' }));
+            }}
+          />
+          {/* 
           <KeywordsSEOTab
             companyName={companyName}
             domain={discoveredWebsite || domain}
@@ -1374,6 +1388,7 @@ export default function TOTVSCheckCard({
               toast.error('❌ Erro na análise SEO', { description: error });
             }}
           />
+          */}
         </TabsContent>
 
         {/* ABA 4: COMPETITORS */}
