@@ -882,10 +882,10 @@ export default function TOTVSCheckCard({
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
         <TabsList className="grid w-full grid-cols-9 mb-6 h-auto bg-muted/30 p-1 rounded-lg">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
-          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg">
+          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg">
             <Search className="w-4 h-4" />
             <span>TOTVS</span>
             <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
@@ -896,7 +896,7 @@ export default function TOTVSCheckCard({
           <TabsTrigger 
             value="decisors" 
             disabled={!totvsSaved} 
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <UserCircle className="w-4 h-4" />
@@ -908,7 +908,7 @@ export default function TOTVSCheckCard({
           <TabsTrigger 
             value="keywords" 
             disabled={!totvsSaved}
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <Globe className="w-4 h-4" />
@@ -977,7 +977,7 @@ export default function TOTVSCheckCard({
         {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
         {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
-        <TabsContent value="detection" className="mt-0 h-full">
+        <TabsContent value="detection" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="TOTVS Check">
           {/* 🐛 DEBUG: Log state antes de renderizar */}
           {(() => {
@@ -1331,7 +1331,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 2: DECISORES & CONTATOS (EXTRAÇÃO APOLLO+LINKEDIN) */}
-        <TabsContent value="decisors" className="mt-0 h-full">
+        <TabsContent value="decisors" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Decisores">
           <DecisorsContactsTab
             companyId={companyId}
@@ -1354,7 +1354,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 3: DIGITAL INTELLIGENCE (AI-POWERED) - NOVA IMPLEMENTAÇÃO */}
-        <TabsContent value="keywords" className="mt-0 h-full">
+        <TabsContent value="keywords" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Digital Intelligence">
           <DigitalIntelligenceTab
             companyId={companyId}
@@ -1400,7 +1400,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 4: COMPETITORS */}
-        <TabsContent value="competitors" className="mt-0 h-full">
+        <TabsContent value="competitors" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Competitors">
           <CompetitorsTab
             companyId={companyId}
@@ -1413,7 +1413,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 5: EMPRESAS SIMILARES */}
-        <TabsContent value="similar" className="mt-0 h-full">
+        <TabsContent value="similar" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Empresas Similares">
           {companyId && companyName ? (
             <SimilarCompaniesTab
@@ -1433,7 +1433,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 6: CLIENT DISCOVERY */}
-        <TabsContent value="clients" className="mt-0 h-full">
+        <TabsContent value="clients" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Client Discovery">
           <ClientDiscoveryTab
             companyId={companyId}
@@ -1445,7 +1445,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 7: ANÁLISE 360° */}
-        <TabsContent value="analysis" className="mt-0 h-full">
+        <TabsContent value="analysis" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Análise 360°">
           {companyId && companyName ? (
             <Analysis360Tab
@@ -1465,7 +1465,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 8: RECOMMENDED PRODUCTS */}
-        <TabsContent value="products" className="mt-0 h-full">
+        <TabsContent value="products" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Produtos Recomendados">
           <RecommendedProductsTab
             companyName={companyName}
@@ -1475,7 +1475,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 9: EXECUTIVE SUMMARY (ÚLTIMA) */}
-        <TabsContent value="executive" className="mt-0 h-full">
+        <TabsContent value="executive" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Executive Summary">
           <ExecutiveSummaryTab
             companyName={companyName}
