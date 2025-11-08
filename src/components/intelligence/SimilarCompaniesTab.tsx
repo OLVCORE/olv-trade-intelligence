@@ -270,23 +270,6 @@ export function SimilarCompaniesTab({
   const [activeScoreFilter, setActiveScoreFilter] = useState<string | null>(null);
   const [loadedFromHistory, setLoadedFromHistory] = useState(false);
   
-  // 🔗 REGISTRY: Registrar aba para SaveBar global
-  useEffect(() => {
-    console.info('[REGISTRY] ✅ Registering: similar');
-    
-    registerTab('similar', {
-      flushSave: async () => {
-        console.log('[SIMILAR] 📤 Registry: flushSave() chamado');
-        onDataChange?.(data?.similar_companies);
-        sonnerToast.success('✅ Empresas Similares Salvas!');
-      },
-      getStatus: () => data?.similar_companies?.length > 0 ? 'completed' : 'draft',
-    });
-
-    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
-    // Cleanup removido para manter estado persistente entre trocas de aba
-  }, [data, onDataChange]);
-  
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['similar-companies-web', companyId, companyName, sector, state],
     queryFn: async (): Promise<SimilarCompaniesData> => {
@@ -1441,6 +1424,23 @@ export function SimilarCompaniesTab({
     enabled: !!companyId && !!companyName && !savedData,
     staleTime: 5 * 60 * 1000,
   });
+  
+  // 🔗 REGISTRY: Registrar aba para SaveBar global
+  useEffect(() => {
+    console.info('[REGISTRY] ✅ Registering: similar');
+    
+    registerTab('similar', {
+      flushSave: async () => {
+        console.log('[SIMILAR] 📤 Registry: flushSave() chamado');
+        onDataChange?.(data?.similar_companies);
+        sonnerToast.success('✅ Empresas Similares Salvas!');
+      },
+      getStatus: () => data?.similar_companies?.length > 0 ? 'completed' : 'draft',
+    });
+
+    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
+    // Cleanup removido para manter estado persistente entre trocas de aba
+  }, [data, onDataChange, registerTab]);
 
   // Usar dados salvos se disponíveis
   const effectiveData = savedData ? {
@@ -2383,24 +2383,4 @@ export function SimilarCompaniesTab({
       )}
     </div>
   );
-}
-
-// 🔗 Hook separado para Registry (evitar conflitos com hooks condicionais)
-function useSimilarCompaniesRegistry(data: any, onDataChange?: (data: any) => void) {
-  useEffect(() => {
-    console.info('[REGISTRY] ✅ Registering: similar');
-    
-    registerTab('similar', {
-      flushSave: async () => {
-        console.log('[SIMILAR] 📤 Registry: flushSave() chamado');
-        const dataToSave = data?.similar_companies || { skipped: true, reason: 'Análise opcional não executada' };
-        onDataChange?.(dataToSave);
-        sonnerToast.success('✅ Empresas Similares Salvas!');
-      },
-      getStatus: () => 'completed', // ✅ SEMPRE completed (aba opcional)
-    });
-
-    // ✅ NÃO DESREGISTRAR! Abas devem permanecer no registry mesmo quando não visíveis
-    // Cleanup removido para manter estado persistente entre trocas de aba
-  }, [data, onDataChange]);
 }
