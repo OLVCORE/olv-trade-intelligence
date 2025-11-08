@@ -8,7 +8,7 @@ export interface Deal {
   title: string;
   description?: string | null;
   company_id?: string | null;
-  stage: string;
+  deal_stage: string; // FIX: Usar deal_stage (nome real da coluna no banco)
   value: number;
   probability: number;
   status: 'open' | 'won' | 'lost' | 'abandoned';
@@ -29,7 +29,7 @@ export function useDeals(filters?: { stage?: string; status?: string }) {
         .select('*, companies:companies(name)')
         .order('created_at', { ascending: false });
       
-      if (filters?.stage) query = query.eq('stage', filters.stage);
+      if (filters?.stage) query = query.eq('deal_stage', filters.stage); // FIX: deal_stage
       if (filters?.status) query = query.eq('status', filters.status);
       
       const { data, error } = await query;
@@ -73,7 +73,7 @@ export function useMoveDeal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ dealId, newStage }: { dealId: string; newStage: string }) => {
-      const { data, error } = await supabase.from('sdr_deals').update({ stage: newStage }).eq('id', dealId).select().single();
+      const { data, error } = await supabase.from('sdr_deals').update({ deal_stage: newStage }).eq('id', dealId).select().single(); // FIX: deal_stage
       if (error) throw error;
       return data;
     },

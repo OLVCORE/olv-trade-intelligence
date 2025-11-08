@@ -41,31 +41,62 @@ CREATE POLICY "Allow authenticated users to read stages"
   TO authenticated
   USING (true);
 
--- 2. CRIAR TABELA sdr_deals (se não existir)
+-- 2. NORMALIZAR TABELA sdr_deals (já existe, mas faltam colunas)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS sdr_deals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  description TEXT,
-  company_id UUID REFERENCES companies(id),
-  stage TEXT NOT NULL DEFAULT 'discovery',
-  value NUMERIC(15,2) NOT NULL DEFAULT 0,
-  probability INTEGER NOT NULL DEFAULT 50 CHECK (probability >= 0 AND probability <= 100),
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'won', 'lost', 'abandoned')),
-  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-  expected_close_date DATE,
-  closed_date DATE,
-  assigned_to UUID REFERENCES auth.users(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
--- Criar índices
-CREATE INDEX IF NOT EXISTS idx_sdr_deals_company ON sdr_deals(company_id);
-CREATE INDEX IF NOT EXISTS idx_sdr_deals_stage ON sdr_deals(stage);
-CREATE INDEX IF NOT EXISTS idx_sdr_deals_status ON sdr_deals(status);
-CREATE INDEX IF NOT EXISTS idx_sdr_deals_assigned ON sdr_deals(assigned_to);
-CREATE INDEX IF NOT EXISTS idx_sdr_deals_created ON sdr_deals(created_at);
+-- Adicionar coluna description se não existir
+ALTER TABLE public.sdr_deals
+  ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- Garantir que deal_stage existe e tem default/NOT NULL
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'sdr_deals' AND column_name = 'deal_stage'
+  ) THEN
+    -- Definir default primeiro
+    ALTER TABLE public.sdr_deals
+      ALTER COLUMN deal_stage SET DEFAULT 'discovery';
+    
+    -- Backfill de valores nulos antes de marcar NOT NULL
+    UPDATE public.sdr_deals SET deal_stage = 'discovery' WHERE deal_stage IS NULL;
+    
+    -- Backfill de valores inválidos
+    UPDATE public.sdr_deals d
+    SET deal_stage = 'discovery'
+    WHERE NOT EXISTS (
+      SELECT 1 FROM public.sdr_pipeline_stages s WHERE s.key = d.deal_stage
+    );
+    
+    -- Enforce NOT NULL
+    ALTER TABLE public.sdr_deals
+      ALTER COLUMN deal_stage SET NOT NULL;
+  END IF;
+END$$;
+
+-- Adicionar FK de deal_stage -> sdr_pipeline_stages.key (se não existir)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.sdr_deals'::regclass
+      AND conname = 'sdr_deals_deal_stage_fk'
+  ) THEN
+    ALTER TABLE public.sdr_deals
+      ADD CONSTRAINT sdr_deals_deal_stage_fk
+      FOREIGN KEY (deal_stage)
+      REFERENCES public.sdr_pipeline_stages(key)
+      ON UPDATE RESTRICT
+      ON DELETE RESTRICT;
+  END IF;
+END$$;
+
+-- Criar índices alinhados aos nomes reais das colunas
+CREATE INDEX IF NOT EXISTS idx_sdr_deals_company ON public.sdr_deals(company_id);
+CREATE INDEX IF NOT EXISTS idx_sdr_deals_stage ON public.sdr_deals(deal_stage);
+CREATE INDEX IF NOT EXISTS idx_sdr_deals_assigned ON public.sdr_deals(assigned_sdr);
+CREATE INDEX IF NOT EXISTS idx_sdr_deals_created ON public.sdr_deals(created_at);
 
 -- Habilitar RLS
 ALTER TABLE sdr_deals ENABLE ROW LEVEL SECURITY;
