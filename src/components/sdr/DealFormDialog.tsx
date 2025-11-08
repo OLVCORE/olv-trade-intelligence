@@ -164,31 +164,9 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
       let companyId = selectedCompany?.id as string | undefined;
       const clean = (formData.cnpj || '').replace(/\D/g, '');
 
-      // Se não há empresa selecionada, BUSCAR DADOS REAIS PRIMEIRO
+      // Se não há empresa selecionada, criar/buscar empresa
       if (!companyId) {
-        // 🔥 PASSO 1: BUSCAR DADOS REAIS DA RECEITA FEDERAL (DIRETO DA API)
-        console.log('🔍 Buscando dados reais da Receita Federal para CNPJ:', clean);
-        
-        try {
-          const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${clean}`);
-          
-          if (!response.ok) {
-            throw new Error('API ReceitaWS retornou erro');
-          }
-          
-          const receitaData = await response.json();
-          
-          if (receitaData.status === 'ERROR') {
-            throw new Error(receitaData.message || 'CNPJ não encontrado na Receita Federal');
-          }
-          
-          console.log('✅ Dados da Receita Federal recebidos:', receitaData);
-        } catch (apiError: any) {
-          console.error('❌ Erro na API ReceitaWS:', apiError);
-          throw new Error('Erro ao buscar dados da Receita Federal: ' + apiError.message);
-        }
-
-        // 🔥 PASSO 2: VERIFICAR SE EMPRESA JÁ EXISTE NO BANCO
+        // 🔥 PASSO 1: VERIFICAR SE EMPRESA JÁ EXISTE NO BANCO
         const { data: existing, error: findError } = await supabase
           .from('companies')
           .select('id, company_name, cnpj, employees, industry, revenue, lead_score')
