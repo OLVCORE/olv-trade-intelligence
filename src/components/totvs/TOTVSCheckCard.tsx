@@ -1318,6 +1318,12 @@ export default function TOTVSCheckCard({
             linkedinUrl={data?.linkedin_url}
             domain={domain}
             savedData={latestReport?.full_report?.decisors_report}
+            onDataChange={(decisorsData) => {
+              console.log('[TOTVS] 💾 Salvando decisores:', decisorsData);
+              tabDataRef.current.decisors = decisorsData;
+              setUnsavedChanges(prev => ({ ...prev, decisors: true }));
+              setTabsStatus(prev => ({ ...prev, decisors: 'success' }));
+            }}
             onWebsiteDiscovered={(website) => {
               console.log('[TOTVS] 🌐 Website descoberto pelos decisores:', website);
               setDiscoveredWebsite(website);
