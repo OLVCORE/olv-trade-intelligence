@@ -268,8 +268,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.website} target="_blank" rel="noopener noreferrer">
-                  <Globe className="w-14 h-14 text-blue-500" />
-                  <span className="text-base font-bold">Website</span>
+                  <Globe className="w-16 h-16 text-blue-500" />
+                  <span className="text-sm font-semibold">Website</span>
                 </a>
               </Button>
             )}
@@ -280,8 +280,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.linkedin} target="_blank" rel="noopener noreferrer">
-                  <Linkedin className="w-14 h-14 text-blue-600" />
-                  <span className="text-base font-bold">LinkedIn</span>
+                  <Linkedin className="w-16 h-16 text-blue-600" />
+                  <span className="text-sm font-semibold">LinkedIn</span>
                 </a>
               </Button>
             )}
@@ -292,8 +292,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.instagram} target="_blank" rel="noopener noreferrer">
-                  <Instagram className="w-14 h-14 text-pink-500" />
-                  <span className="text-base font-bold">Instagram</span>
+                  <Instagram className="w-16 h-16 text-pink-500" />
+                  <span className="text-sm font-semibold">Instagram</span>
                 </a>
               </Button>
             )}
@@ -304,8 +304,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.facebook} target="_blank" rel="noopener noreferrer">
-                  <Facebook className="w-14 h-14 text-blue-700" />
-                  <span className="text-base font-bold">Facebook</span>
+                  <Facebook className="w-16 h-16 text-blue-700" />
+                  <span className="text-sm font-semibold">Facebook</span>
                 </a>
               </Button>
             )}
@@ -316,8 +316,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.youtube} target="_blank" rel="noopener noreferrer">
-                  <Youtube className="w-14 h-14 text-red-600" />
-                  <span className="text-base font-bold">YouTube</span>
+                  <Youtube className="w-16 h-16 text-red-600" />
+                  <span className="text-sm font-semibold">YouTube</span>
                 </a>
               </Button>
             )}
@@ -328,8 +328,8 @@ export default function DigitalIntelligenceTab({
                 asChild
               >
                 <a href={data.digital_presence.twitter} target="_blank" rel="noopener noreferrer">
-                  <Twitter className="w-14 h-14 text-sky-500" />
-                  <span className="text-base font-bold">Twitter/X</span>
+                  <Twitter className="w-16 h-16 text-sky-500" />
+                  <span className="text-sm font-semibold">Twitter/X</span>
                 </a>
               </Button>
             )}

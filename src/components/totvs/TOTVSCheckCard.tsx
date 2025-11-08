@@ -584,6 +584,9 @@ export default function TOTVSCheckCard({
       console.log('[REGISTRY] ✅ Todas as abas salvas com sucesso!');
       
       // 2. 🔥 CRITICAL: Salvar full_report no banco (stc_verification_history)
+      console.log('[SAVE] 🔍 Verificando stcHistoryId:', stcHistoryId);
+      console.log('[SAVE] 🔍 tabDataRef.current:', tabDataRef.current);
+      
       if (stcHistoryId) {
         try {
           // Montar full_report com dados de todas as abas
@@ -597,6 +600,7 @@ export default function TOTVSCheckCard({
             analysis_report: tabDataRef.current.analysis,
             products_report: tabDataRef.current.products,
             executive_report: tabDataRef.current.executive,
+            digital_report: tabDataRef.current.digital, // 🔥 ADICIONAR DIGITAL!
             __status: getStatuses(), // Salvar status de cada aba
             __meta: {
               saved_at: new Date().toISOString(),
@@ -605,23 +609,31 @@ export default function TOTVSCheckCard({
             },
           };
           
-          console.log('[SAVE] 💾 Salvando full_report no banco...', {
-            stcHistoryId,
-            tabs: Object.keys(fullReport).filter(k => !k.startsWith('__')),
-          });
+          console.log('[SAVE] 💾 Salvando full_report no banco...');
+          console.log('[SAVE] 📊 stcHistoryId:', stcHistoryId);
+          console.log('[SAVE] 📦 fullReport keys:', Object.keys(fullReport));
+          console.log('[SAVE] 🔥 decisors_report:', fullReport.decisors_report);
+          console.log('[SAVE] 🔥 digital_report:', fullReport.digital_report);
           
-          const { error: updateError } = await supabase
+          const { data: updateData, error: updateError } = await supabase
             .from('stc_verification_history')
             .update({ full_report: fullReport })
-            .eq('id', stcHistoryId);
+            .eq('id', stcHistoryId)
+            .select(); // 🔥 ADICIONAR .select() para verificar se atualizou
           
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error('[SAVE] ❌ UPDATE ERROR:', updateError);
+            throw updateError;
+          }
           
           console.log('[SAVE] ✅ full_report salvo no banco!');
+          console.log('[SAVE] 📦 updateData:', updateData);
         } catch (err) {
           console.error('[SAVE] ❌ Erro ao salvar full_report:', err);
           throw err;
         }
+      } else {
+        console.error('[SAVE] ❌ stcHistoryId NÃO EXISTE! Não pode salvar.');
       }
       
       toast.success('✅ Relatório salvo no sistema!', {
@@ -873,35 +885,35 @@ export default function TOTVSCheckCard({
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-9 mb-6 h-auto bg-muted/30 p-1 rounded-lg">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
-          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg">
             <Search className="w-4 h-4" />
             <span>TOTVS</span>
             <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
-            {tabsStatus.detection === 'success' && (
+            {getStatuses().detection === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
             )}
           </TabsTrigger>
           <TabsTrigger 
             value="decisors" 
             disabled={!totvsSaved} 
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <UserCircle className="w-4 h-4" />
             <span>Decisores</span>
-            {tabsStatus.decisors === 'success' && (
+            {getStatuses().decisors === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
             )}
           </TabsTrigger>
           <TabsTrigger 
             value="keywords" 
             disabled={!totvsSaved}
-            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            className="flex items-center justify-center gap-2 text-sm py-3 px-4 disabled:opacity-40 disabled:cursor-not-allowed font-semibold relative data-[state=active]:bg-blue-700 data-[state=active]:text-white data-[state=active]:shadow-lg"
           >
             {!totvsSaved && <span className="text-sm">🔒</span>}
             <Globe className="w-4 h-4" />
             <span>Digital</span>
-            {tabsStatus.keywords === 'success' && (
+            {getStatuses().keywords === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
             )}
           </TabsTrigger>
@@ -965,7 +977,7 @@ export default function TOTVSCheckCard({
         {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
         {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
-        <TabsContent value="detection" className="mt-0">
+        <TabsContent value="detection" className="mt-0 h-full">
           <UniversalTabWrapper tabName="TOTVS Check">
           {/* 🐛 DEBUG: Log state antes de renderizar */}
           {(() => {
@@ -1319,7 +1331,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 2: DECISORES & CONTATOS (EXTRAÇÃO APOLLO+LINKEDIN) */}
-        <TabsContent value="decisors" className="mt-0">
+        <TabsContent value="decisors" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Decisores">
           <DecisorsContactsTab
             companyId={companyId}
@@ -1342,7 +1354,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 3: DIGITAL INTELLIGENCE (AI-POWERED) - NOVA IMPLEMENTAÇÃO */}
-        <TabsContent value="keywords" className="mt-0">
+        <TabsContent value="keywords" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Digital Intelligence">
           <DigitalIntelligenceTab
             companyId={companyId}
@@ -1388,7 +1400,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 4: COMPETITORS */}
-        <TabsContent value="competitors" className="mt-0">
+        <TabsContent value="competitors" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Competitors">
           <CompetitorsTab
             companyId={companyId}
@@ -1401,7 +1413,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 5: EMPRESAS SIMILARES */}
-        <TabsContent value="similar" className="mt-0">
+        <TabsContent value="similar" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Empresas Similares">
           {companyId && companyName ? (
             <SimilarCompaniesTab
@@ -1421,7 +1433,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 6: CLIENT DISCOVERY */}
-        <TabsContent value="clients" className="mt-0">
+        <TabsContent value="clients" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Client Discovery">
           <ClientDiscoveryTab
             companyId={companyId}
@@ -1433,7 +1445,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 7: ANÁLISE 360° */}
-        <TabsContent value="analysis" className="mt-0">
+        <TabsContent value="analysis" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Análise 360°">
           {companyId && companyName ? (
             <Analysis360Tab
@@ -1453,7 +1465,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 8: RECOMMENDED PRODUCTS */}
-        <TabsContent value="products" className="mt-0">
+        <TabsContent value="products" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Produtos Recomendados">
           <RecommendedProductsTab
             companyName={companyName}
@@ -1463,7 +1475,7 @@ export default function TOTVSCheckCard({
         </TabsContent>
 
         {/* ABA 9: EXECUTIVE SUMMARY (ÚLTIMA) */}
-        <TabsContent value="executive" className="mt-0">
+        <TabsContent value="executive" className="mt-0 h-full">
           <UniversalTabWrapper tabName="Executive Summary">
           <ExecutiveSummaryTab
             companyName={companyName}
