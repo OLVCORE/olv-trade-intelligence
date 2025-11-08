@@ -41,7 +41,7 @@ export default function SDRWorkspacePage() {
     queryClient.invalidateQueries({ queryKey: ['sdr_deals'] });
   }, []);
   
-  const { data: deals } = useDeals({ status: 'open' });
+  const { data: deals } = useDeals({ status: 'open' }); // 🔥 DESABILITADO VIA enabled: false
   const { data: stages } = usePipelineStages();
   const { data: automations, isLoading: automationsLoading } = useSDRAutomations();
   const { data: companiesAtRisk } = { data: [] }; // DESABILITAR TEMPORARIAMENTE
