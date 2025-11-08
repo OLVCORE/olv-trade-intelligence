@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface DigitalIntelligenceTabProps {
   cnpj?: string;
   domain?: string;
   sector?: string;
+  stcStatus?: 'go' | 'no-go' | 'revisar'; // ✅ Status do TOTVS Check
   onDataChange?: (data: any) => void;
 }
 
@@ -105,39 +107,38 @@ export default function DigitalIntelligenceTab({
   cnpj,
   domain,
   sector,
+  stcStatus,
   onDataChange
 }: DigitalIntelligenceTabProps) {
   const [isUrlsExpanded, setIsUrlsExpanded] = useState(false);
+  
+  // ⚠️ Se é NO-GO (já cliente TOTVS), não faz sentido analisar vendas
+  const isExistingClient = stcStatus === 'no-go';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['digital-intelligence', companyId, companyName],
     queryFn: async (): Promise<DigitalIntelligenceData> => {
       console.log('[DIGITAL-INTEL] 🚀 Iniciando análise de inteligência digital...');
       
-      // TODO: Implementar chamada à API
-      // Por enquanto, retorna dados mockados
-      return {
-        temperature: 'hot',
-        temperature_score: 95,
-        sales_readiness_score: 85,
-        closing_probability: 80,
-        digital_presence: {
-          website: 'https://vianaoffshore.com.br',
-          linkedin: 'https://linkedin.com/company/viana-offshore',
-          instagram: 'https://instagram.com/vianaoffshore',
-          facebook: 'https://facebook.com/vianaoffshore',
-          youtube: null,
-          twitter: null,
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Usuário não autenticado');
+
+      const response = await supabase.functions.invoke('digital-intelligence-analysis', {
+        body: {
+          companyName,
+          cnpj,
+          domain,
+          sector,
         },
-        buying_signals: [],
-        pain_points: [],
-        timeline: [],
-        ai_diagnosis: '',
-        sales_script: '',
-        approach_timing: '',
-        analyzed_urls: [],
-        generated_at: new Date().toISOString(),
-      };
+      });
+
+      if (response.error) {
+        console.error('[DIGITAL-INTEL] ❌ Erro:', response.error);
+        throw new Error(response.error.message);
+      }
+
+      console.log(`[DIGITAL-INTEL] ✅ Análise concluída: ${response.data.analyzed_urls.length} URLs`);
+      return response.data;
     },
     enabled: false, // ✅ Desabilitado por padrão (aba opcional)
     staleTime: 5 * 60 * 1000,
@@ -203,22 +204,39 @@ export default function DigitalIntelligenceTab({
 
   if (!data) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <Target className="w-16 h-16 mx-auto text-muted-foreground" />
-            <h3 className="text-lg font-semibold">Análise de Inteligência Digital</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Clique no botão abaixo para iniciar uma análise profunda da presença digital 
-              desta empresa usando IA. Serão analisadas 50-100 fontes de dados.
-            </p>
-            <Button onClick={() => refetch()} size="lg" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Gerar Análise com IA
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {isExistingClient && (
+          <Alert variant="destructive">
+            <AlertTriangle className="w-4 h-4" />
+            <AlertDescription>
+              <strong>⚠️ ATENÇÃO: Empresa já é cliente TOTVS (NO-GO)</strong>
+              <br />
+              Esta análise deve focar em <strong>Upsell/Cross-sell</strong>, não em nova venda.
+              A temperatura e probabilidade serão ajustadas automaticamente.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center space-y-4">
+              <Target className="w-16 h-16 mx-auto text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Análise de Inteligência Digital</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {isExistingClient ? (
+                  'Análise focada em oportunidades de Upsell e Cross-sell para cliente existente TOTVS.'
+                ) : (
+                  'Clique no botão abaixo para iniciar uma análise profunda da presença digital desta empresa usando IA. Serão analisadas 50-100 fontes de dados.'
+                )}
+              </p>
+              <Button onClick={() => refetch()} size="lg" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                {isExistingClient ? 'Analisar Oportunidades Upsell' : 'Gerar Análise com IA'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
