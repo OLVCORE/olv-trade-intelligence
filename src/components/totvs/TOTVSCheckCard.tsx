@@ -29,6 +29,7 @@ import DigitalIntelligenceTab from '@/components/intelligence/DigitalIntelligenc
 import { DecisorsContactsTab } from '@/components/icp/tabs/DecisorsContactsTab';
 import { TabSaveWrapper } from './TabSaveWrapper';
 import { TabIndicator } from '@/components/icp/tabs/TabIndicator';
+import { UniversalTabWrapper } from './UniversalTabWrapper';
 import { registerTab as registerTabInGlobal, unregisterTab as unregisterTabInGlobal } from '@/components/icp/tabs/tabsRegistry';
 import { saveAllTabs, hasNonCompleted, getStatuses, getStatusCounts } from '@/components/icp/tabs/tabsRegistry';
 import { createSnapshotFromFullReport, loadSnapshot, isReportClosed, generatePdfFromSnapshot, type Snapshot } from '@/components/icp/tabs/snapshotReport';
@@ -982,7 +983,8 @@ export default function TOTVSCheckCard({
         {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
         {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
-        <TabsContent value="detection" className="mt-0 overflow-y-auto">
+        <TabsContent value="detection" className="mt-0">
+          <UniversalTabWrapper tabName="TOTVS Check">
           {/* 🐛 DEBUG: Log state antes de renderizar */}
           {(() => {
             console.log('[TOTVS-TAB-RENDER] Condições:', {
@@ -1331,10 +1333,12 @@ export default function TOTVSCheckCard({
               </div>
             </>
           )}
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 2: DECISORES & CONTATOS (EXTRAÇÃO APOLLO+LINKEDIN) */}
-        <TabsContent value="decisors" className="mt-0 overflow-y-auto">
+        <TabsContent value="decisors" className="mt-0">
+          <UniversalTabWrapper tabName="Decisores">
           <DecisorsContactsTab
             companyId={companyId}
             companyName={companyName}
@@ -1346,10 +1350,12 @@ export default function TOTVSCheckCard({
               setDiscoveredWebsite(website);
             }}
           />
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 3: DIGITAL INTELLIGENCE (AI-POWERED) - NOVA IMPLEMENTAÇÃO */}
-        <TabsContent value="keywords" className="mt-0 overflow-y-auto">
+        <TabsContent value="keywords" className="mt-0">
+          <UniversalTabWrapper tabName="Digital Intelligence">
           <DigitalIntelligenceTab
             companyId={companyId}
             companyName={companyName}
@@ -1390,10 +1396,12 @@ export default function TOTVSCheckCard({
             }}
           />
           */}
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 4: COMPETITORS */}
-        <TabsContent value="competitors" className="mt-0 overflow-y-auto">
+        <TabsContent value="competitors" className="mt-0">
+          <UniversalTabWrapper tabName="Competitors">
           <CompetitorsTab
             companyId={companyId}
             companyName={companyName}
@@ -1401,10 +1409,12 @@ export default function TOTVSCheckCard({
             domain={domain}
             similarCompanies={sharedSimilarCompanies}
           />
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 5: EMPRESAS SIMILARES */}
-        <TabsContent value="similar" className="mt-0 overflow-y-auto">
+        <TabsContent value="similar" className="mt-0">
+          <UniversalTabWrapper tabName="Empresas Similares">
           {companyId && companyName ? (
             <SimilarCompaniesTab
               companyId={companyId}
@@ -1419,20 +1429,24 @@ export default function TOTVSCheckCard({
               </p>
             </Card>
           )}
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 6: CLIENT DISCOVERY */}
-        <TabsContent value="clients" className="mt-0 overflow-y-auto">
+        <TabsContent value="clients" className="mt-0">
+          <UniversalTabWrapper tabName="Client Discovery">
           <ClientDiscoveryTab
             companyId={companyId}
             companyName={companyName}
             cnpj={cnpj}
             savedData={latestReport?.full_report?.similar_companies_report}
           />
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 7: ANÁLISE 360° */}
-        <TabsContent value="analysis" className="mt-0 overflow-y-auto">
+        <TabsContent value="analysis" className="mt-0">
+          <UniversalTabWrapper tabName="Análise 360°">
           {companyId && companyName ? (
             <Analysis360Tab
               companyId={companyId}
@@ -1447,18 +1461,22 @@ export default function TOTVSCheckCard({
               </p>
             </Card>
           )}
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 8: RECOMMENDED PRODUCTS */}
-        <TabsContent value="products" className="mt-0 overflow-y-auto">
+        <TabsContent value="products" className="mt-0">
+          <UniversalTabWrapper tabName="Produtos Recomendados">
           <RecommendedProductsTab
             companyName={companyName}
             stcResult={data}
           />
+          </UniversalTabWrapper>
         </TabsContent>
 
         {/* ABA 9: EXECUTIVE SUMMARY (ÚLTIMA) */}
-        <TabsContent value="executive" className="mt-0 overflow-y-auto">
+        <TabsContent value="executive" className="mt-0">
+          <UniversalTabWrapper tabName="Executive Summary">
           <ExecutiveSummaryTab
             companyName={companyName}
             stcResult={data}
@@ -1467,6 +1485,7 @@ export default function TOTVSCheckCard({
             clientsCount={Math.floor((similarCompaniesData?.length || 0) * 2.5)}
             maturityScore={data?.digital_maturity_score || 0}
           />
+          </UniversalTabWrapper>
         </TabsContent>
       </Tabs>
 
