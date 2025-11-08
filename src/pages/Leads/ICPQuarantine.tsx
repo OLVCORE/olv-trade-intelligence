@@ -1334,6 +1334,17 @@ export default function ICPQuarantine() {
                       <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'cnpj' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                     </Button>
                   </TableHead>
+                  <TableHead className="min-w-[150px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('source_name')}
+                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
+                    >
+                      <span className="font-semibold">Origem</span>
+                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'source_name' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
+                    </Button>
+                  </TableHead>
                   <TableHead className="min-w-[100px]">
                     <Button
                       variant="ghost"
@@ -1387,13 +1398,13 @@ export default function ICPQuarantine() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8">
+                  <TableCell colSpan={13} className="text-center py-8">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : filteredCompanies.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                     Nenhuma empresa encontrada
                   </TableCell>
                 </TableRow>
@@ -1457,6 +1468,37 @@ export default function ICPQuarantine() {
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {company.source_name ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge 
+                                variant="secondary" 
+                                className="bg-blue-600/10 text-blue-600 border-blue-600/30 hover:bg-blue-600/20 transition-colors cursor-help max-w-[140px] truncate"
+                              >
+                                {company.source_name}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-1">
+                                <p><strong>Origem:</strong> {company.source_name}</p>
+                                {company.source_metadata?.campaign && (
+                                  <p><strong>Campanha:</strong> {company.source_metadata.campaign}</p>
+                                )}
+                                {company.import_date && (
+                                  <p><strong>Importado:</strong> {new Date(company.import_date).toLocaleDateString('pt-BR')}</p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Sem origem
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>
