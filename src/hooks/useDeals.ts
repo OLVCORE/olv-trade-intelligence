@@ -24,13 +24,25 @@ export function useDeals(filters?: { stage?: string; status?: string }) {
   return useQuery({
     queryKey: [...DEALS_QUERY_KEY, filters],
     queryFn: async () => {
+      // Construir query base
       let query = supabase
         .from('sdr_deals')
-        .select('*, companies:companies(name)')
+        .select('*, companies:companies(company_name)')
         .order('created_at', { ascending: false });
       
-      if (filters?.stage) query = query.eq('deal_stage', filters.stage); // FIX: deal_stage
-      if (filters?.status) query = query.eq('status', filters.status);
+      // Filtro por stage
+      if (filters?.stage) query = query.eq('deal_stage', filters.stage);
+      
+      // Filtro por status: usar is_closed da tabela sdr_pipeline_stages
+      if (filters?.status) {
+        if (filters.status === 'open') {
+          // Deals abertos: stage.is_closed = false
+          query = query.in('deal_stage', ['discovery', 'qualification', 'proposal', 'negotiation']);
+        } else if (filters.status === 'closed') {
+          // Deals fechados: stage.is_closed = true
+          query = query.in('deal_stage', ['won', 'lost']);
+        }
+      }
       
       const { data, error } = await query;
       if (error) {
