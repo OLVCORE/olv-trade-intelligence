@@ -27,11 +27,11 @@ export default function AddCompanyDialog({ open, onOpenChange }: AddCompanyDialo
     queryFn: async () => {
       let query = supabase
         .from('companies')
-        .select('id, name, cnpj, headquarters_state, industry, employees')
-        .order('name');
+        .select('id, company_name, cnpj, headquarters_state, industry, employees')
+        .order('company_name');
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,domain.ilike.%${searchTerm}%`);
+        query = query.or(`company_name.ilike.%${searchTerm}%,domain.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query.limit(50);

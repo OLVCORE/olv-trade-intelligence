@@ -40,7 +40,7 @@ export default function ResultsDashboard() {
     queryFn: async () => {
       let query = supabase
         .from('companies')
-        .select('id, name, cnpj, totvs_detection_score, totvs_last_checked_at')
+        .select('id, company_name, cnpj, totvs_detection_score, totvs_last_checked_at')
         .not('totvs_last_checked_at', 'is', null)
         .order('totvs_last_checked_at', { ascending: false });
 

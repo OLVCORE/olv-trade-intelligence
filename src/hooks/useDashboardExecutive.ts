@@ -66,8 +66,8 @@ export function useDashboardExecutive() {
       ] = await Promise.all([
         supabase.from('companies').select('*'),
         supabase.from('decision_makers').select('*'),
-        supabase.from('account_strategies').select('*, companies(name, industry, employees, location)'),
-        supabase.from('conversations').select('*, companies(name, industry)'),
+        supabase.from('account_strategies').select('*, companies(company_name, industry, employees, location)'),
+        supabase.from('conversations').select('*, companies(company_name, industry)'),
         supabase.from('messages').select('*')
       ]);
 

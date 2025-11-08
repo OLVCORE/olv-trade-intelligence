@@ -97,13 +97,13 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
     try {
       let queryBuilder = supabase
         .from('companies')
-        .select('id, name, employees, revenue, industry, cnpj, lead_score')
+        .select('id, company_name, employees, revenue, industry, cnpj, lead_score') // FIX: company_name
         .order('lead_score', { ascending: false, nullsLast: true }); // FIX: nullsLast instead of nullsFirst
 
       if (query) {
         // Remove apenas pontuação para busca de CNPJ
         const cleanQuery = query.replace(/[^\w\s]/g, '');
-        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,cnpj.ilike.%${cleanQuery}%`);
+        queryBuilder = queryBuilder.or(`company_name.ilike.%${query}%,cnpj.ilike.%${cleanQuery}%`); // FIX: company_name
       }
 
       const { data, error } = await queryBuilder.limit(50);

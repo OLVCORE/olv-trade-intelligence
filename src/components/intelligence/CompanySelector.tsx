@@ -41,8 +41,8 @@ export function CompanySelector({
       setLoading(true);
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, cnpj, industry, domain')
-        .order('name');
+        .select('id, company_name, cnpj, industry, domain')
+        .order('company_name');
 
       if (error) {
         console.error('Supabase error:', error);

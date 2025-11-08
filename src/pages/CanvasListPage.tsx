@@ -46,8 +46,8 @@ export default function CanvasListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, cnpj')
-        .order('name');
+        .select('id, company_name, cnpj')
+        .order('company_name');
 
       if (error) throw error;
       return data;
