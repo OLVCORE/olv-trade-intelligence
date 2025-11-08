@@ -633,6 +633,7 @@ export default function STCHistory() {
               </div>
             </div>
           )}
+          </div>
         </DialogContent>
       </Dialog>
       
