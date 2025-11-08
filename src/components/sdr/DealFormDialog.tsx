@@ -540,7 +540,7 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
       }));
 
       const { data: createdContacts, error: contactError } = await supabase
-        .from('contacts')
+        .from('Contact')
         .insert(contactsToInsert)
         .select('id');
 
