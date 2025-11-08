@@ -32,7 +32,6 @@ export function BulkUploadDialog({ children }: { children?: ReactNode }) {
   const [progress, setProgress] = useState(0);
 const [result, setResult] = useState<{ success: number; errors: string[] } | null>(null);
 const navigate = useNavigate();
-const [importMode, setImportMode] = useState<'analyze' | 'direct'>('analyze');
 const [sourceName, setSourceName] = useState("");
 const [sourceCampaign, setSourceCampaign] = useState("");
 
@@ -510,70 +509,49 @@ const [sourceCampaign, setSourceCampaign] = useState("");
         source_metadata: {
           file_name: file.name,
           campaign: sourceCampaign.trim() || null,
-          total_rows: companies.length,
-          import_mode: importMode
+          total_rows: companies.length
         }
       }));
 
-// Se o modo for importação direta, enviar ao backend
-if (importMode === 'direct') {
-  try {
-    toast.info(`Importando ${companiesWithMetadata.length} empresas para a base...`);
-    const { data, error } = await supabase.functions.invoke('bulk-upload-companies', {
-      body: { 
-        companies: companiesWithMetadata,
-        metadata: {
-          source_name: sourceName.trim(),
-          campaign: sourceCampaign.trim() || null,
-          import_batch_id
-        }
-      }
-    });
-    if (error) throw error;
+// FLUXO NOVO: SEMPRE importa para estoque (companies) e redireciona para Quarentena ICP
+toast.info(`📤 Importando ${companiesWithMetadata.length} empresas de "${sourceName}" para o estoque...`);
 
-    const imported = (data?.success as number) ?? (Array.isArray(data?.inserted) ? data.inserted.length : 0);
-    toast.success('Importação concluída', {
-      description: `${imported} empresas de "${sourceName}" importadas com sucesso`,
-      action: {
-        label: 'Ver empresas',
-        onClick: () => navigate('/companies')
-      }
-    });
-
-    setIsUploading(false);
-    setIsOpen(false);
-    navigate('/companies');
-    return;
-  } catch (e: any) {
-    console.error('Erro ao importar direto:', e);
-    toast.error('Falha ao importar', { description: e?.message || 'Erro desconhecido' });
-    setIsUploading(false);
-    return;
+const { data, error } = await supabase.functions.invoke('bulk-upload-companies', {
+  body: { 
+    companies: companiesWithMetadata,
+    metadata: {
+      source_name: sourceName.trim(),
+      campaign: sourceCampaign.trim() || null,
+      import_batch_id,
+      destination: 'quarantine' // Flag para indicar que vai para quarentena
+    }
   }
+});
+
+if (error) {
+  console.error('Erro ao importar:', error);
+  toast.error('Falha ao importar', { description: error?.message || 'Erro desconhecido' });
+  setIsUploading(false);
+  return;
 }
 
-// Fluxo atual: Redirecionar para análise ICP antes de cadastrar
-toast.success(`📊 ${companiesWithMetadata.length} empresas de "${sourceName}" prontas para análise ICP`, {
-  description: 'Redirecionando para análise automática...',
+const imported = (data?.success as number) ?? (Array.isArray(data?.inserted) ? data.inserted.length : 0);
+
+toast.success('✅ Importação concluída!', {
+  description: `${imported} empresas de "${sourceName}" adicionadas ao estoque`,
+  action: {
+    label: 'Ir para Quarentena ICP',
+    onClick: () => navigate('/leads/icp-quarantine')
+  }
 });
 
 setIsUploading(false);
-
-// Fechar o dialog
 setIsOpen(false);
 
-// Redirecionar para página de análise em massa com os dados
+// Redirecionar para Quarentena ICP onde as empresas importadas aparecerão
 setTimeout(() => {
-  navigate('/central-icp/batch', {
-    state: {
-      empresas: companiesWithMetadata,
-      origem: 'upload_massa',
-      source_name: sourceName.trim(),
-      source_campaign: sourceCampaign.trim() || null,
-      import_batch_id
-    }
-  });
-}, 500);
+  navigate('/leads/icp-quarantine');
+}, 1500);
 
     } catch (error) {
       console.error('Erro no upload:', error);
@@ -693,21 +671,13 @@ try {
               </AlertDescription>
             </Alert>
 
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <div>
-                <p className="text-sm font-medium">Destino do upload</p>
-                <p className="text-xs text-muted-foreground">Analisar ICP ou importar direto para a base</p>
-              </div>
-              <Select value={importMode} onValueChange={(v) => setImportMode(v as 'analyze' | 'direct')}>
-                <SelectTrigger className="w-[240px]">
-                  <SelectValue placeholder="Selecione o destino" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="analyze">Analisar ICP (recomendado)</SelectItem>
-                  <SelectItem value="direct">Importar direto para Empresas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* FLUXO LINEAR FIXO */}
+            <Alert className="border-blue-600/30 bg-blue-600/5">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm">
+                <strong>Fluxo Automático:</strong> Empresas serão importadas para o <strong>Estoque</strong> → <strong>Quarentena ICP</strong> → Aprovação
+              </AlertDescription>
+            </Alert>
 
             {/* CAMPOS DE RASTREABILIDADE */}
             <div className="space-y-4 rounded-lg border border-blue-600/30 bg-blue-600/5 p-4">
