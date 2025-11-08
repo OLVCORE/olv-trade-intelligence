@@ -55,18 +55,26 @@ export function useCompaniesAtRisk() {
         .from('deal_health_scores')
         .select(`
           *,
-          companies (
+          sdr_deals!inner (
             id,
-            name,
-            deal_value,
+            title,
+            value,
             deal_stage,
-            assigned_to
+            assigned_sdr,
+            company_id,
+            companies (
+              id,
+              name
+            )
           )
         `)
         .in('risk_level', ['high', 'critical'])
         .order('calculated_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching companies at risk:', error);
+        return []; // Retornar array vazio em vez de quebrar
+      }
       return data;
     },
   });

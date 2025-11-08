@@ -33,7 +33,10 @@ export function useDeals(filters?: { stage?: string; status?: string }) {
       if (filters?.status) query = query.eq('status', filters.status);
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        logger.error('Error fetching deals', error);
+        return []; // Retornar array vazio em vez de quebrar
+      }
       return data as Deal[];
     },
   });
