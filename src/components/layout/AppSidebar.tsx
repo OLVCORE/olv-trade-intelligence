@@ -103,8 +103,13 @@ const menuGroups: MenuGroup[] = [
         title: "Central de Comando",
         icon: Rocket,
         url: "/comando",
-        description: "Mission Control: Funil completo + IA em tempo real",
-        highlighted: true,
+        description: "Mission Control: Funil operacional e ações priorizadas"
+      },
+      {
+        title: "Dashboard Executivo",
+        icon: LayoutDashboard,
+        url: "/dashboard",
+        description: "Controle de APIs, métricas estratégicas e governança"
       },
       {
         title: "Busca Global",

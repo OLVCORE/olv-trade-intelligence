@@ -190,73 +190,67 @@ export default function CommandCenter() {
   return (
     <AppLayout>
       <div className="p-8 space-y-8">
-        {/* Header Enterprise com IA */}
-        <div className="relative overflow-hidden rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-blue-950/30 via-purple-950/20 to-slate-950/30 p-8">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-purple-500/10 blur-3xl -z-10" />
-          
+        {/* Header Corporativo */}
+        <div className="border border-border rounded-lg bg-card p-6">
           <div className="flex items-center justify-between">
-            <div className="space-y-3">
-              <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 border-0">
-                <Sparkles className="mr-1 h-3 w-3" />
-                Live Intelligence
-              </Badge>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Rocket className="h-8 w-8 text-blue-600" />
+                <h1 className="text-3xl font-bold text-foreground">
+                  Central de Comando
+                </h1>
+              </div>
               
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Mission Control
-              </h1>
-              
-              <p className="text-lg text-muted-foreground max-w-2xl">
-                Cockpit inteligente com IA em tempo real para decisões estratégicas
+              <p className="text-base text-muted-foreground">
+                Visão operacional completa do funil de vendas
               </p>
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Activity className="h-4 w-4 text-green-500 animate-pulse" />
+                <div className="h-2 w-2 rounded-full bg-green-600" />
                 <span>Sistema operacional • Atualizado há {metrics.lastImport ? formatDistanceToNow(new Date(metrics.lastImport), { locale: ptBR }) : 'N/A'}</span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
               <Button 
                 onClick={() => navigate('/search')}
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                <Upload className="mr-2 h-5 w-5" />
+                <Upload className="mr-2 h-4 w-4" />
                 Importar Empresas
               </Button>
               
               <Button 
                 onClick={async () => {
-                  toast.loading('IA analisando dashboard...');
+                  toast.loading('Atualizando métricas...');
                   await loadMetrics();
-                  toast.success('Dashboard atualizado!');
+                  toast.success('Métricas atualizadas!');
                 }}
                 variant="outline"
-                className="border-purple-500/50 hover:bg-purple-500/10"
               >
-                <Brain className="mr-2 h-4 w-4 text-purple-500" />
-                Atualizar IA
+                <Activity className="mr-2 h-4 w-4" />
+                Atualizar
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Funil Visual Enterprise */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-slate-950/50 to-slate-900/30">
+        {/* Funil Visual Corporativo */}
+        <Card className="border border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <TrendingUp className="h-6 w-6" />
-                  Funil de Conversão Inteligente
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  Funil de Conversão
                 </CardTitle>
-                <CardDescription className="text-base mt-1">
+                <CardDescription>
                   Jornada completa: Importação → Qualificação → Ativação → Fechamento
                 </CardDescription>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Conversão Global</p>
-                <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                <p className="text-2xl font-bold text-blue-600">
                   {metrics.conversionRate.overall}%
                 </p>
               </div>
@@ -266,24 +260,23 @@ export default function CommandCenter() {
             <div className="grid grid-cols-7 gap-2 items-center">
               {/* ETAPA 1: IMPORTADAS */}
               <div 
-                className="relative group cursor-pointer"
+                className="relative group cursor-pointer border border-border rounded-lg hover:border-blue-600/50 transition-all bg-card"
                 onClick={() => navigate('/companies')}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-lg -z-10 group-hover:from-blue-500/20 group-hover:to-blue-600/10 transition-all" />
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Database className="h-8 w-8 text-blue-500" />
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
+                    <Database className="h-6 w-6 text-blue-600" />
+                    <Badge variant="secondary" className="text-base">
                       {metrics.totalImported}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Importadas</h3>
-                    <p className="text-sm text-muted-foreground">Total no sistema</p>
+                    <h3 className="font-semibold">Importadas</h3>
+                    <p className="text-xs text-muted-foreground">Total no sistema</p>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-600/10">
                     Ver Todas
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -295,30 +288,29 @@ export default function CommandCenter() {
 
               {/* ETAPA 2: QUARENTENA */}
               <div 
-                className="relative group cursor-pointer"
+                className="relative group cursor-pointer border border-border rounded-lg hover:border-yellow-600/50 transition-all bg-card"
                 onClick={() => navigate('/leads/icp-quarantine')}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 rounded-lg -z-10 group-hover:from-yellow-500/20 group-hover:to-yellow-600/10 transition-all" />
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Filter className="h-8 w-8 text-yellow-500" />
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
+                    <Filter className="h-6 w-6 text-yellow-600" />
+                    <Badge variant="secondary" className="text-base">
                       {metrics.inQuarantine}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Quarentena ICP</h3>
-                    <p className="text-sm text-muted-foreground">Análise pendente</p>
+                    <h3 className="font-semibold">Quarentena ICP</h3>
+                    <p className="text-xs text-muted-foreground">Análise pendente</p>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Taxa de aprovação:</span>
-                    <span className="font-semibold text-yellow-500">
+                    <span className="text-muted-foreground">Taxa aprovação:</span>
+                    <span className="font-semibold text-yellow-600">
                       {metrics.conversionRate.quarantineToApproved}%
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="ghost" size="sm" className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-600/10">
                     Analisar
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -330,30 +322,29 @@ export default function CommandCenter() {
 
               {/* ETAPA 3: APROVADAS */}
               <div 
-                className="relative group cursor-pointer"
+                className="relative group cursor-pointer border border-border rounded-lg hover:border-green-600/50 transition-all bg-card"
                 onClick={() => navigate('/leads/approved')}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-green-600/5 rounded-lg -z-10 group-hover:from-green-500/20 group-hover:to-green-600/10 transition-all" />
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                    <Badge variant="secondary" className="text-base">
                       {metrics.approved}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Aprovadas</h3>
-                    <p className="text-sm text-muted-foreground">Prontas para vendas</p>
+                    <h3 className="font-semibold">Aprovadas</h3>
+                    <p className="text-xs text-muted-foreground">Prontas para vendas</p>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Conversão p/ Pipeline:</span>
-                    <span className="font-semibold text-green-500">
+                    <span className="text-muted-foreground">Conv. Pipeline:</span>
+                    <span className="font-semibold text-green-600">
                       {metrics.conversionRate.approvedToPipeline}%
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="ghost" size="sm" className="w-full text-green-600 hover:text-green-700 hover:bg-green-600/10">
                     Criar Deals
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -365,30 +356,29 @@ export default function CommandCenter() {
 
               {/* ETAPA 4: PIPELINE */}
               <div 
-                className="relative group cursor-pointer"
+                className="relative group cursor-pointer border border-border rounded-lg hover:border-blue-600/50 transition-all bg-card"
                 onClick={() => navigate('/sdr/workspace')}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-lg -z-10 group-hover:from-purple-500/20 group-hover:to-purple-600/10 transition-all" />
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Zap className="h-8 w-8 text-purple-500" />
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
+                    <Zap className="h-6 w-6 text-blue-600" />
+                    <Badge variant="secondary" className="text-base">
                       {metrics.inPipeline}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Pipeline Ativo</h3>
-                    <p className="text-sm text-muted-foreground">Em negociação</p>
+                    <h3 className="font-semibold">Pipeline Ativo</h3>
+                    <p className="text-xs text-muted-foreground">Em negociação</p>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Taxa global:</span>
-                    <span className="font-semibold text-purple-500">
+                    <span className="font-semibold text-blue-600">
                       {metrics.conversionRate.overall}%
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full">
+                  <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-600/10">
                     Abrir Workspace
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
@@ -458,38 +448,38 @@ export default function CommandCenter() {
 
         {/* KPIs CRÍTICOS EM TEMPO REAL */}
         <div className="grid grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-purple-500">
+          <Card className="border-l-4 border-l-blue-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Valor Pipeline</p>
-                <DollarSign className="h-5 w-5 text-purple-500" />
+                <DollarSign className="h-5 w-5 text-blue-600" />
               </div>
-              <p className="text-3xl font-bold">R$ {(metrics.dealsValue / 1000).toFixed(0)}k</p>
-              <Progress value={metrics.conversionRate.overall} className="mt-2 h-2" />
+              <p className="text-2xl font-bold">R$ {(metrics.dealsValue / 1000).toFixed(0)}k</p>
+              <Progress value={metrics.conversionRate.overall} className="mt-2 h-1.5" />
               <p className="text-xs text-muted-foreground mt-1">{metrics.conversionRate.overall}% conversão</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="border-l-4 border-l-red-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Leads Quentes</p>
-                <TrendingUp className="h-5 w-5 text-red-500" />
+                <TrendingUp className="h-5 w-5 text-red-600" />
               </div>
-              <p className="text-3xl font-bold text-red-500">{metrics.hotLeads}</p>
+              <p className="text-2xl font-bold text-red-600">{metrics.hotLeads}</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Potencial: R$ {((metrics.hotLeads * 50000) / 1000).toFixed(0)}k
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500">
+          <Card className="border-l-4 border-l-green-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Win Rate</p>
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-3xl font-bold text-green-500">
+              <p className="text-2xl font-bold text-green-600">
                 {metrics.dealsWon + metrics.dealsLost > 0
                   ? Math.round((metrics.dealsWon / (metrics.dealsWon + metrics.dealsLost)) * 100)
                   : 0}%
@@ -500,13 +490,13 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-slate-600">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Ciclo Médio</p>
-                <Clock className="h-5 w-5 text-blue-500" />
+                <Clock className="h-5 w-5 text-slate-600" />
               </div>
-              <p className="text-3xl font-bold text-blue-500">{metrics.avgDealCycle}d</p>
+              <p className="text-2xl font-bold text-slate-600">{metrics.avgDealCycle}d</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Tempo médio para fechar
               </p>
@@ -516,19 +506,19 @@ export default function CommandCenter() {
 
         {/* SUGESTÕES INTELIGENTES COM IA - ACIONÁVEIS */}
         {metrics.aiSuggestions.length > 0 && (
-          <Card className="border-2 border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-blue-500/5">
+          <Card className="border border-blue-600/30">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-purple-500 animate-pulse" />
+                    <Brain className="h-5 w-5 text-blue-600" />
                     Recomendações Estratégicas (IA)
                   </CardTitle>
                   <CardDescription>
-                    Ações priorizadas por machine learning
+                    Ações priorizadas baseadas em análise de dados
                   </CardDescription>
                 </div>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 border-0">
+                <Badge variant="secondary">
                   {metrics.aiSuggestions.length} ações
                 </Badge>
               </div>
@@ -557,15 +547,15 @@ export default function CommandCenter() {
                 }
                 
                 return (
-                  <div key={idx} className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-all group">
-                    <Sparkles className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                  <div key={idx} className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-blue-600/50 transition-all">
+                    <Sparkles className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 space-y-2">
-                      <p className="text-sm font-medium">{suggestion}</p>
+                      <p className="text-sm">{suggestion}</p>
                       {actionButton && (
                         <Button 
                           size="sm" 
-                          variant="ghost"
-                          className="text-purple-500 hover:text-purple-400 hover:bg-purple-500/10 p-0 h-auto"
+                          variant="link"
+                          className="text-blue-600 hover:text-blue-700 p-0 h-auto"
                           onClick={() => navigate(actionUrl)}
                         >
                           {actionButton} →
@@ -573,7 +563,7 @@ export default function CommandCenter() {
                       )}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      Prioridade {idx + 1}
+                      P{idx + 1}
                     </Badge>
                   </div>
                 );
