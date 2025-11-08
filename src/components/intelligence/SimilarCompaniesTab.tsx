@@ -1421,7 +1421,7 @@ export function SimilarCompaniesTab({
         }
       };
     },
-    enabled: !!companyId && !!companyName && !savedData,
+    enabled: false, // ✅ DESABILITADO: Aba opcional, requer acionamento manual
     staleTime: 5 * 60 * 1000,
   });
   

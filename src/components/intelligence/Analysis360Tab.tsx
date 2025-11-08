@@ -270,7 +270,7 @@ export function Analysis360Tab({
         generated_at: new Date().toISOString()
       } as Analysis360Data;
     },
-    enabled: !!companyId,
+    enabled: false, // ✅ DESABILITADO: Aba opcional, requer acionamento manual
     staleTime: 5 * 60 * 1000,
   });
 
@@ -381,6 +381,11 @@ export function Analysis360Tab({
   };
 
   const timingInfo = getTimingLabel(timing);
+  
+  // Função para resetar/voltar (não faz nada, pois não há estado local para resetar)
+  const handleReset = () => {
+    console.log('[360] Reset solicitado (nada a fazer)');
+  };
 
   return (
     <div className="space-y-6">
