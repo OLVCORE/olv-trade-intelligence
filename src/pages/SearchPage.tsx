@@ -489,8 +489,8 @@ export default function SearchPage() {
       if (pais && pais !== "Brasil") searchBody.pais = pais;
 
       // 🔥 SE FOR CNPJ, BUSCAR DIRETO COM TRIPLE FALLBACK
-      if (cnpj) {
-        const clean = cnpj.replace(/\D/g, '');
+      if (searchType === 'cnpj' && searchQuery) {
+        const clean = searchQuery.replace(/\D/g, '');
         let empresaData: any = null;
 
         // Triple fallback: API Brasil → ReceitaWS → Error
