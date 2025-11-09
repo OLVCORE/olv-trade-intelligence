@@ -538,13 +538,9 @@ console.log('🔑 Token Type:', sessionData.session.token_type);
 console.log('👤 User ID:', sessionData.session.user.id);
 console.log('📧 User Email:', sessionData.session.user.email);
 
-// 🔍 DEBUG: Verificar se o Supabase vai enviar o Authorization automaticamente
-const headers = {
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${sessionData.session.access_token}`
-};
-
-console.log('📤 Headers que serão enviados:', Object.keys(headers));
+// ❌ NÃO enviar Content-Type - Supabase Client gerencia isso automaticamente
+// ❌ NÃO enviar Authorization - Supabase Client já envia com a sessão ativa
+console.log('📤 Supabase Client vai enviar automaticamente: Authorization + Content-Type');
 
 // 🔍 DEBUG: Ver o que está sendo enviado
 const bodyPayload = { 
@@ -562,9 +558,10 @@ console.log('📊 Número de empresas:', companiesWithMetadata.length);
 console.log('📊 Primeira empresa:', JSON.stringify(companiesWithMetadata[0]).substring(0, 200));
 
 // 🧪 TESTE TEMPORÁRIO: Usar bulk-upload-temp (sem JWT) para diagnosticar
+// ✅ NÃO enviar headers customizados - deixar o Supabase Client gerenciar
 const { data, error } = await supabase.functions.invoke('bulk-upload-temp', {
-  body: bodyPayload,
-  headers // 🔧 FORÇAR ENVIO DO AUTHORIZATION HEADER
+  body: bodyPayload
+  // ❌ headers removidos - causavam problema de serialização
 });
 
 setProgress(90); // Atualizar progresso após requisição
