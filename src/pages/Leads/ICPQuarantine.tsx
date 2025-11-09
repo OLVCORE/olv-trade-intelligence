@@ -53,15 +53,6 @@ export default function ICPQuarantine() {
   const [filterUF, setFilterUF] = useState<string[]>([]);
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
   
-  // 🔄 SINCRONIZAR: Desmarcar empresas que não estão mais visíveis após filtro
-  useEffect(() => {
-    const visibleIds = filteredCompanies.map(c => c.id);
-    const currentSelected = selectedIds.filter(id => visibleIds.includes(id));
-    
-    if (currentSelected.length !== selectedIds.length) {
-      setSelectedIds(currentSelected);
-    }
-  }, [filteredCompanies]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCompany, setPreviewCompany] = useState<any>(null);
   const [sortColumn, setSortColumn] = useState<string>('');
@@ -625,6 +616,16 @@ export default function ICPQuarantine() {
         return bStr.localeCompare(aStr);
       }
     });
+
+  // 🔄 SINCRONIZAR: Desmarcar empresas que não estão mais visíveis após filtro
+  useEffect(() => {
+    const visibleIds = filteredCompanies.map(c => c.id);
+    const currentSelected = selectedIds.filter(id => visibleIds.includes(id));
+    
+    if (currentSelected.length !== selectedIds.length) {
+      setSelectedIds(currentSelected);
+    }
+  }, [filteredCompanies, selectedIds]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
