@@ -17,12 +17,26 @@ serve(async (req) => {
   }
 
   try {
+    // 🛡️ VALIDAR AUTENTICAÇÃO DO USUÁRIO
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('❌ Sem header Authorization');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: 'Token de autenticação não fornecido' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // 🔍 DEBUG: Verificar variáveis de ambiente
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     console.log('🔍 SUPABASE_URL:', supabaseUrl ? 'OK' : '❌ MISSING');
     console.log('🔍 SERVICE_ROLE_KEY:', serviceRoleKey ? 'OK (length: ' + serviceRoleKey.length + ')' : '❌ MISSING');
+    console.log('🔑 Authorization Header:', authHeader.substring(0, 20) + '...');
     
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(
@@ -40,6 +54,32 @@ serve(async (req) => {
       );
     }
 
+    // 🔐 VALIDAR TOKEN DO USUÁRIO COM ANON KEY
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const userClient = createClient(supabaseUrl, anonKey!, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('❌ Token inválido:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', message: 'Token de autenticação inválido' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    console.log('✅ Usuário autenticado:', user.email);
+
+    // 🔧 CRIAR CLIENTE ADMIN COM SERVICE ROLE (para operações no banco)
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
     const { companies, metadata } = await req.json() as { 
