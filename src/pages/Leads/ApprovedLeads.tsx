@@ -230,6 +230,11 @@ export default function ApprovedLeads() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Aprovados</p>
                   <p className="text-2xl font-bold">{leads.length}</p>
+                  {filteredLeads.length !== leads.length && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {filteredLeads.length} filtrados
+                    </p>
+                  )}
                 </div>
                 <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
@@ -418,7 +423,7 @@ export default function ApprovedLeads() {
                         <h3 className="font-semibold text-lg">{lead.razao_social}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <p className="text-sm text-muted-foreground">
-                            CNPJ: {lead.cnpj} • {lead.segmento || 'Segmento não identificado'}
+                            CNPJ: {lead.cnpj} • {lead.segmento || (lead as any).raw_data?.setor_amigavel || (lead as any).raw_data?.atividade_economica || 'Segmento não identificado'}
                           </p>
                           {lead.source_name && (
                             <Badge 

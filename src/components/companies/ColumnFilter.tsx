@@ -30,9 +30,9 @@ export function ColumnFilter({
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
 
-  // Valores únicos (sem duplicatas e sem null/undefined)
+  // Valores únicos (sem duplicatas, null, undefined, vazios, ou "N/A")
   const uniqueValues = Array.from(new Set(
-    values.filter((v) => v !== null && v !== undefined && v !== '')
+    values.filter((v) => v !== null && v !== undefined && v !== '' && v !== 'N/A')
   )).sort();
 
   // Filtrar valores com base no termo de busca

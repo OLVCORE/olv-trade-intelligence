@@ -1288,7 +1288,9 @@ export default function ICPQuarantine() {
             <div>
               <CardTitle>Ações em Lote</CardTitle>
               <CardDescription>
-                {selectedIds.length > 0 ? `${selectedIds.length} empresas selecionadas` : 'Selecione empresas para ações em lote'}
+                {selectedIds.length > 0 
+                  ? `${selectedIds.length} de ${filteredCompanies.length} empresas selecionadas` 
+                  : `${filteredCompanies.length} empresas na visualização · Selecione para ações em lote`}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -1316,6 +1318,23 @@ export default function ICPQuarantine() {
                 selectedItems={companies.filter(c => selectedIds.includes(c.id))}
                 totalCompanies={filteredCompanies}
               />
+              
+              {/* ✅ BOTÃO APROVAR EM LOTE DESTACADO */}
+              {selectedIds.length > 0 && (
+                <Button
+                  onClick={handleBulkApprove}
+                  disabled={isApproving}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                  title="Aprovar empresas selecionadas e mover para Pool de Vendas"
+                >
+                  {isApproving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                  Aprovar Selecionadas ({selectedIds.length})
+                </Button>
+              )}
               
               <Button
                 onClick={() => setShowDiscardedModal(true)}
@@ -1637,18 +1656,33 @@ export default function ICPQuarantine() {
                     <TableCell>
                       <QuarantineCNPJStatusBadge 
                         cnpj={company.cnpj} 
-                        cnpjStatus={company.cnpj_status}
+                        cnpjStatus={(() => {
+                          const receitaData = rawData?.receita_federal || rawData || {};
+                          let status = receitaData.situacao || receitaData.status || company.cnpj_status || '';
+                          
+                          // Normalizar para lowercase
+                          if (status.toUpperCase().includes('ATIVA') || status === '02') return 'ativa';
+                          if (status.toUpperCase().includes('SUSPENSA') || status === '03') return 'inativo';
+                          if (status.toUpperCase().includes('INAPTA') || status === '04') return 'inativo';
+                          if (status.toUpperCase().includes('BAIXADA') || status === '08') return 'inexistente';
+                          if (status.toUpperCase().includes('NULA') || status === '01') return 'inexistente';
+                          
+                          return status.toLowerCase();
+                        })()}
                       />
                     </TableCell>
                     <TableCell className="py-4">
                       <div className="max-w-[100px]">
-                        {company.setor ? (
-                          <span className="text-sm line-clamp-2 leading-snug" title={company.setor}>
-                            {company.setor}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Não identificado</span>
-                        )}
+                        {(() => {
+                          const sector = company.segmento || company.setor || rawData?.setor_amigavel || rawData?.atividade_economica;
+                          return sector ? (
+                            <span className="text-sm line-clamp-2 leading-snug" title={sector}>
+                              {sector}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Não identificado</span>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>
