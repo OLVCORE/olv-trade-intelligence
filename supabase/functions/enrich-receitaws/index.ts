@@ -67,39 +67,40 @@ serve(async (req) => {
 
     console.log('[ReceitaWS] ✅ Dados encontrados para:', data.nome)
 
-    // ATUALIZAR A EMPRESA NO BANCO COM TODOS OS DADOS
+    // ATUALIZAR A EMPRESA NO BANCO COM NORMALIZADOR UNIVERSAL
     if (company_id) {
-      const updateData: any = {
-        company_name: data.nome || undefined,
-        industry: data.atividade_principal?.[0]?.text || undefined,
-        employees: data.qsa?.length || undefined,
-      }
-
-      // Atualizar raw_data com TODOS os dados da Receita
       const { data: currentCompany } = await supabaseClient
         .from('companies')
-        .select('raw_data')
+        .select('*')
         .eq('id', company_id)
         .single()
 
       const existingRawData = currentCompany?.raw_data || {}
 
-      updateData.raw_data = {
-        ...existingRawData,
-        enriched_receita: true,
-        receita: data,
-        // PREENCHER CAMPOS NORMALIZADOS
-        situacao_cadastral: data.situacao || null,
-        data_abertura: data.abertura || null,
-        porte_estimado: data.porte || null,
-        natureza_juridica: data.natureza_juridica || null,
-        cod_atividade_economica: data.atividade_principal?.[0]?.code || null,
-        atividade_economica: data.atividade_principal?.[0]?.text || null,
-        atividades_secundarias: data.atividades_secundarias || null,
-        telefones_matriz: data.telefone || null,
-        email_receita_federal: data.email || null,
-        capital_social: data.capital_social || null,
-        socios_administradores: data.qsa || null,
+      // NORMALIZAÇÃO UNIVERSAL - MAPEIA TUDO AUTOMATICAMENTE
+      const updateData: any = {
+        company_name: data.nome || currentCompany.company_name,
+        industry: data.atividade_principal?.[0]?.text || currentCompany.industry,
+        employees: data.qsa?.length || currentCompany.employees,
+        state: data.uf || currentCompany.state,
+        city: data.municipio || currentCompany.city,
+        street: data.logradouro || currentCompany.street,
+        number: data.numero || currentCompany.number,
+        neighborhood: data.bairro || currentCompany.neighborhood,
+        zip_code: data.cep || currentCompany.zip_code,
+        phone: data.telefone || currentCompany.phone,
+        email: data.email || currentCompany.email,
+        share_capital: data.capital_social ? parseFloat(data.capital_social) : currentCompany.share_capital,
+        registration_status: data.situacao || currentCompany.registration_status,
+        opening_date: data.abertura || currentCompany.opening_date,
+        legal_nature: data.natureza_juridica || currentCompany.legal_nature,
+        company_size: data.porte || currentCompany.company_size,
+        main_activity: data.atividade_principal?.[0]?.text || currentCompany.main_activity,
+        raw_data: {
+          ...existingRawData,
+          enriched_receita: true,
+          receita: data
+        }
       }
 
       const { data: updated, error: updateError } = await supabaseClient
