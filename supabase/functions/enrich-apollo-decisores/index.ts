@@ -208,25 +208,34 @@ serve(async (req) => {
         .eq('data_source', 'apollo');
 
       // Inserir novos decisores (CAMPOS CORRETOS DO SCHEMA)
-      const decisoresToInsert = decisores.map((d: any) => ({
-        company_id: companyId,
-        full_name: d.name,
-        position: d.title,
-        email: d.email,
-        phone: d.phone,
-        linkedin_url: d.linkedin_url,
-        seniority_level: d.seniority,
-        data_source: 'apollo',
-        department: d.departments?.[0] || null
-      }));
+      // Filtrar apenas decisores com nome válido (full_name é NOT NULL)
+      const decisoresToInsert = decisores
+        .filter((d: any) => d.name && d.name.trim().length > 0)
+        .map((d: any) => ({
+          company_id: companyId,
+          full_name: d.name.trim(),
+          position: d.title || null,
+          email: d.email || null,
+          phone: d.phone || null,
+          linkedin_url: d.linkedin_url || null,
+          seniority_level: d.seniority || null,
+          data_source: 'apollo',
+          department: d.departments?.[0] || null
+        }));
 
-      const { error: insertError } = await supabaseClient
-        .from('decision_makers')
-        .insert(decisoresToInsert);
+      if (decisoresToInsert.length > 0) {
+        const { error: insertError } = await supabaseClient
+          .from('decision_makers')
+          .insert(decisoresToInsert);
 
-      if (insertError) {
-        console.error('[ENRICH-APOLLO] Erro ao salvar decisores:', insertError);
-        throw insertError;
+        if (insertError) {
+          console.error('[ENRICH-APOLLO] ❌ Erro ao salvar decisores:', insertError);
+          throw insertError;
+        }
+        
+        console.log('[ENRICH-APOLLO] ✅ Salvos:', decisoresToInsert.length, 'decisores');
+      } else {
+        console.warn('[ENRICH-APOLLO] ⚠️ Nenhum decisor válido para salvar (todos sem nome)');
       }
 
       // Atualizar flag na empresa
