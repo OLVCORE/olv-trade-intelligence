@@ -451,15 +451,23 @@ export default function CompaniesManagementPage() {
           // Verificar se já tem dados
           const hasReceitaData = (company as any).raw_data?.receita_federal || (company as any).raw_data?.receita;
           
+          console.log(`[BATCH] ${company.company_name}:`, {
+            hasReceitaData: !!hasReceitaData,
+            raw_data: (company as any).raw_data ? Object.keys((company as any).raw_data) : 'undefined'
+          });
+          
           if (hasReceitaData) {
+            console.log(`[BATCH] ⏭️ Pulando ${company.company_name} (já tem dados)`);
             skipped++;
             continue;
           }
 
           // ✅ CHAMAR API DIRETAMENTE (como Quarentena)
+          console.log(`[BATCH] 🔍 Enriquecendo ${company.company_name}...`);
           const result = await consultarReceitaFederal(company.cnpj!);
 
           if (!result.success) {
+            console.error(`[BATCH] ❌ Falhou: ${company.company_name}`);
             errors++;
             continue;
           }
@@ -469,6 +477,7 @@ export default function CompaniesManagementPage() {
             ? (company as any).raw_data as Record<string, any>
             : {};
 
+          console.log(`[BATCH] 💾 Salvando dados de ${company.company_name}...`);
           const { error: updateError } = await supabase
             .from('companies')
             .update({
@@ -481,14 +490,18 @@ export default function CompaniesManagementPage() {
             })
             .eq('id', company.id);
 
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.error(`[BATCH] ❌ Erro ao salvar ${company.company_name}:`, updateError);
+            throw updateError;
+          }
 
+          console.log(`[BATCH] ✅ ${company.company_name} enriquecida com sucesso!`);
           enriched++;
           
           // Delay para não sobrecarregar API
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error: any) {
-          console.error(`Erro ao enriquecer ${company.name}:`, error);
+          console.error(`[BATCH] ❌ Exceção em ${company.company_name}:`, error);
           errors++;
         }
       }
