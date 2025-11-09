@@ -104,7 +104,7 @@ export default function Dashboard() {
       const doc = new jsPDF();
       
       doc.setFontSize(20);
-      doc.text('Dashboard Executive - Command Center', 14, 22);
+      doc.text('Dashboard Executivo - OLV Internacional', 14, 22);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
       
@@ -255,10 +255,10 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-gradient flex items-center gap-3">
-                    Command Center
+                    Dashboard Executivo
                   </h1>
                   <p className="text-lg text-muted-foreground mt-2 max-w-2xl">
-                    Análise estratégica em tempo real com inteligência artificial avançada
+                    Visão estratégica 360° em tempo real com inteligência artificial avançada
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-sm text-muted-foreground">Powered by</span>
