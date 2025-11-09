@@ -873,7 +873,7 @@ export default function CompanyDetailPage() {
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground">Telefones Matriz</p>
                   <ScrollArea className="h-20 border rounded-lg p-2 bg-muted/20">
-                    <p className="text-xs font-mono">{rawData.telefones_matriz || 'N/A'}</p>
+                    <p className="text-xs font-mono">{receitaData?.ddd_telefone_1 || receitaData?.ddd_telefone_2 || rawData.telefones_matriz || 'N/A'}</p>
                   </ScrollArea>
                 </div>
                 <div className="space-y-2">
@@ -981,9 +981,7 @@ export default function CompanyDetailPage() {
                 <div className="flex justify-between items-start border-b border-border/50 pb-2">
                   <span className="text-sm text-muted-foreground">CNAE Principal</span>
                   <span className="text-sm font-mono font-semibold text-right">
-                    {receitaData?.atividade_principal?.[0]?.code || 
-                     receitaData?.atividade_principal?.code || 
-                     rawData.cod_atividade_economica || 'N/A'}
+                    {receitaData?.cnae_fiscal || rawData.cod_atividade_economica || 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between items-start border-b border-border/50 pb-2">
@@ -1003,10 +1001,10 @@ export default function CompanyDetailPage() {
                 </div>
               </div>
 
-              {(receitaData?.atividade_principal?.[0]?.text || receitaData?.atividade_principal?.text) && (
+              {receitaData?.cnae_fiscal_descricao && (
                 <div className="p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs text-muted-foreground mb-1">Atividade Principal - Descrição</p>
-                  <p className="text-sm">{receitaData.atividade_principal?.[0]?.text || receitaData.atividade_principal.text}</p>
+                  <p className="text-sm">{receitaData.cnae_fiscal_descricao}</p>
                 </div>
               )}
 
@@ -1016,17 +1014,17 @@ export default function CompanyDetailPage() {
               <div>
                 <p className="text-sm font-semibold mb-3 text-primary">Atividades Secundárias</p>
                 <ScrollArea className="h-40 border rounded-lg p-3 bg-muted/20">
-                  {receitaData?.atividades_secundarias && receitaData.atividades_secundarias.length > 0 ? (
+                  {receitaData?.cnaes_secundarios && receitaData.cnaes_secundarios.length > 0 ? (
                     <div className="space-y-2">
-                      {receitaData.atividades_secundarias.map((ativ: any, i: number) => (
+                      {receitaData.cnaes_secundarios.map((ativ: any, i: number) => (
                         <div key={i} className="pb-2 border-b border-border/30 last:border-0">
-                          <p className="text-xs font-mono font-semibold text-primary">{ativ.code}</p>
-                          <p className="text-xs text-muted-foreground">{ativ.text}</p>
+                          <p className="text-xs font-mono font-semibold text-primary">{ativ.codigo}</p>
+                          <p className="text-xs text-muted-foreground">{ativ.descricao}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{rawData.atividades_secundarias || 'Nenhuma atividade secundária'}</p>
+                    <p className="text-sm text-muted-foreground">Nenhuma atividade secundária</p>
                   )}
                 </ScrollArea>
               </div>

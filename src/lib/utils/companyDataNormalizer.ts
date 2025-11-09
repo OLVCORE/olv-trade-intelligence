@@ -76,20 +76,22 @@ function normalizeApiBrasil(data: any): NormalizedCompanyData {
 
 /**
  * Normaliza dados de ReceitaWS
+ * FORMATO REAL DA API: cnae_fiscal_descricao, situacao_cadastral, ddd_telefone_1
  */
 function normalizeReceitaWS(data: any): NormalizedCompanyData {
   return {
-    company_name: data.nome || data.fantasia || 'Empresa sem nome',
+    company_name: data.razao_social || data.nome_fantasia || 'Empresa sem nome',
     cnpj: data.cnpj,
-    industry: data.atividade_principal?.[0]?.text || null,
-    employees: null, // ReceitaWS não fornece
-    revenue: null,
+    industry: data.cnae_fiscal_descricao || null,
+    employees: data.qsa?.length || null, // Usa quantidade de sócios como proxy
+    revenue: data.capital_social ? parseFloat(data.capital_social) : null,
     lead_score: null,
     location: {
       city: data.municipio,
       state: data.uf,
       country: 'Brasil',
       address: [
+        data.descricao_tipo_de_logradouro || '',
         data.logradouro,
         data.numero,
         data.complemento,
@@ -100,6 +102,19 @@ function normalizeReceitaWS(data: any): NormalizedCompanyData {
     raw_data: {
       source: 'receitaws',
       timestamp: new Date().toISOString(),
+      situacao_cadastral: data.situacao_cadastral,
+      descricao_situacao_cadastral: data.descricao_situacao_cadastral,
+      porte: data.porte,
+      data_abertura: data.data_inicio_atividade,
+      telefone: data.ddd_telefone_1 || data.ddd_telefone_2,
+      email: data.email,
+      cnae_principal: {
+        codigo: data.cnae_fiscal,
+        descricao: data.cnae_fiscal_descricao
+      },
+      cnaes_secundarios: data.cnaes_secundarios || [],
+      socios: data.qsa || [],
+      natureza_juridica: data.natureza_juridica,
       original: data
     }
   };

@@ -77,25 +77,8 @@ serve(async (req) => {
 
       const existingRawData = currentCompany?.raw_data || {}
 
-      // NORMALIZAÇÃO UNIVERSAL - MAPEIA TUDO AUTOMATICAMENTE
+      // SALVA TUDO EM raw_data.receita - UI puxa de lá
       const updateData: any = {
-        company_name: data.nome || currentCompany.company_name,
-        industry: data.atividade_principal?.[0]?.text || currentCompany.industry,
-        employees: data.qsa?.length || currentCompany.employees,
-        state: data.uf || currentCompany.state,
-        city: data.municipio || currentCompany.city,
-        street: data.logradouro || currentCompany.street,
-        number: data.numero || currentCompany.number,
-        neighborhood: data.bairro || currentCompany.neighborhood,
-        zip_code: data.cep || currentCompany.zip_code,
-        phone: data.telefone || currentCompany.phone,
-        email: data.email || currentCompany.email,
-        share_capital: data.capital_social ? parseFloat(data.capital_social) : currentCompany.share_capital,
-        registration_status: data.situacao || currentCompany.registration_status,
-        opening_date: data.abertura || currentCompany.opening_date,
-        legal_nature: data.natureza_juridica || currentCompany.legal_nature,
-        company_size: data.porte || currentCompany.company_size,
-        main_activity: data.atividade_principal?.[0]?.text || currentCompany.main_activity,
         raw_data: {
           ...existingRawData,
           enriched_receita: true,
