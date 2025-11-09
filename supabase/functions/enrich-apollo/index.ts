@@ -103,31 +103,11 @@ serve(async (req: Request) => {
 
     const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-    // ESTIMATIVA DE CRÉDITOS
-    const estimate = await estimateCredits(sb, input.organization_id, input.modes);
-
-    // VERIFICAÇÃO DE CRÉDITOS DISPONÍVEIS
-    const creditCheck = await checkCreditsAvailable(sb, estimate.total);
-
-    if (!creditCheck.ok) {
-      await sb.from('apollo_credit_usage').insert({
-        company_id: input.company_id,
-        organization_id: input.organization_id,
-        modes: input.modes,
-        estimated_credits: estimate.total,
-        status: 'insufficient_credits',
-        error_code: 'insufficient_credits',
-        error_message: creditCheck.message
-      });
-
-      return J({
-        error: 'insufficient_credits',
-        hint: creditCheck.message,
-        estimate,
-        available: creditCheck.available,
-        correlationId
-      }, 402, c);
-    }
+    // ESTIMATIVA DE CRÉDITOS (DESABILITADA PARA TESTES)
+    // const estimate = await estimateCredits(sb, input.organization_id, input.modes);
+    // const creditCheck = await checkCreditsAvailable(sb, estimate.total);
+    
+    console.log('[enrich-apollo] ⚠️ Verificação de créditos DESABILITADA para testes');
 
     // DRY RUN (apenas estimativa)
     const isDryRun = body.dry_run === true;
