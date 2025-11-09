@@ -216,34 +216,29 @@ export default function CompanyDetailPage() {
   const handleEnrichApollo = async (apolloOrgId?: string) => {
     setIsEnriching(true);
     try {
-      console.log('[CompanyDetail] 🚀 Iniciando enriquecimento Apollo para:', company.name);
+      console.log('[CompanyDetail] 🚀 Buscando decisores Apollo para:', company.name);
+      console.log('[CompanyDetail] 📋 Apollo Org ID:', apolloOrgId || 'N/A');
       
-      // Limpar domínio de http/https/www
-      const cleanDomain = (domain?: string) => {
-        if (!domain) return undefined;
-        return domain
-          .replace(/^https?:\/\//i, '') // Remove http:// ou https://
-          .replace(/^www\./i, '') // Remove www.
-          .replace(/\/.*$/, '') // Remove tudo depois da primeira /
-          .trim();
-      };
-      
-      const cleanedDomain = cleanDomain(company.domain || company.website);
-      console.log('[CompanyDetail] 🧹 Domínio limpo:', {
-        original: company.domain || company.website,
-        cleaned: cleanedDomain
+      toast.info('Buscando decisores no Apollo.io...', {
+        description: apolloOrgId ? 'Usando Organization ID manual' : 'Usando nome da empresa'
       });
       
-      toast.info('Enriquecendo com Apollo.io...');
+      // Salvar Apollo Org ID na empresa se fornecido
+      if (apolloOrgId) {
+        await supabase
+          .from('companies')
+          .update({ apollo_organization_id: apolloOrgId })
+          .eq('id', id);
+      }
       
-      // Enriquecer empresa completa com Apollo
-      const { data: apolloData, error } = await supabase.functions.invoke('enrich-apollo', {
+      // Usar função simplificada enrich-apollo-decisores
+      const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
-          type: 'enrich_company',
-          companyId: id,
-          organizationName: company.name,
-          ...(apolloOrgId ? { apolloOrgId } : {}),
-          ...(cleanedDomain ? { domain: cleanedDomain } : {})
+          company_id: id,
+          company_name: company.name,
+          domain: company.domain || company.website,
+          apollo_org_id: apolloOrgId || company.apollo_organization_id,
+          modes: ['people', 'company']
         }
       });
       
@@ -252,30 +247,18 @@ export default function CompanyDetailPage() {
         throw error;
       }
 
-      console.log('[CompanyDetail] ✅ Enriquecimento concluído:', apolloData);
-      const peopleLinked = (apolloData as any)?.peopleLinked ?? 0;
-      const similarLinked = (apolloData as any)?.similarLinked ?? 0;
-      const techCount = (apolloData as any)?.technologiesCount ?? 0;
+      console.log('[CompanyDetail] ✅ Apollo retornou:', data);
       
       queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['decision_makers', id] });
-      queryClient.invalidateQueries({ queryKey: ['company-people', id] });
-      queryClient.invalidateQueries({ queryKey: ['company-similar', id] });
-      queryClient.invalidateQueries({ queryKey: ['company-technologies', id] });
       
-      if (peopleLinked > 0 || similarLinked > 0 || techCount > 0) {
-        toast.success(`Enriquecimento concluído!`, {
-          description: `${peopleLinked} decisores · ${similarLinked} similares · ${techCount} tecnologias`
-        });
-      } else {
-        toast.warning('Nenhum dado novo encontrado', {
-          description: 'Tente informar o ID correto da organização no Apollo.'
-        });
-      }
+      toast.success('Decisores encontrados!', {
+        description: `${(data as any)?.decisores_salvos || 0} decisores salvos no banco`
+      });
     } catch (e: any) {
       console.error('[CompanyDetail] ❌ Erro completo:', e);
-      toast.error('Erro ao enriquecer com Apollo', { 
-        description: e.message || 'Verifique se a API key do Apollo está configurada'
+      toast.error('Erro ao buscar decisores', { 
+        description: e.message || 'Verifique o Apollo Organization ID'
       });
     } finally {
       setIsEnriching(false);

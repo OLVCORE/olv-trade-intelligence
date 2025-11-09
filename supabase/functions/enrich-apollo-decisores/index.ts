@@ -7,10 +7,13 @@ const corsHeaders = {
 };
 
 interface EnrichApolloRequest {
-  companyId?: string; // optional: only update DB when provided
-  companyName: string;
+  company_id?: string; // optional: only update DB when provided
+  company_name?: string;
+  companyName?: string; // backward compatibility
   domain?: string;
+  apollo_org_id?: string; // NOVO: Apollo Organization ID manual
   positions?: string[]; // optional: custom positions list
+  modes?: string[]; // ['people', 'company']
 }
 
 // Classificar poder de decisão baseado no título
@@ -65,9 +68,12 @@ serve(async (req) => {
     );
 
     const body: EnrichApolloRequest = await req.json();
-    const { companyId, companyName, domain, positions } = body;
+    const companyId = body.company_id || body.companyId;
+    const companyName = body.company_name || body.companyName;
+    const { domain, positions, apollo_org_id } = body;
 
-    console.log('[ENRICH-APOLLO] Buscando decisores para:', companyName);
+    console.log('[ENRICH-APOLLO-DECISORES] Buscando decisores para:', companyName);
+    console.log('[ENRICH-APOLLO-DECISORES] Apollo Org ID fornecido:', apollo_org_id || 'N/A');
 
     const apolloKey = Deno.env.get('APOLLO_API_KEY');
     
@@ -75,20 +81,24 @@ serve(async (req) => {
       throw new Error('APOLLO_API_KEY não configurada');
     }
 
-    // PASSO 1: Buscar a empresa pelo nome para obter o organization_id
-    let organizationId: string | null = null;
+    // PASSO 1: Usar apollo_org_id se fornecido, senão buscar pelo nome
+    let organizationId: string | null = apollo_org_id || null;
     
-    if (!domain) {
-      // Apollo funciona melhor com "Primeira + Segunda palavra" (ex: "Ceramfix Indústria")
-      const words = companyName.split(/\s+/);
+    if (!organizationId && !domain) {
+      console.log('[ENRICH-APOLLO-DECISORES] Buscando Organization ID por nome...');
+      
+      // Apollo funciona melhor com "Primeira + Segunda palavra"
+      const words = (companyName || '').split(/\s+/);
       const firstTwo = words.slice(0, 2).join(' ');
       const firstOne = words[0];
       
       const namesToTry = [firstTwo, firstOne, companyName];
       
-      console.log('[ENRICH-APOLLO] Tentando nomes:', namesToTry);
+      console.log('[ENRICH-APOLLO-DECISORES] Tentando nomes:', namesToTry);
       
       for (const name of namesToTry) {
+        if (!name) continue;
+        
         const orgSearchPayload = {
           q_organization_name: name,
           page: 1,
@@ -111,15 +121,17 @@ serve(async (req) => {
           const orgData = await orgResponse.json();
           if (orgData.organizations && orgData.organizations.length > 0) {
             organizationId = orgData.organizations[0].id;
-            console.log('[ENRICH-APOLLO] ✅ Organização encontrada:', organizationId, 'com nome:', name);
+            console.log('[ENRICH-APOLLO-DECISORES] ✅ Organização encontrada:', organizationId, 'com nome:', name);
             break;
           }
         }
       }
       
       if (!organizationId) {
-        console.warn('[ENRICH-APOLLO] ⚠️ Organização não encontrada, usando busca genérica');
+        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ Organização não encontrada pelo nome');
       }
+    } else if (apollo_org_id) {
+      console.log('[ENRICH-APOLLO-DECISORES] ✅ Usando Apollo Org ID fornecido:', apollo_org_id);
     }
     
     // PASSO 2: Buscar pessoas (decisores) na empresa
