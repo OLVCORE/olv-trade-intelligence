@@ -516,6 +516,9 @@ const [sourceCampaign, setSourceCampaign] = useState("");
 // FLUXO NOVO: SEMPRE importa para estoque (companies) e redireciona para Quarentena ICP
 toast.info(`📤 Importando ${companiesWithMetadata.length} empresas de "${sourceName}" para o estoque...`);
 
+// Simular progresso durante o upload
+setProgress(10);
+
 const { data, error } = await supabase.functions.invoke('bulk-upload-companies', {
   body: { 
     companies: companiesWithMetadata,
@@ -528,14 +531,19 @@ const { data, error } = await supabase.functions.invoke('bulk-upload-companies',
   }
 });
 
+setProgress(90); // Atualizar progresso após requisição
+
 if (error) {
   console.error('Erro ao importar:', error);
   toast.error('Falha ao importar', { description: error?.message || 'Erro desconhecido' });
   setIsUploading(false);
+  setProgress(0);
   return;
 }
 
 const imported = (data?.success as number) ?? (Array.isArray(data?.inserted) ? data.inserted.length : 0);
+
+setProgress(100); // Completar barra
 
 toast.success('✅ Importação concluída!', {
   description: `${imported} empresas de "${sourceName}" adicionadas ao estoque`,
