@@ -76,6 +76,7 @@ export default function CompaniesManagementPage() {
   const [filterSector, setFilterSector] = useState<string[]>([]);
   const [filterRegion, setFilterRegion] = useState<string[]>([]);
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
+  const [filterEnrichment, setFilterEnrichment] = useState<string[]>([]); // ✅ NOVO: Filtro por enriquecimento
   
   // 🔥 DEBOUNCE: Só busca após 500ms de inatividade
   useEffect(() => {
@@ -172,8 +173,29 @@ export default function CompaniesManagementPage() {
       });
     }
     
+    // ✅ NOVO: Filtro por tipo de enriquecimento
+    if (filterEnrichment.length > 0) {
+      filtered = filtered.filter(c => {
+        const rawData = (c as any).raw_data || {};
+        const hasReceita = !!(rawData.receita_federal || rawData.receita);
+        const hasApollo = !!(rawData.apollo_organization || rawData.apollo);
+        const has360 = !!(rawData.digital_intelligence || rawData.enrichment_360);
+        const hasTOTVS = !!(rawData.totvs_report);
+        
+        // Verificar se empresa tem os enriquecimentos filtrados
+        const enrichments: Record<string, boolean> = {
+          'Receita Federal': hasReceita,
+          'Apollo': hasApollo,
+          '360° Digital': has360,
+          'TOTVS Check': hasTOTVS,
+        };
+        
+        return filterEnrichment.some(e => enrichments[e]);
+      });
+    }
+    
     return filtered;
-  }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterAnalysisStatus]);
+  }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterAnalysisStatus, filterEnrichment]);
   
   // 🔢 ALIASES PARA COMPATIBILIDADE COM QUARENTENA
   const filteredCompanies = companies;

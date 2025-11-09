@@ -17,14 +17,15 @@ export function QuarantineEnrichmentStatusBadge({
   rawAnalysis, 
   showProgress = false 
 }: QuarantineEnrichmentStatusBadgeProps) {
-  // Verificar quais enriquecimentos existem
-  const hasReceitaFederal = !!rawAnalysis?.receita_federal;
-  const hasApollo = !!rawAnalysis?.apollo;
-  const hasEnrichment360 = !!rawAnalysis?.enrichment_360;
+  // ✅ VERIFICAR 4 ENRIQUECIMENTOS (NÃO 3!)
+  const hasReceitaFederal = !!rawAnalysis?.receita_federal || !!rawAnalysis?.receita;
+  const hasApollo = !!rawAnalysis?.apollo_organization || !!rawAnalysis?.apollo;
+  const hasEnrichment360 = !!rawAnalysis?.digital_intelligence || !!rawAnalysis?.enrichment_360;
+  const hasTOTVS = !!rawAnalysis?.totvs_report;
   
-  // Calcular porcentagem de completude
-  const totalChecks = 3;
-  const completedChecks = [hasReceitaFederal, hasApollo, hasEnrichment360].filter(Boolean).length;
+  // Calcular porcentagem de completude (4 checks)
+  const totalChecks = 4;
+  const completedChecks = [hasReceitaFederal, hasApollo, hasEnrichment360, hasTOTVS].filter(Boolean).length;
   const completionPercentage = Math.round((completedChecks / totalChecks) * 100);
   
   const isFullyEnriched = completionPercentage === 100;
@@ -75,21 +76,44 @@ export function QuarantineEnrichmentStatusBadge({
   const tooltipContent = (
     <div className="space-y-2 text-xs">
       <p className="font-semibold">Status de Enriquecimento</p>
-      <div className="space-y-1">
-        <p className={hasReceitaFederal ? "text-green-600" : "text-muted-foreground"}>
-          {hasReceitaFederal ? "✓" : "○"} Receita Federal
-        </p>
-        <p className={hasApollo ? "text-green-600" : "text-muted-foreground"}>
-          {hasApollo ? "✓" : "○"} Apollo
-        </p>
-        <p className={hasEnrichment360 ? "text-green-600" : "text-muted-foreground"}>
-          {hasEnrichment360 ? "✓" : "○"} Enriquecimento 360°
-        </p>
+      <div className="space-y-1.5">
+        {/* 🟢 LUZ 1: RECEITA FEDERAL (25%) */}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${hasReceitaFederal ? 'bg-green-500' : 'bg-gray-500'}`} />
+          <p className={hasReceitaFederal ? "text-green-600 font-medium" : "text-muted-foreground"}>
+            {hasReceitaFederal ? "✓" : "○"} Receita Federal <span className="text-xs opacity-70">(25%)</span>
+          </p>
+        </div>
+        
+        {/* 🟡 LUZ 2: APOLLO (50%) */}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${hasApollo ? 'bg-yellow-500' : 'bg-gray-500'}`} />
+          <p className={hasApollo ? "text-yellow-600 font-medium" : "text-muted-foreground"}>
+            {hasApollo ? "✓" : "○"} Apollo (Decisores) <span className="text-xs opacity-70">(50%)</span>
+          </p>
+        </div>
+        
+        {/* 🔵 LUZ 3: 360° DIGITAL (75%) */}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${hasEnrichment360 ? 'bg-blue-500' : 'bg-gray-500'}`} />
+          <p className={hasEnrichment360 ? "text-blue-600 font-medium" : "text-muted-foreground"}>
+            {hasEnrichment360 ? "✓" : "○"} 360° Digital <span className="text-xs opacity-70">(75%)</span>
+          </p>
+        </div>
+        
+        {/* 🟣 LUZ 4: TOTVS CHECK (100%) */}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${hasTOTVS ? 'bg-purple-500' : 'bg-gray-500'}`} />
+          <p className={hasTOTVS ? "text-purple-600 font-medium" : "text-muted-foreground"}>
+            {hasTOTVS ? "✓" : "○"} TOTVS Check <span className="text-xs opacity-70">(100%)</span>
+          </p>
+        </div>
       </div>
       <div className="pt-2 border-t">
         <p className="text-muted-foreground">
           {completedChecks} de {totalChecks} enriquecimentos completos
         </p>
+        <Progress value={completionPercentage} className="h-2 mt-2" />
       </div>
     </div>
   );
