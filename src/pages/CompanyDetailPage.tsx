@@ -1175,123 +1175,98 @@ export default function CompanyDetailPage() {
         </TabsContent>
 
         {/* TAB 3: Financeiro */}
-        <TabsContent value="financeiro" className="space-y-4">
+        <TabsContent value="financeiro" className="space-y-3">
           <FinancialDebtCard rawData={rawData} />
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="bg-blue-50 dark:bg-lime-500/10 border-blue-200 dark:border-lime-500/30">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-700 dark:text-lime-300">Capital Social</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-blue-700 dark:text-lime-400">
-                  {receitaData?.capital_social || rawData.capital_social
-                    ? `R$ ${parseFloat(receitaData?.capital_social || rawData.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    : 'N/A'}
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="p-2 bg-blue-50 dark:bg-lime-500/10 border border-blue-200 dark:border-lime-500/30 rounded">
+              <p className="text-[10px] text-blue-700 dark:text-lime-300 font-semibold mb-0.5">Capital Social</p>
+              <p className="text-sm font-bold text-blue-700 dark:text-lime-400">
+                {receitaData?.capital_social || rawData.capital_social
+                  ? `R$ ${parseFloat(receitaData?.capital_social || rawData.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                  : 'N/A'}
+              </p>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Recebimentos Governo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xl font-bold">
-                  {rawData.recebimentos_governo_federal
-                    ? `R$ ${parseFloat(rawData.recebimentos_governo_federal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                    : 'N/A'}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="p-2 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Recebimentos Governo</p>
+              <p className="text-sm font-bold">
+                {rawData.recebimentos_governo_federal
+                  ? `R$ ${parseFloat(rawData.recebimentos_governo_federal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                  : 'N/A'}
+              </p>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Porte</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{rawData.enquadramento_porte || receitaData?.porte || rawData.porte_estimado || 'N/A'}</p>
-              </CardContent>
-            </Card>
+            <div className="p-2 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Porte</p>
+              <p className="text-sm font-bold">{rawData.enquadramento_porte || receitaData?.porte || 'N/A'}</p>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Faturamento (Matriz + CNPJ)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{rawData.faturamento_presumido_matriz_cnpj || 'N/A'}</p>
-              </CardContent>
-            </Card>
+            <div className="p-2 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Faturamento Matriz+CNPJ</p>
+              <p className="text-xs font-semibold">{rawData.faturamento_presumido_matriz_cnpj || 'N/A'}</p>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Faturamento (Este CNPJ)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{rawData.faturamento_presumido_este_cnpj || 'N/A'}</p>
-              </CardContent>
-            </Card>
+            <div className="p-2 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Faturamento Este CNPJ</p>
+              <p className="text-xs font-semibold">{rawData.faturamento_presumido_este_cnpj || 'N/A'}</p>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Crescimento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge>{rawData.crescimento_empresa || 'Estável'}</Badge>
-              </CardContent>
-            </Card>
+            <div className="p-2 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Crescimento</p>
+              <Badge className="text-[10px]">{rawData.crescimento_empresa || 'Estável'}</Badge>
+            </div>
           </div>
 
-          <Separator />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+          {/* Dívidas - Compacto 4 Colunas */}
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertCircle className="h-4 w-4 text-red-500" />
                 Dívidas e Débitos
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">% Dívidas CNPJ / Faturamento</p>
-                  <p className="text-lg font-semibold">{rawData.perc_dividas_cnpj_sobre_faturamento || 'N/A'}</p>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="p-2 bg-destructive/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">% Dív. CNPJ/Fat.</p>
+                  <p className="text-xs font-semibold">{rawData.perc_dividas_cnpj_sobre_faturamento || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">% Dívidas CNPJ + Sócios / Faturamento</p>
-                  <p className="text-lg font-semibold">{rawData.perc_dividas_cnpj_socios_sobre_faturamento || 'N/A'}</p>
+                <div className="p-2 bg-destructive/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">% Dív. CNPJ+Sócios/Fat.</p>
+                  <p className="text-xs font-semibold">{rawData.perc_dividas_cnpj_socios_sobre_faturamento || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Dívidas CNPJ com União</p>
-                  <p className="text-lg font-semibold text-red-600">{rawData.total_dividas_cnpj_uniao || 'N/A'}</p>
+                <div className="p-2 bg-destructive/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Total Dív. CNPJ c/ União</p>
+                  <p className="text-xs font-semibold text-red-600">{rawData.total_dividas_cnpj_uniao || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Dívidas CNPJ + Sócios com União</p>
-                  <p className="text-lg font-semibold text-red-600">{rawData.total_dividas_cnpj_socios_uniao || 'N/A'}</p>
+                <div className="p-2 bg-destructive/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Total Dív. CNPJ+Sócios</p>
+                  <p className="text-xs font-semibold text-red-600">{rawData.total_dividas_cnpj_socios_uniao || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas Gerais CNPJ</p>
-                  <p>{rawData.dividas_gerais_cnpj_uniao || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Dív. Gerais CNPJ</p>
+                  <p className="text-xs">{rawData.dividas_gerais_cnpj_uniao || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas Gerais CNPJ + Sócios</p>
-                  <p>{rawData.dividas_gerais_cnpj_socios_uniao || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Dív. Gerais CNPJ+Sócios</p>
+                  <p className="text-xs">{rawData.dividas_gerais_cnpj_socios_uniao || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas FGTS (CNPJ)</p>
-                  <p>{rawData.dividas_cnpj_fgts || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">FGTS CNPJ</p>
+                  <p className="text-xs">{rawData.dividas_cnpj_fgts || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas FGTS (CNPJ + Sócios)</p>
-                  <p>{rawData.dividas_cnpj_socios_fgts || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">FGTS CNPJ+Sócios</p>
+                  <p className="text-xs">{rawData.dividas_cnpj_socios_fgts || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas Previdência (CNPJ)</p>
-                  <p>{rawData.dividas_cnpj_previdencia || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Prev. CNPJ</p>
+                  <p className="text-xs">{rawData.dividas_cnpj_previdencia || 'N/A'}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Dívidas Previdência (CNPJ + Sócios)</p>
-                  <p>{rawData.dividas_cnpj_socios_previdencia || 'N/A'}</p>
+                <div className="p-2 bg-muted/10 rounded border">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Prev. CNPJ+Sócios</p>
+                  <p className="text-xs">{rawData.dividas_cnpj_socios_previdencia || 'N/A'}</p>
                 </div>
               </div>
             </CardContent>
@@ -1299,7 +1274,7 @@ export default function CompanyDetailPage() {
         </TabsContent>
 
         {/* TAB 2: Inteligência e Análise */}
-        <TabsContent value="inteligencia" className="space-y-4">
+        <TabsContent value="inteligencia" className="space-y-3">
           {/* Diagnóstico 360° por IA */}
           <DiagnosticAIPanel company={company} />
           
@@ -1309,53 +1284,41 @@ export default function CompanyDetailPage() {
             onEnrichmentComplete={() => queryClient.invalidateQueries({ queryKey: ['company-detail', id] })}
           />
           
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Score Digital</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-primary">
-                  {company.digital_maturity_score?.toFixed(1) || 'N/A'}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="p-3 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Score Digital</p>
+              <div className="text-2xl font-bold text-primary">
+                {company.digital_maturity_score?.toFixed(1) || 'N/A'}
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Nível de Atividade</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge>{rawData.nivel_atividade || 'N/A'}</Badge>
-              </CardContent>
-            </Card>
+            <div className="p-3 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Nível de Atividade</p>
+              <Badge className="mt-1">{rawData.nivel_atividade || 'N/A'}</Badge>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Classificação</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{company.classification || 'N/A'}</p>
-              </CardContent>
-            </Card>
+            <div className="p-3 border rounded bg-muted/10">
+              <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Classificação</p>
+              <p className="text-sm font-semibold">{company.classification || 'N/A'}</p>
+            </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Insights Capturados</CardTitle>
+          <Card className="glass-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Insights Capturados</CardTitle>
             </CardHeader>
             <CardContent>
               {(company as any)?.insights && (company as any).insights.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {(company as any).insights.map((insight: any) => (
-                    <div key={insight.id} className="border rounded p-3">
-                      <p className="font-semibold">{insight.insight_type}</p>
-                      <p className="text-sm text-muted-foreground">{insight.content}</p>
+                    <div key={insight.id} className="border rounded p-2 bg-muted/10">
+                      <p className="text-xs font-semibold text-primary">{insight.insight_type}</p>
+                      <p className="text-xs text-muted-foreground">{insight.content}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">Nenhum insight capturado ainda</p>
+                <p className="text-xs text-muted-foreground">Nenhum insight capturado ainda</p>
               )}
             </CardContent>
           </Card>
@@ -1513,8 +1476,8 @@ export default function CompanyDetailPage() {
           </div>
         </TabsContent>
 
-        {/* TAB: Apollo 360° - CICLO 3 */}
-        <TabsContent value="apollo360" className="space-y-6 animate-fade-in">
+        {/* TAB: Apollo 360° - RADAR */}
+        <TabsContent value="apollo360" className="space-y-3 animate-fade-in">
           <Card className="glass-card">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -1576,8 +1539,8 @@ export default function CompanyDetailPage() {
         </TabsContent>
 
         {/* TAB: Créditos Apollo */}
-        <TabsContent value="credits" className="space-y-6 animate-fade-in">
-          <div className="grid gap-6 md:grid-cols-2">
+        <TabsContent value="credits" className="space-y-3 animate-fade-in">
+          <div className="grid gap-3 md:grid-cols-2">
             <CreditsDashboard />
             <CreditUsageHistory />
           </div>
