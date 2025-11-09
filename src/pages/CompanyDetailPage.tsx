@@ -655,11 +655,11 @@ export default function CompanyDetailPage() {
             <Card className="glass-card hover-scale">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className={`h-4 w-4 ${receitaData?.situacao === 'ATIVA' ? 'text-lime-500' : 'text-yellow-500'}`} />
+                  <CheckCircle className={`h-4 w-4 ${receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'text-lime-500' : 'text-yellow-500'}`} />
                   <p className="text-xs text-muted-foreground">Situação</p>
                 </div>
-                <Badge variant={receitaData?.situacao === 'ATIVA' ? 'default' : 'secondary'} className={receitaData?.situacao === 'ATIVA' ? 'bg-lime-600 hover:bg-lime-700 text-white dark:bg-lime-500 dark:hover:bg-lime-600' : 'bg-yellow-600 text-white dark:bg-yellow-500'}>
-                  {receitaData?.situacao || rawData?.situacao_cadastral || 'Pendente'}
+                <Badge variant={receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'default' : 'secondary'} className={receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'bg-lime-600 hover:bg-lime-700 text-white dark:bg-lime-500 dark:hover:bg-lime-600' : 'bg-yellow-600 text-white dark:bg-yellow-500'}>
+                  {receitaData?.descricao_situacao_cadastral || rawData?.situacao_cadastral || 'Pendente'}
                 </Badge>
               </CardContent>
             </Card>
@@ -681,7 +681,7 @@ export default function CompanyDetailPage() {
                   <p className="text-xs text-muted-foreground">Abertura</p>
                 </div>
                 <p className="font-semibold text-sm">
-                  {receitaData?.abertura || rawData?.data_abertura || 'N/A'}
+                  {receitaData?.data_inicio_atividade || rawData?.data_abertura || 'N/A'}
                 </p>
               </CardContent>
             </Card>
@@ -1098,9 +1098,12 @@ export default function CompanyDetailPage() {
                   {receitaData?.qsa && receitaData.qsa.length > 0 ? (
                     <div className="space-y-2">
                       {receitaData.qsa.map((socio: any, i: number) => (
-                        <div key={i} className="p-2 bg-muted/30 rounded-lg">
-                          <p className="text-sm font-semibold">{socio.nome}</p>
-                          <p className="text-xs text-muted-foreground">{socio.qual}</p>
+                        <div key={i} className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                          <p className="text-sm font-semibold text-primary">{socio.nome_socio || socio.nome}</p>
+                          <p className="text-xs text-muted-foreground">{socio.qualificacao_socio || socio.qual}</p>
+                          {socio.faixa_etaria && (
+                            <p className="text-xs text-muted-foreground mt-1">📊 {socio.faixa_etaria}</p>
+                          )}
                         </div>
                       ))}
                     </div>
