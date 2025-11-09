@@ -1127,32 +1127,44 @@ export default function CompaniesManagementPage() {
                         )}
                       </TableCell>
                        <TableCell>
-                        {(company as any).cnpj_status === 'ativa' || (company as any).cnpj_status === 'ativo' ? (
-                          <Badge variant="success" className="gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Ativa
-                          </Badge>
-                        ) : (company as any).cnpj_status === 'inativo' ? (
-                          <Badge variant="warning" className="gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            Inativo
-                          </Badge>
-                        ) : (company as any).cnpj_status === 'inexistente' ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <XCircle className="w-3 h-3" />
-                            Inexistente
-                          </Badge>
-                        ) : !company.cnpj ? (
-                          <Badge variant="secondary" className="gap-1 bg-gray-500/10 text-gray-600 border-gray-500/20">
-                            <Clock className="w-3 h-3" />
-                            Não descoberto
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1 bg-blue-500/10 text-blue-600 border-blue-500/20">
-                            <Clock className="w-3 h-3" />
-                            Pendente
-                          </Badge>
-                        )}
+                        {(() => {
+                          const hasReceita = (company as any).raw_data?.enriched_receita || (company as any).raw_data?.receita;
+                          const situacao = (company as any).raw_data?.receita?.situacao || (company as any).raw_data?.situacao_cadastral;
+                          
+                          if (situacao === 'ATIVA') {
+                            return (
+                              <Badge className="gap-1 bg-lime-600 hover:bg-lime-700 text-white dark:bg-lime-500 dark:hover:bg-lime-600">
+                                <CheckCircle className="w-3 h-3" />
+                                Ativo
+                              </Badge>
+                            );
+                          }
+                          
+                          if (hasReceita && situacao) {
+                            return (
+                              <Badge variant="warning" className="gap-1 bg-red-600 text-white">
+                                <AlertTriangle className="w-3 h-3" />
+                                {situacao}
+                              </Badge>
+                            );
+                          }
+                          
+                          if (!company.cnpj) {
+                            return (
+                              <Badge variant="secondary" className="gap-1 bg-gray-500/10 text-gray-600 border-gray-500/20">
+                                <Clock className="w-3 h-3" />
+                                Sem CNPJ
+                              </Badge>
+                            );
+                          }
+                          
+                          return (
+                            <Badge className="gap-1 bg-yellow-600 text-white dark:bg-yellow-500">
+                              <Clock className="w-3 h-3" />
+                              Pendente
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         {company.industry || <span className="text-xs text-muted-foreground">N/A</span>}
