@@ -352,6 +352,9 @@ export default function CompanyDetailPage() {
 
   const receitaData = (company as any)?.raw_data?.receita;
   const decisors = (company as any)?.decision_makers || [];
+  
+  console.log('[CompanyDetail] 📊 Decisores carregados:', decisors.length);
+  console.log('[CompanyDetail] 📋 Primeiro decisor:', decisors[0]);
   const digitalPresence = (company as any)?.digital_presence;
   const rawData = (company as any)?.raw_data || {};
   const situacaoReceita: string | undefined = receitaData?.situacao;
