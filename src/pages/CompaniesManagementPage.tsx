@@ -1181,24 +1181,44 @@ export default function CompaniesManagementPage() {
                         })()}
                       </TableCell>
                       <TableCell>
-                        {company.industry || <span className="text-xs text-muted-foreground">N/A</span>}
+                        {(() => {
+                          const setor = company.industry || 
+                                       (company as any).raw_data?.receita?.atividade_principal?.[0]?.text ||
+                                       (company as any).raw_data?.atividade_economica ||
+                                       (company as any).raw_data?.setor_amigavel;
+                          return setor ? (
+                            <span className="text-xs">{setor}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          );
+                        })()}
                       </TableCell>
                        <TableCell>
                         <div className="flex flex-col gap-1">
-                          {(company.location as any)?.state ? (
-                            <>
-                              <Badge variant="secondary" className="w-fit">
-                                {(company.location as any).state}
-                              </Badge>
-                              {(company.location as any)?.city && (
-                                <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={(company.location as any).city}>
-                                  {(company.location as any).city}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">N/A</span>
-                          )}
+                          {(() => {
+                            const uf = (company.location as any)?.state || 
+                                      (company as any).raw_data?.receita?.uf ||
+                                      (company as any).raw_data?.uf;
+                            const city = (company.location as any)?.city || 
+                                        (company as any).raw_data?.receita?.municipio ||
+                                        (company as any).raw_data?.municipio;
+                            
+                            if (uf) {
+                              return (
+                                <>
+                                  <Badge variant="secondary" className="w-fit">
+                                    {uf}
+                                  </Badge>
+                                  {city && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={city}>
+                                      {city}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            }
+                            return <span className="text-xs text-muted-foreground">N/A</span>;
+                          })()}
                         </div>
                       </TableCell>
                        <TableCell>
