@@ -934,7 +934,8 @@ export default function CompaniesManagementPage() {
                           .from('icp_analysis_results')
                           .insert({
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj, // ✅ CAMPO OBRIGATÓRIO
+                            cnpj: fullCompany.cnpj, // ✅ NOT NULL
+                            razao_social: fullCompany.company_name || fullCompany.name || 'N/A', // ✅ NOT NULL
                             status: 'pendente',
                             source_type: fullCompany.source_type || 'manual',
                             source_name: fullCompany.source_name || 'Estoque',
@@ -1130,7 +1131,8 @@ export default function CompaniesManagementPage() {
                           .from('icp_analysis_results')
                           .insert({
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj, // ✅ OBRIGATÓRIO
+                            cnpj: fullCompany.cnpj, // ✅ NOT NULL
+                            razao_social: fullCompany.company_name || fullCompany.name || 'N/A', // ✅ NOT NULL
                             status: 'pendente',
                             source_type: fullCompany.source_type || 'manual',
                             source_name: fullCompany.source_name || 'Estoque',
