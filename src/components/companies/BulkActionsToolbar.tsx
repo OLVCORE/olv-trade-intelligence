@@ -49,6 +49,7 @@ interface BulkActionsToolbarProps {
   onBulkEnrichTotvsCheck?: () => Promise<void>;
   onBulkDiscoverCNPJ?: () => Promise<void>;
   onBulkApprove?: () => Promise<void>;
+  onBulkSendToQuarantine?: () => Promise<void>; // 🆕 NOVO
   onExportSelected: () => void;
   isProcessing?: boolean;
 }
@@ -66,6 +67,7 @@ export function BulkActionsToolbar({
   onBulkEnrichTotvsCheck,
   onBulkDiscoverCNPJ,
   onBulkApprove,
+  onBulkSendToQuarantine, // 🆕 NOVO
   onExportSelected,
   isProcessing = false
 }: BulkActionsToolbarProps) {
@@ -226,6 +228,15 @@ export function BulkActionsToolbar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onBulkSendToQuarantine && (
+                  <>
+                    <DropdownMenuItem onClick={onBulkSendToQuarantine} disabled={isProcessing}>
+                      <Target className="h-4 w-4 mr-2 text-yellow-600" />
+                      Enviar para Quarentena ICP
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 {onBulkApprove && (
                   <>
                     <DropdownMenuItem onClick={onBulkApprove} disabled={isProcessing}>

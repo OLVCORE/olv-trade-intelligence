@@ -987,6 +987,64 @@ export default function CompaniesManagementPage() {
                 onBulkEnrichReceita={handleBatchEnrichReceitaWS}
                 onBulkEnrich360={handleBatchEnrich360}
                 onBulkEnrichApollo={handleBatchEnrichApollo}
+                onBulkSendToQuarantine={async () => {
+                  try {
+                    toast.info('📊 Enviando empresas para Quarentena ICP...', {
+                      description: 'Todos os dados enriquecidos serão mantidos'
+                    });
+
+                    const selectedComps = selectedCompanies.length > 0
+                      ? companies.filter(c => selectedCompanies.includes(c.id))
+                      : companies;
+
+                    let sent = 0;
+                    let errors = 0;
+
+                    for (const company of selectedComps) {
+                      try {
+                        // Verifica se já existe na quarentena
+                        const { data: existing } = await supabase
+                          .from('icp_analysis_results')
+                          .select('id')
+                          .eq('company_id', company.id)
+                          .single();
+
+                        if (existing) {
+                          console.log(`Empresa ${company.name} já está na quarentena`);
+                          continue;
+                        }
+
+                        // Cria entrada na quarentena mantendo TODOS os dados
+                        const { error } = await supabase
+                          .from('icp_analysis_results')
+                          .insert({
+                            company_id: company.id,
+                            status: 'pendente',
+                            source_type: company.source_type || 'manual',
+                            source_name: company.source_name || 'Estoque',
+                            import_batch_id: company.import_batch_id
+                          });
+
+                        if (error) throw error;
+                        sent++;
+                      } catch (e) {
+                        console.error(`Error sending ${company.name} to quarantine:`, e);
+                        errors++;
+                      }
+                    }
+
+                    toast.success(
+                      `✅ ${sent} empresas enviadas para Quarentena ICP!`,
+                      { description: `${errors} erros. Clique em "Leads > ICP Quarentena" para analisar.` }
+                    );
+
+                    refetch();
+                    setSelectedCompanies([]);
+                  } catch (error) {
+                    console.error('Error sending to quarantine:', error);
+                    toast.error('Erro ao enviar para Quarentena ICP');
+                  }
+                }}
                 onBulkEnrichEconodata={async () => {
                   try {
                     setIsBatchEnrichingEconodata(true);
