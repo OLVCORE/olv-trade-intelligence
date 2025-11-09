@@ -156,13 +156,34 @@ serve(async (req) => {
 
     console.log('[REVEAL-EMAIL] ✅ Email revelado e salvo:', revealedEmail);
 
+    // 🛡️ LOG DE AUDITORIA: Registrar consumo de crédito
+    try {
+      await supabaseClient.from('apollo_credit_log').insert({
+        decisor_id: decisor_id,
+        decisor_name: decisor.full_name,
+        decisor_email_before: decisor.email,
+        decisor_email_after: revealedEmail,
+        company_id: decisor.company_id,
+        action: 'reveal_email',
+        source: source,
+        credits_consumed: source === 'apollo_reveal' ? 1 : 0, // Apollo consome, Hunter/Phantom não
+        success: true,
+        created_at: new Date().toISOString()
+      });
+      console.log('[REVEAL-EMAIL] 📊 Log de auditoria registrado');
+    } catch (logError) {
+      console.error('[REVEAL-EMAIL] ⚠️ Erro ao registrar log (não-crítico):', logError);
+      // Não falha a operação se o log falhar
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         email: revealedEmail,
         phone: revealedPhone,
         source: source,
-        message: `Email revelado via ${source}`
+        message: `Email revelado via ${source}`,
+        credits_consumed: source === 'apollo_reveal' ? 1 : 0
       }),
       { 
         status: 200, 

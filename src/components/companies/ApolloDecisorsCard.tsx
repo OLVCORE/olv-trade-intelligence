@@ -157,6 +157,16 @@ export function ApolloDecisorsCard({ decisors }: ApolloDecisorsCardProps) {
   };
 
   const handleRevealEmail = async () => {
+    // 🚨 FUNÇÃO DESABILITADA POR SEGURANÇA - CRÉDITOS APOLLO SENDO CONSUMIDOS
+    toast.error('🔒 Função BLOQUEADA por Segurança', {
+      description: '⚠️ Revelar Email está desabilitado. Créditos Apollo estavam sendo consumidos indevidamente.'
+    });
+    
+    setShowRevealDialog(false);
+    setSelectedDecisor(null);
+    return;
+    
+    /* CÓDIGO ORIGINAL BLOQUEADO:
     if (!selectedDecisor) return;
 
     setRevealingEmailId(selectedDecisor.id);
@@ -197,6 +207,7 @@ export function ApolloDecisorsCard({ decisors }: ApolloDecisorsCardProps) {
       setRevealingEmailId(null);
       setSelectedDecisor(null);
     }
+    */
   };
 
   return (
