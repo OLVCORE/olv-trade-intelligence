@@ -1202,6 +1202,12 @@ export default function ICPQuarantine() {
     ? filteredCompanies 
     : filteredCompanies.slice(0, pageSize);
   
+  // 🐛 DEBUG
+  console.log('[QUARENTENA] Total do banco:', companies.length);
+  console.log('[QUARENTENA] Após filtros:', filteredCompanies.length);
+  console.log('[QUARENTENA] Paginação ativa:', pageSize);
+  console.log('[QUARENTENA] Exibindo:', paginatedCompanies.length);
+  
   const selectedCompanies = filteredCompanies.filter(c => selectedIds.includes(c.id));
   const displayCompanies = previewCompany ? [previewCompany] : selectedCompanies;
 
