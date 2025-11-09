@@ -272,7 +272,19 @@ export default function CompaniesManagementPage() {
         const existingRaw = (company.raw_data && typeof company.raw_data === 'object') ? (company.raw_data as any) : {};
         const mergedRaw = {
           ...existingRaw,
+          enriched_receita: true, // FLAG CRÍTICA DE GOVERNANÇA
           receita,
+          situacao_cadastral: receita.situacao || null,
+          data_abertura: receita.abertura || null,
+          porte_estimado: receita.porte || null,
+          natureza_juridica: receita.natureza_juridica || null,
+          cod_atividade_economica: receita.atividade_principal?.[0]?.code || null,
+          atividade_economica: receita.atividade_principal?.[0]?.text || null,
+          atividades_secundarias: receita.atividades_secundarias || null,
+          telefones_matriz: receita.telefone || null,
+          email_receita_federal: receita.email || null,
+          capital_social: receita.capital_social || null,
+          socios_administradores: receita.qsa || null,
           ...(existingRaw.apollo && { apollo: existingRaw.apollo }),
           ...(existingRaw.segment && { segment: existingRaw.segment }),
           ...(existingRaw.refinamentos && { refinamentos: existingRaw.refinamentos })
@@ -283,6 +295,7 @@ export default function CompaniesManagementPage() {
           .from('companies')
           .update({ 
             raw_data: mergedRaw,
+            company_name: receita.nome || company.name,
             ...(industryFromReceita ? { industry: industryFromReceita } : {})
           })
           .eq('id', companyId);

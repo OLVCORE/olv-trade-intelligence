@@ -102,12 +102,24 @@ serve(async (req) => {
         socios_administradores: data.qsa || null,
       }
 
-      await supabaseClient
+      const { data: updated, error: updateError } = await supabaseClient
         .from('companies')
         .update(updateData)
         .eq('id', company_id)
+        .select()
+        .single()
 
-      console.log('[ReceitaWS] ✅ Empresa atualizada no banco com dados completos')
+      if (updateError) {
+        console.error('[ReceitaWS] ❌ Erro ao atualizar empresa:', updateError)
+        throw updateError
+      }
+
+      console.log('[ReceitaWS] ✅ Empresa atualizada:', {
+        company_id,
+        enriched_receita: updated.raw_data?.enriched_receita,
+        situacao: updated.raw_data?.receita?.situacao,
+        nome: updated.raw_data?.receita?.nome
+      })
     }
 
     // Retornar dados enriquecidos
