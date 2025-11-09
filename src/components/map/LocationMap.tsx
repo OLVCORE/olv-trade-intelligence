@@ -159,14 +159,20 @@ export default function LocationMap({
   }, [address, numero, municipio, estado, cep, onLocationSelect]);
 
   return (
-    <Card className="relative w-full h-[360px] overflow-hidden">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <Card className="relative w-full h-[360px] overflow-hidden bg-slate-100 dark:bg-slate-900">
+      <div ref={mapContainer} className="absolute inset-0 z-0" style={{ background: '#e5e7eb' }} />
       
       {loading && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-[1000]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
+      
+      {/* Debug Info */}
+      <div className="absolute top-2 left-2 z-[1000] bg-black/70 text-white text-xs p-2 rounded">
+        <p>📍 {municipio || 'N/A'}, {estado || 'N/A'}</p>
+        <p>🗺️ Leaflet + OSM</p>
+      </div>
     </Card>
   );
 }
