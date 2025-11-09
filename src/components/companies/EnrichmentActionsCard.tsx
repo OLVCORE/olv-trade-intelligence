@@ -47,29 +47,29 @@ export function EnrichmentActionsCard({ company, onEnrichmentComplete }: Enrichm
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" />
+    <Card className="glass-card">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Sparkles className="h-4 w-4" />
           Ações de Enriquecimento
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs">
           Enriqueça os dados da empresa com múltiplas fontes de dados
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Apollo Enrichment */}
-        <div className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-          <div className="space-y-1 flex-1">
+      <CardContent className="space-y-2">
+        {/* Apollo Enrichment - Compacto */}
+        <div className="flex items-center justify-between p-2 border rounded bg-card hover:bg-accent/50 transition-colors">
+          <div className="space-y-0.5 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold">Apollo.io</h4>
+              <h4 className="font-semibold text-xs">Apollo.io</h4>
               {hasApolloData && (
-                <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
+                <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 text-[10px] px-1.5 py-0">
                   ✓ Enriquecido
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               42 campos organizacionais + Decisores + PhantomBuster fallback
             </p>
           </div>
@@ -84,34 +84,35 @@ export function EnrichmentActionsCard({ company, onEnrichmentComplete }: Enrichm
           />
         </div>
 
-        {/* CNPJ / ReceitaWS Enrichment */}
+        {/* CNPJ / ReceitaWS Enrichment - Compacto */}
         {hasCNPJ && (
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-            <div className="space-y-1 flex-1">
+          <div className="flex items-center justify-between p-2 border rounded bg-card hover:bg-accent/50 transition-colors">
+            <div className="space-y-0.5 flex-1">
               <div className="flex items-center gap-2">
-                <h4 className="font-semibold">ReceitaWS</h4>
+                <h4 className="font-semibold text-xs">ReceitaWS</h4>
                 {company.cnpj_enriched_at && (
-                  <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
+                  <Badge variant="default" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 text-[10px] px-1.5 py-0">
                     ✓ Enriquecido
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 Dados cadastrais e jurídicos da Receita Federal
               </p>
             </div>
             <Button 
               variant="outline" 
               size="sm"
+              className="h-8 px-3"
               onClick={handleEnrichReceita}
               disabled={isEnrichingReceita}
             >
               {isEnrichingReceita ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3 w-3 mr-1.5" />
               )}
-              Atualizar
+              <span className="text-xs">Atualizar</span>
             </Button>
           </div>
         )}
