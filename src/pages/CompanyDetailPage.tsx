@@ -368,16 +368,16 @@ export default function CompanyDetailPage() {
           <div className="flex items-start justify-between">
             <div className="space-y-2">
               <CardTitle className="text-3xl flex items-center gap-3">
-                <Building2 className="h-8 w-8 text-primary" />
-                {company.name}
+                <Building2 className="h-8 w-8 text-lime-400" />
+                <span className="text-lime-300">{company.name}</span>
               </CardTitle>
               {receitaData?.fantasia && receitaData.fantasia !== company.name && (
                 <p className="text-lg text-muted-foreground">Nome Fantasia: {receitaData.fantasia}</p>
               )}
             </div>
               <div className="text-right space-y-2">
-              <Badge variant={situacaoReceita === 'ATIVA' ? 'success' : (situacaoReceita && ['INAPTA','SUSPENSA','INATIVA','BAIXADA'].includes(situacaoReceita) ? 'warning' : 'destructive')} className="bg-success text-success-foreground">
-                {situacaoReceita || 'Status desconhecido'}
+              <Badge variant={situacaoReceita === 'ATIVA' ? 'success' : (situacaoReceita && ['INAPTA','SUSPENSA','INATIVA','BAIXADA'].includes(situacaoReceita) ? 'warning' : 'destructive')} className={situacaoReceita === 'ATIVA' ? 'bg-lime-500 hover:bg-lime-600 text-white' : 'bg-yellow-500 text-white'}>
+                {situacaoReceita || 'Pendente'}
               </Badge>
               <div className="flex flex-col items-end gap-3">
                 <Button
@@ -621,10 +621,10 @@ export default function CompanyDetailPage() {
             <Card className="glass-card hover-scale">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">CNPJ</p>
+                  <Building2 className="h-4 w-4 text-lime-400" />
+                  <p className="text-xs text-lime-300 font-semibold">CNPJ</p>
                 </div>
-                <p className="font-mono font-semibold text-sm">{company.cnpj || 'N/A'}</p>
+                <p className="font-mono font-bold text-lg text-lime-400 tracking-wide bg-lime-500/10 px-3 py-1 rounded-md border border-lime-500/30">{company.cnpj || 'N/A'}</p>
               </CardContent>
             </Card>
 
@@ -1100,9 +1100,9 @@ export default function CompanyDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-3 gap-4">
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Capital Social</p>
-                  <p className="text-xl font-bold text-primary">
+                <div className="p-3 bg-lime-500/10 rounded-lg border border-lime-500/30">
+                  <p className="text-xs text-lime-300 font-semibold mb-1">Capital Social</p>
+                  <p className="text-2xl font-bold text-lime-400">
                     {receitaData?.capital_social || rawData.capital_social
                       ? `R$ ${parseFloat(receitaData?.capital_social || rawData.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                       : 'N/A'}
@@ -1230,12 +1230,12 @@ export default function CompanyDetailPage() {
           <FinancialDebtCard rawData={rawData} />
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card>
+            <Card className="bg-lime-500/10 border-lime-500/30">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Capital Social</CardTitle>
+                <CardTitle className="text-sm font-medium text-lime-300">Capital Social</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xl font-bold">
+                <p className="text-2xl font-bold text-lime-400">
                   {receitaData?.capital_social || rawData.capital_social
                     ? `R$ ${parseFloat(receitaData?.capital_social || rawData.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                     : 'N/A'}
