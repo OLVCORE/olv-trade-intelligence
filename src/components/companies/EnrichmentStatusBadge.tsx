@@ -73,22 +73,16 @@ export function EnrichmentStatusBadge({ companyId, showProgress = false }: Enric
       <p className="font-semibold">{status.companyName}</p>
       <div className="space-y-1">
         <p className={status.hasReceitaWS ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasReceitaWS ? "✓" : "○"} Dados ReceitaWS
+          {status.hasReceitaWS ? "✓" : "○"} Receita Federal (API Brasil/ReceitaWS)
         </p>
         <p className={status.hasDecisionMakers ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasDecisionMakers ? "✓" : "○"} Decisores
+          {status.hasDecisionMakers ? "✓" : "○"} Decisores Apollo
         </p>
         <p className={status.hasDigitalPresence ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasDigitalPresence ? "✓" : "○"} Presença Digital
-        </p>
-        <p className={status.hasMaturityScore ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasMaturityScore ? "✓" : "○"} Maturidade Digital
+          {status.hasDigitalPresence ? "✓" : "○"} Digital Intelligence
         </p>
         <p className={status.hasLegalData ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasLegalData ? "✓" : "○"} Saúde Jurídica
-        </p>
-        <p className={status.hasInsights ? "text-green-600" : "text-muted-foreground"}>
-          {status.hasInsights ? "✓" : "○"} Insights IA
+          {status.hasLegalData ? "✓" : "○"} TOTVS Report (9 tabs)
         </p>
       </div>
     </div>

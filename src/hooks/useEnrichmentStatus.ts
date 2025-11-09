@@ -42,28 +42,29 @@ export function useEnrichmentStatus(companyId?: string) {
         supabase.from('legal_data').select('id').eq('company_id', companyId).maybeSingle(),
       ]);
 
+      // ✅ LÓGICA SIMPLIFICADA: Conta apenas enriquecimentos REAIS e ÚTEIS
+      const rawData = (company.raw_data as any) || {};
+      
       const status: EnrichmentStatus = {
         companyId: company.id,
         companyName: company.name,
-        hasReceitaWS: !!(company.raw_data as any)?.enriched_receita && !!(company.raw_data as any)?.receita,
+        hasReceitaWS: !!(rawData?.enriched_receita && rawData?.receita),
         hasDecisionMakers: (decisorsCountRes.count || 0) > 0,
-        hasDigitalPresence: (digitalPresenceRes.count || 0) > 0,
+        hasDigitalPresence: !!(rawData?.digital_intelligence), // Digital Intelligence tab
         hasMaturityScore: !!company.digital_maturity_score,
         hasFitScore: false,
-        hasLegalData: !!(legalDataRes as any).data,
+        hasLegalData: !!(rawData?.totvs_report), // TOTVS 9-tabs report
         hasInsights: (insightsRes.count || 0) > 0,
         completionPercentage: 0,
         isFullyEnriched: false,
       };
 
-      // Calcula percentual de completude
+      // Calcula percentual de completude (APENAS 4 ITENS CRÍTICOS)
       const checks = [
-        status.hasReceitaWS,
-        status.hasDecisionMakers,
-        status.hasDigitalPresence,
-        status.hasMaturityScore,
-        status.hasLegalData,
-        status.hasInsights,
+        status.hasReceitaWS,        // 1. Dados Receita Federal (API Brasil/ReceitaWS)
+        status.hasDecisionMakers,   // 2. Decisores Apollo
+        status.hasDigitalPresence,  // 3. Digital Intelligence
+        status.hasLegalData,        // 4. TOTVS Report (9 tabs)
       ];
       
       status.completionPercentage = Math.round(
@@ -110,27 +111,29 @@ export function useAllEnrichmentStatus() {
       const legalDataSet = new Set((legalDataListRes.data || []).map((r: any) => r.company_id));
 
       const statusList: EnrichmentStatus[] = companies.map(company => {
+        // ✅ LÓGICA SIMPLIFICADA: Conta apenas enriquecimentos REAIS e ÚTEIS
+        const rawData = (company.raw_data as any) || {};
+        
         const status: EnrichmentStatus = {
           companyId: company.id,
           companyName: company.name,
-          hasReceitaWS: !!(company.raw_data as any)?.enriched_receita && !!(company.raw_data as any)?.receita,
+          hasReceitaWS: !!(rawData?.enriched_receita && rawData?.receita),
           hasDecisionMakers: decisorsSet.has(company.id),
-          hasDigitalPresence: digitalMaturitySet.has(company.id),
+          hasDigitalPresence: !!(rawData?.digital_intelligence), // Digital Intelligence tab
           hasMaturityScore: !!company.digital_maturity_score,
           hasFitScore: false,
-          hasLegalData: legalDataSet.has(company.id),
+          hasLegalData: !!(rawData?.totvs_report), // TOTVS 9-tabs report
           hasInsights: insightsSet.has(company.id),
           completionPercentage: 0,
           isFullyEnriched: false,
         };
 
+        // Calcula percentual de completude (APENAS 4 ITENS CRÍTICOS)
         const checks = [
-          status.hasReceitaWS,
-          status.hasDecisionMakers,
-          status.hasDigitalPresence,
-          status.hasMaturityScore,
-          status.hasLegalData,
-          status.hasInsights,
+          status.hasReceitaWS,        // 1. Dados Receita Federal (API Brasil/ReceitaWS)
+          status.hasDecisionMakers,   // 2. Decisores Apollo
+          status.hasDigitalPresence,  // 3. Digital Intelligence
+          status.hasLegalData,        // 4. TOTVS Report (9 tabs)
         ];
         
         status.completionPercentage = Math.round(
