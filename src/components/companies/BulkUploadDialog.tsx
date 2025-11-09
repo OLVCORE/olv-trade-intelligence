@@ -533,6 +533,7 @@ if (sessionError || !sessionData.session) {
 }
 
 console.log('✅ Sessão válida - prosseguindo com upload');
+console.log('🔑 Access Token:', sessionData.session.access_token.substring(0, 20) + '...');
 
 const { data, error } = await supabase.functions.invoke('bulk-upload-companies', {
   body: { 
@@ -543,6 +544,9 @@ const { data, error } = await supabase.functions.invoke('bulk-upload-companies',
       import_batch_id,
       destination: 'quarantine' // Flag para indicar que vai para quarentena
     }
+  },
+  headers: {
+    Authorization: `Bearer ${sessionData.session.access_token}` // 🔧 FORÇAR TOKEN NO HEADER
   }
 });
 
