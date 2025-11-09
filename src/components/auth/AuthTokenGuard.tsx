@@ -23,8 +23,28 @@ export function AuthTokenGuard() {
       if (!tokenInStorage) {
         console.warn('🚨 [AuthGuard] LOGIN FANTASMA DETECTADO!');
         console.warn('User está logado no Context mas token ausente no LocalStorage');
+        forceTokenRefresh();
+        return;
+      }
+
+      // NOVO: Validar se o token está corrompido
+      try {
+        const parsed = JSON.parse(tokenInStorage);
+        const isCorrupted = !parsed?.currentSession?.user || !parsed?.currentSession?.access_token;
         
-        // Tenta forçar refresh do token
+        if (isCorrupted) {
+          console.warn('🚨 [AuthGuard] TOKEN CORROMPIDO DETECTADO!');
+          console.warn('Token existe mas estrutura inválida - forçando refresh...');
+          
+          // Limpa token corrompido
+          localStorage.removeItem(storageKey);
+          
+          // Força refresh
+          forceTokenRefresh();
+        }
+      } catch (e) {
+        console.error('🚨 [AuthGuard] TOKEN INVÁLIDO (JSON corrompido)');
+        localStorage.removeItem(storageKey);
         forceTokenRefresh();
       }
     };
