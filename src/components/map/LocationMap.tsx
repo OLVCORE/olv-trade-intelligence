@@ -73,13 +73,14 @@ export default function LocationMap({
 
   // Geocodificar endereço usando Nominatim (GRATUITO)
   useEffect(() => {
-    // Aguardar mapa estar pronto
-    if (!map.current) {
-      console.log('⏳ Aguardando mapa inicializar...');
-      return;
-    }
+    // Aguardar mapa estar 100% pronto
+    const timer = setTimeout(async () => {
+      if (!map.current) {
+        console.log('⏳ Mapa ainda não inicializado');
+        return;
+      }
 
-    const geocodeAddress = async () => {
+      const geocodeAddress = async () => {
       const hasNumero = numero && numero.trim().length > 0;
       const hasCep = cep && cep.replace(/\D/g, '').length === 8;
       
@@ -175,9 +176,12 @@ export default function LocationMap({
       } finally {
         setLoading(false);
       }
-    };
+      };
 
-    geocodeAddress();
+      await geocodeAddress();
+    }, 500); // Delay de 500ms para garantir inicialização
+
+    return () => clearTimeout(timer);
   }, [address, numero, municipio, estado, cep, onLocationSelect]);
 
   return (
