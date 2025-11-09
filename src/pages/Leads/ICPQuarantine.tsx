@@ -36,6 +36,7 @@ import { ExecutiveReportModal } from '@/components/reports/ExecutiveReportModal'
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { searchApolloOrganizations, searchApolloPeople } from '@/services/apolloDirect';
 import { enrichment360Simplificado } from '@/services/enrichment360';
+import { ColumnFilter } from '@/components/companies/ColumnFilter';
 
 export default function ICPQuarantine() {
   const navigate = useNavigate();
@@ -43,6 +44,14 @@ export default function ICPQuarantine() {
   const [statusFilter, setStatusFilter] = useState('all'); // ✅ Mostrar TODAS (pendente + analisadas)
   const [tempFilter, setTempFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [pageSize, setPageSize] = useState(50); // 🔢 Paginação configurável
+  
+  // 🔍 FILTROS POR COLUNA (tipo Excel)
+  const [filterOrigin, setFilterOrigin] = useState<string[]>([]);
+  const [filterCNPJStatus, setFilterCNPJStatus] = useState<string[]>([]);
+  const [filterSector, setFilterSector] = useState<string[]>([]);
+  const [filterUF, setFilterUF] = useState<string[]>([]);
+  const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCompany, setPreviewCompany] = useState<any>(null);
   const [sortColumn, setSortColumn] = useState<string>('');
@@ -474,10 +483,77 @@ export default function ICPQuarantine() {
   };
 
   const filteredCompanies = companies
-    .filter(c => 
-      c.razao_social?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.cnpj?.includes(searchQuery)
-    )
+    .filter(c => {
+      // Filtro de busca por nome/CNPJ
+      const matchesSearch = c.razao_social?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.cnpj?.includes(searchQuery);
+      
+      if (!matchesSearch) return false;
+      
+      // 🔍 FILTROS INTELIGENTES POR COLUNA
+      
+      // Filtro por Origem
+      if (filterOrigin.length > 0 && !filterOrigin.includes(c.source_name || '')) {
+        return false;
+      }
+      
+      // Filtro por Status CNPJ
+      if (filterCNPJStatus.length > 0) {
+        const rawData = (c as any).raw_data?.receita_federal || (c as any).raw_data || {};
+        let status = 'PENDENTE';
+        
+        if (rawData.situacao || rawData.status) {
+          status = rawData.situacao || rawData.status;
+          
+          if (status.toUpperCase().includes('ATIVA') || status === '02') {
+            status = 'ATIVA';
+          } else if (status.toUpperCase().includes('SUSPENSA') || status === '03') {
+            status = 'SUSPENSA';
+          } else if (status.toUpperCase().includes('INAPTA') || status === '04') {
+            status = 'INAPTA';
+          } else if (status.toUpperCase().includes('BAIXADA') || status === '08') {
+            status = 'BAIXADA';
+          } else if (status.toUpperCase().includes('NULA') || status === '01') {
+            status = 'NULA';
+          }
+        }
+        
+        if (!filterCNPJStatus.includes(status)) return false;
+      }
+      
+      // Filtro por Setor
+      if (filterSector.length > 0) {
+        const sector = c.segmento || (c as any).raw_data?.setor_amigavel || (c as any).raw_data?.atividade_economica || 'N/A';
+        if (!filterSector.includes(sector)) return false;
+      }
+      
+      // Filtro por UF
+      if (filterUF.length > 0) {
+        const uf = c.uf || (c as any).raw_data?.uf || '';
+        if (!filterUF.includes(uf)) return false;
+      }
+      
+      // Filtro por Status Análise
+      if (filterAnalysisStatus.length > 0) {
+        const rawData = (c as any).raw_data || {};
+        const hasReceitaWS = !!(rawData.receita_federal || rawData.cnpj);
+        const hasDecisionMakers = ((c as any).decision_makers_count || 0) > 0;
+        const hasDigitalPresence = !!(rawData.digital_intelligence);
+        const hasLegalData = !!(rawData.totvs_report);
+        
+        const checks = [hasReceitaWS, hasDecisionMakers, hasDigitalPresence, hasLegalData];
+        const percentage = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+        
+        let statusLabel = '0-25%';
+        if (percentage > 75) statusLabel = '76-100%';
+        else if (percentage > 50) statusLabel = '51-75%';
+        else if (percentage > 25) statusLabel = '26-50%';
+        
+        if (!filterAnalysisStatus.includes(statusLabel)) return false;
+      }
+      
+      return true;
+    })
     .sort((a, b) => {
       if (!sortColumn) return 0;
       
@@ -1108,6 +1184,11 @@ export default function ICPQuarantine() {
     navigate(`/leads/icp-quarantine/report/${company.id}?name=${name}&cnpj=${cnpj}&domain=${domain}`);
   };
 
+  // 🔢 APLICAR PAGINAÇÃO
+  const paginatedCompanies = pageSize === 9999 
+    ? filteredCompanies 
+    : filteredCompanies.slice(0, pageSize);
+  
   const selectedCompanies = filteredCompanies.filter(c => selectedIds.includes(c.id));
   const displayCompanies = previewCompany ? [previewCompany] : selectedCompanies;
 
@@ -1255,6 +1336,25 @@ export default function ICPQuarantine() {
                 <FileText className="h-4 w-4" />
                 Relatórios
               </Button>
+              
+              {/* 🔢 DROPDOWN DE PAGINAÇÃO */}
+              <div className="flex items-center gap-2 ml-4">
+                <span className="text-sm text-muted-foreground">Mostrar:</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => setPageSize(Number(value))}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="150">150</SelectItem>
+                    <SelectItem value="9999">Todos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -1335,48 +1435,59 @@ export default function ICPQuarantine() {
                     </Button>
                   </TableHead>
                   <TableHead className="min-w-[150px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('source_name')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Origem</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'source_name' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="source_name"
+                      title="Origem"
+                      values={companies.map(c => c.source_name || '')}
+                      selectedValues={filterOrigin}
+                      onFilterChange={setFilterOrigin}
+                      onSort={() => handleSort('source_name')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[100px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('cnpj_status')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Status CNPJ</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'cnpj_status' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="cnpj_status"
+                      title="Status CNPJ"
+                      values={companies.map(c => {
+                        const rawData = (c as any).raw_data?.receita_federal || (c as any).raw_data || {};
+                        let status = 'PENDENTE';
+                        
+                        if (rawData.situacao || rawData.status) {
+                          status = rawData.situacao || rawData.status;
+                          
+                          if (status.toUpperCase().includes('ATIVA') || status === '02') status = 'ATIVA';
+                          else if (status.toUpperCase().includes('SUSPENSA') || status === '03') status = 'SUSPENSA';
+                          else if (status.toUpperCase().includes('INAPTA') || status === '04') status = 'INAPTA';
+                          else if (status.toUpperCase().includes('BAIXADA') || status === '08') status = 'BAIXADA';
+                          else if (status.toUpperCase().includes('NULA') || status === '01') status = 'NULA';
+                        }
+                        
+                        return status;
+                      })}
+                      selectedValues={filterCNPJStatus}
+                      onFilterChange={setFilterCNPJStatus}
+                      onSort={() => handleSort('cnpj_status')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[100px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('setor')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Setor</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'setor' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="setor"
+                      title="Setor"
+                      values={companies.map(c => c.segmento || (c as any).raw_data?.setor_amigavel || (c as any).raw_data?.atividade_economica || 'N/A')}
+                      selectedValues={filterSector}
+                      onFilterChange={setFilterSector}
+                      onSort={() => handleSort('setor')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[90px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('uf')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">UF/Região</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'uf' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="uf"
+                      title="UF"
+                      values={companies.map(c => c.uf || (c as any).raw_data?.uf || '')}
+                      selectedValues={filterUF}
+                      onFilterChange={setFilterUF}
+                      onSort={() => handleSort('uf')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[80px]">
                     <Button
@@ -1389,7 +1500,29 @@ export default function ICPQuarantine() {
                       <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'score' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                     </Button>
                   </TableHead>
-                  <TableHead className="min-w-[90px]"><span className="font-semibold">Status Análise</span></TableHead>
+                  <TableHead className="min-w-[90px]">
+                    <ColumnFilter
+                      column="analysis_status"
+                      title="Status Análise"
+                      values={companies.map(c => {
+                        const rawData = (c as any).raw_data || {};
+                        const hasReceitaWS = !!(rawData.receita_federal || rawData.cnpj);
+                        const hasDecisionMakers = ((c as any).decision_makers_count || 0) > 0;
+                        const hasDigitalPresence = !!(rawData.digital_intelligence);
+                        const hasLegalData = !!(rawData.totvs_report);
+                        
+                        const checks = [hasReceitaWS, hasDecisionMakers, hasDigitalPresence, hasLegalData];
+                        const percentage = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+                        
+                        if (percentage > 75) return '76-100%';
+                        if (percentage > 50) return '51-75%';
+                        if (percentage > 25) return '26-50%';
+                        return '0-25%';
+                      })}
+                      selectedValues={filterAnalysisStatus}
+                      onFilterChange={setFilterAnalysisStatus}
+                    />
+                  </TableHead>
                   <TableHead className="min-w-[110px]"><span className="font-semibold">Website</span></TableHead>
                   <TableHead className="min-w-[60px]"><span className="font-semibold">Agent</span></TableHead>
                   <TableHead className="w-[50px]"><span className="font-semibold">Ações</span></TableHead>
@@ -1402,14 +1535,14 @@ export default function ICPQuarantine() {
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : filteredCompanies.length === 0 ? (
+              ) : paginatedCompanies.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                     Nenhuma empresa encontrada
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCompanies.map((company) => {
+                paginatedCompanies.map((company) => {
                   // ✅ USAR raw_data (campo correto onde salvamos os enriquecimentos)
                   const rawData = (company.raw_data && typeof company.raw_data === 'object' && !Array.isArray(company.raw_data)) 
                     ? company.raw_data as Record<string, any>
