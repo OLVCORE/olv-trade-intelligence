@@ -55,6 +55,7 @@ import { ColumnFilter } from '@/components/companies/ColumnFilter';
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { QuarantineCNPJStatusBadge } from '@/components/icp/QuarantineCNPJStatusBadge';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
+import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
 
 
 export default function CompaniesManagementPage() {
@@ -653,16 +654,20 @@ export default function CompaniesManagementPage() {
   };
 
   const [isBatchEnrichingApollo, setIsBatchEnrichingApollo] = useState(false);
+  
+  // ✅ MODAL DE PROGRESSO EM TEMPO REAL
+  const [enrichmentModalOpen, setEnrichmentModalOpen] = useState(false);
+  const [enrichmentProgress, setEnrichmentProgress] = useState<EnrichmentProgress[]>([]);
+  const [cancelEnrichment, setCancelEnrichment] = useState(false);
 
   const handleBatchEnrichApollo = async () => {
     try {
       setIsBatchEnrichingApollo(true);
-      
-      toast.info('🚀 Iniciando enriquecimento em massa...', {
-        description: '✅ Sistema OLV Internacional - Identificação de decisores e informações empresariais'
-      });
+      setCancelEnrichment(false);
 
-      const companiesWithDomain = companies.filter(c => c.website || c.domain);
+      const companiesWithDomain = selectedCompanies.length > 0
+        ? companies.filter(c => selectedCompanies.includes(c.id) && (c.website || c.domain))
+        : companies.filter(c => c.website || c.domain);
       
       if (companiesWithDomain.length === 0) {
         toast.error('Nenhuma empresa com domínio disponível', {
@@ -671,44 +676,82 @@ export default function CompaniesManagementPage() {
         return;
       }
 
+      // ✅ INICIALIZAR MODAL DE PROGRESSO
+      const initialProgress: EnrichmentProgress[] = companiesWithDomain.map(c => ({
+        companyId: c.id,
+        companyName: c.company_name || c.name,
+        status: 'pending',
+      }));
+      
+      setEnrichmentProgress(initialProgress);
+      setEnrichmentModalOpen(true);
+
       let enriched = 0;
       let errors = 0;
 
-      for (const company of companiesWithDomain) {
+      for (let i = 0; i < companiesWithDomain.length; i++) {
+        // ✅ VERIFICAR CANCELAMENTO
+        if (cancelEnrichment) {
+          toast.info('❌ Processo cancelado pelo usuário');
+          break;
+        }
+
+        const company = companiesWithDomain[i];
+        
         try {
+          // ✅ ATUALIZAR STATUS: PROCESSANDO
+          setEnrichmentProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'processing', message: 'Buscando decisores no Apollo...' }
+              : p
+          ));
+
           const domain = sanitizeDomain(company.website || company.domain || null);
-          if (!domain) continue;
+          if (!domain) {
+            throw new Error('Domínio inválido');
+          }
 
           const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: { 
               company_id: company.id,
-              company_name: company.name,
+              company_name: company.company_name || company.name,
               domain: domain,
               modes: ['people'] // APENAS pessoas, não consome créditos
             }
           });
           
           if (error) throw error;
-          enriched++;
           
-          // Feedback visual a cada 5 empresas
-          if (enriched % 5 === 0) {
-            toast.info(`📊 Progresso: ${enriched}/${companiesWithDomain.length} empresas processadas`);
-          }
-        } catch (e) {
-          console.error(`Error enriching ${company.name}:`, e);
+          // ✅ ATUALIZAR STATUS: SUCESSO
+          setEnrichmentProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'success', message: 'Decisores identificados!' }
+              : p
+          ));
+          
+          enriched++;
+        } catch (e: any) {
+          console.error(`Error enriching ${company.company_name}:`, e);
+          
+          // ✅ ATUALIZAR STATUS: ERRO
+          setEnrichmentProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'error', message: e.message || 'Erro desconhecido' }
+              : p
+          ));
+          
           errors++;
         }
       }
 
-      toast.success(
-        `✅ Enriquecimento concluído! ${enriched} empresas processadas, ${errors} erros.`,
-        { description: `Powered by OLV Internacional · Sistema de Inteligência Empresarial` }
-      );
+      if (!cancelEnrichment) {
+        toast.success(
+          `✅ Enriquecimento concluído! ${enriched} empresas processadas`,
+          { description: `${errors} erros · 0 créditos consumidos` }
+        );
+      }
       
       refetch();
-      
-      // ✅ INVALIDAR CACHE DO STATUS DE ENRIQUECIMENTO
       queryClient.invalidateQueries({ queryKey: ['enrichment-status'] });
       queryClient.invalidateQueries({ queryKey: ['all-enrichment-status'] });
     } catch (error) {
@@ -2145,6 +2188,16 @@ export default function CompaniesManagementPage() {
             domain={stcCompany.domain || stcCompany.website}
           />
         )}
+        
+        {/* ✅ MODAL DE PROGRESSO EM TEMPO REAL */}
+        <EnrichmentProgressModal
+          open={enrichmentModalOpen}
+          onOpenChange={setEnrichmentModalOpen}
+          title="Enriquecimento Apollo - Decisores"
+          companies={enrichmentProgress}
+          onCancel={() => setCancelEnrichment(true)}
+          isCancelling={cancelEnrichment}
+        />
       </AppLayout>
     </ErrorBoundary>
   );
