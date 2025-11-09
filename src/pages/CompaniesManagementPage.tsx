@@ -929,17 +929,36 @@ export default function CompaniesManagementPage() {
                           continue;
                         }
 
-                        // Integra ao ICP mantendo TODOS os dados
+                        // 🔧 NORMALIZAR DADOS USANDO DADOS COMPLETOS DA EMPRESA
+                        const receitaData = (fullCompany.raw_data as any)?.receita || {};
+                        
+                        // Integra ao ICP com TODOS os campos necessários
                         const { error: insertError } = await supabase
                           .from('icp_analysis_results')
                           .insert({
+                            // ✅ OBRIGATÓRIOS (NOT NULL)
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj, // ✅ NOT NULL
-                            razao_social: fullCompany.company_name || fullCompany.name || 'N/A', // ✅ NOT NULL
+                            cnpj: fullCompany.cnpj,
+                            razao_social: fullCompany.company_name || receitaData.razao_social || receitaData.nome || 'N/A',
+                            
+                            // ✅ OPCIONAIS (mas importantes)
+                            nome_fantasia: receitaData.nome_fantasia || receitaData.fantasia || null,
+                            uf: (fullCompany.location as any)?.state || receitaData.uf || null,
+                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || null,
+                            porte: receitaData.porte || fullCompany.porte_estimado || null,
+                            cnae_principal: receitaData.cnae_fiscal || receitaData.atividade_principal?.[0]?.code || null,
+                            website: fullCompany.website || fullCompany.domain || null,
+                            email: fullCompany.email || receitaData.email || null,
+                            telefone: receitaData.ddd_telefone_1 || receitaData.telefone || null,
+                            
+                            // ✅ RASTREABILIDADE
                             status: 'pendente',
                             source_type: fullCompany.source_type || 'manual',
                             source_name: fullCompany.source_name || 'Estoque',
-                            import_batch_id: fullCompany.import_batch_id
+                            import_batch_id: fullCompany.import_batch_id,
+                            
+                            // ✅ RAW DATA (mantém TUDO)
+                            raw_data: fullCompany.raw_data || {}
                           });
 
                         if (insertError) {
@@ -1126,17 +1145,36 @@ export default function CompaniesManagementPage() {
                           continue;
                         }
 
-                        // Integra ao ICP mantendo TODOS os dados enriquecidos
+                        // 🔧 NORMALIZAR DADOS USANDO DADOS COMPLETOS DA EMPRESA
+                        const receitaData = (fullCompany.raw_data as any)?.receita || {};
+                        
+                        // Integra ao ICP com TODOS os campos necessários
                         const { error: insertError } = await supabase
                           .from('icp_analysis_results')
                           .insert({
+                            // ✅ OBRIGATÓRIOS (NOT NULL)
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj, // ✅ NOT NULL
-                            razao_social: fullCompany.company_name || fullCompany.name || 'N/A', // ✅ NOT NULL
+                            cnpj: fullCompany.cnpj,
+                            razao_social: fullCompany.company_name || receitaData.razao_social || receitaData.nome || 'N/A',
+                            
+                            // ✅ OPCIONAIS (mas importantes)
+                            nome_fantasia: receitaData.nome_fantasia || receitaData.fantasia || null,
+                            uf: (fullCompany.location as any)?.state || receitaData.uf || null,
+                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || null,
+                            porte: receitaData.porte || fullCompany.porte_estimado || null,
+                            cnae_principal: receitaData.cnae_fiscal || receitaData.atividade_principal?.[0]?.code || null,
+                            website: fullCompany.website || fullCompany.domain || null,
+                            email: fullCompany.email || receitaData.email || null,
+                            telefone: receitaData.ddd_telefone_1 || receitaData.telefone || null,
+                            
+                            // ✅ RASTREABILIDADE
                             status: 'pendente',
                             source_type: fullCompany.source_type || 'manual',
                             source_name: fullCompany.source_name || 'Estoque',
-                            import_batch_id: fullCompany.import_batch_id
+                            import_batch_id: fullCompany.import_batch_id,
+                            
+                            // ✅ RAW DATA (mantém TUDO)
+                            raw_data: fullCompany.raw_data || {}
                           });
 
                         if (insertError) {
