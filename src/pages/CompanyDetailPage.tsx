@@ -681,7 +681,9 @@ export default function CompanyDetailPage() {
                   <p className="text-xs text-muted-foreground">Abertura</p>
                 </div>
                 <p className="font-semibold text-sm">
-                  {receitaData?.data_inicio_atividade || rawData?.data_abertura || 'N/A'}
+                  {receitaData?.data_inicio_atividade 
+                    ? new Date(receitaData.data_inicio_atividade).toLocaleDateString('pt-BR')
+                    : rawData?.data_abertura || 'N/A'}
                 </p>
               </CardContent>
             </Card>
@@ -692,7 +694,11 @@ export default function CompanyDetailPage() {
                   <Users className="h-4 w-4 text-primary" />
                   <p className="text-xs text-muted-foreground">Funcionários</p>
                 </div>
-                <p className="font-semibold text-sm">{rawData?.funcionarios_presumido_matriz_cnpj || company.employees || receitaData?.qsa?.length || 'N/A'}</p>
+                <p className="font-semibold text-sm">
+                  {(company as any)?.raw_data?.apollo?.employee_count || 
+                   rawData?.funcionarios_presumido_matriz_cnpj || 
+                   company.employees || 'N/A'}
+                </p>
               </CardContent>
             </Card>
 
