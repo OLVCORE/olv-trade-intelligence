@@ -639,48 +639,48 @@ export default function CompanyDetailPage() {
         </ScrollArea>
 
         {/* TAB 1: Visão Geral */}
-        <TabsContent value="overview" className="space-y-6 animate-fade-in">
-          {/* Header - Informações Principais em Grid Compacto */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <TabsContent value="overview" className="space-y-4 animate-fade-in">
+          {/* Header - Informações Principais em Grid Compacto World-Class */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <Building2 className="h-4 w-4 text-blue-600 dark:text-lime-400" />
-                  <p className="text-xs text-blue-700 dark:text-lime-300 font-semibold">CNPJ</p>
+                  <p className="text-xs text-blue-700 dark:text-lime-300 font-semibold uppercase tracking-wide">CNPJ</p>
                 </div>
-                <p className="font-mono font-bold text-lg text-blue-700 dark:text-lime-400 tracking-wide bg-blue-50 dark:bg-lime-500/10 px-3 py-1 rounded-md border border-blue-200 dark:border-lime-500/30">{company.cnpj || 'N/A'}</p>
+                <p className="font-mono font-bold text-base text-blue-700 dark:text-lime-400 tracking-wide bg-blue-50 dark:bg-lime-500/10 px-2 py-1 rounded border border-blue-200 dark:border-lime-500/30">{company.cnpj || 'N/A'}</p>
               </CardContent>
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <CheckCircle className={`h-4 w-4 ${receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'text-lime-500' : 'text-yellow-500'}`} />
-                  <p className="text-xs text-muted-foreground">Situação</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Situação</p>
                 </div>
-                <Badge variant={receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'default' : 'secondary'} className={receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'bg-lime-600 hover:bg-lime-700 text-white dark:bg-lime-500 dark:hover:bg-lime-600' : 'bg-yellow-600 text-white dark:bg-yellow-500'}>
+                <Badge variant={receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'default' : 'secondary'} className={`text-sm px-3 py-1 ${receitaData?.descricao_situacao_cadastral === 'ATIVA' ? 'bg-lime-600 hover:bg-lime-700 text-white dark:bg-lime-500 dark:hover:bg-lime-600' : 'bg-yellow-600 text-white dark:bg-yellow-500'}`}>
                   {receitaData?.descricao_situacao_cadastral || rawData?.situacao_cadastral || 'Pendente'}
                 </Badge>
               </CardContent>
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Porte</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Porte</p>
                 </div>
-                <p className="font-semibold text-sm">{receitaData?.porte || rawData.porte_estimado || 'N/A'}</p>
+                <p className="font-bold text-base">{receitaData?.porte || rawData.porte_estimado || 'N/A'}</p>
               </CardContent>
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <Calendar className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Abertura</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Abertura</p>
                 </div>
-                <p className="font-semibold text-sm">
+                <p className="font-bold text-base">
                   {receitaData?.data_inicio_atividade 
                     ? new Date(receitaData.data_inicio_atividade).toLocaleDateString('pt-BR')
                     : rawData?.data_abertura || 'N/A'}
@@ -689,12 +689,12 @@ export default function CompanyDetailPage() {
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <Users className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Funcionários</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Funcionários</p>
                 </div>
-                <p className="font-semibold text-sm">
+                <p className="font-bold text-base">
                   {(company as any)?.raw_data?.apollo?.employee_count || 
                    rawData?.funcionarios_presumido_matriz_cnpj || 
                    company.employees || 'N/A'}
@@ -703,34 +703,34 @@ export default function CompanyDetailPage() {
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <UserPlus className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Sócios</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sócios</p>
                 </div>
-                <p className="font-semibold text-sm">
+                <p className="font-bold text-base">
                   {receitaData?.qsa?.length || rawData?.qtd_socios || 'N/A'}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="glass-card hover-scale">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-1.5">
                   <Globe className="h-4 w-4 text-primary" />
-                  <p className="text-xs text-muted-foreground">Website</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Website</p>
                 </div>
                 {company.website || digitalPresence?.website ? (
                   <a 
                     href={company.website || digitalPresence?.website} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-xs text-primary hover:underline truncate block"
+                    className="text-sm text-primary hover:underline truncate block font-semibold"
                   >
                     Acessar
                   </a>
                 ) : (
-                  <p className="text-xs text-muted-foreground">N/A</p>
+                  <p className="text-base font-bold text-muted-foreground">N/A</p>
                 )}
               </CardContent>
             </Card>
