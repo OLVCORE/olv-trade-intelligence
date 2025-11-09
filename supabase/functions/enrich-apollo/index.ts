@@ -5,7 +5,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const ORIGINS = new Set<string>([
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://83aa9319-3cdb-4039-89a3-d5632b977732.lovableproject.com'
+  'http://localhost:5175',
+  'https://83aa9319-3cdb-4039-89a3-d5632b977732.lovableproject.com',
+  'https://olv-intelligence-prospect-v2-git-master-olv-core444.vercel.app'
 ]);
 
 const schema = {
