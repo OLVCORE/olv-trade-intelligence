@@ -76,8 +76,9 @@ export function useEnrichmentStatus(companyId?: string) {
       return status;
     },
     enabled: !!companyId,
-    refetchInterval: false, // Desabilitado - use manual refetch quando necessário
-    staleTime: 60000, // Considera dados válidos por 1 minuto
+    refetchInterval: 10000, // ✅ REVALIDA a cada 10 segundos
+    staleTime: 5000, // ✅ Considera dados válidos por apenas 5 segundos
+    refetchOnWindowFocus: true, // ✅ Revalida ao focar janela
   });
 }
 

@@ -43,6 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCompanies, useDeleteCompany } from '@/hooks/useCompanies';
+import { useQueryClient } from '@tanstack/react-query';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -57,6 +58,7 @@ export default function CompaniesManagementPage() {
   logger.info('CompaniesManagementPage mounted', 'CompaniesManagement');
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50); // 🔢 Tamanho da página configurável
   const [searchTerm, setSearchTerm] = useState('');
@@ -443,6 +445,10 @@ export default function CompaniesManagementPage() {
       }
 
       refetch(); // Recarrega para ver os dados atualizados
+      
+      // ✅ INVALIDAR CACHE DO STATUS DE ENRIQUECIMENTO
+      queryClient.invalidateQueries({ queryKey: ['enrichment-status'] });
+      queryClient.invalidateQueries({ queryKey: ['all-enrichment-status'] });
     } catch (error) {
       console.error('Error batch enriching:', error);
       toast.error('Erro ao executar enriquecimento em lote');
@@ -474,6 +480,10 @@ export default function CompaniesManagementPage() {
       }
 
       refetch();
+      
+      // ✅ INVALIDAR CACHE DO STATUS DE ENRIQUECIMENTO
+      queryClient.invalidateQueries({ queryKey: ['enrichment-status'] });
+      queryClient.invalidateQueries({ queryKey: ['all-enrichment-status'] });
     } catch (error) {
       console.error('Error batch enriching 360:', error);
       toast.error('Erro ao executar enriquecimento 360°');
@@ -537,6 +547,10 @@ export default function CompaniesManagementPage() {
       );
       
       refetch();
+      
+      // ✅ INVALIDAR CACHE DO STATUS DE ENRIQUECIMENTO
+      queryClient.invalidateQueries({ queryKey: ['enrichment-status'] });
+      queryClient.invalidateQueries({ queryKey: ['all-enrichment-status'] });
     } catch (error) {
       console.error('Error batch enriching:', error);
       toast.error('Erro ao executar enriquecimento em lote');
