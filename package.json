@@ -66,6 +66,7 @@
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.462.0",
+    "mapillary-js": "^4.1.2",
     "next-themes": "^0.3.0",
     "openai": "^4.104.0",
     "papaparse": "^5.5.3",

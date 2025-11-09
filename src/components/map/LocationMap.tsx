@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Eye, Map as MapIcon } from 'lucide-react';
 
 // Fix Leaflet default marker icon issue
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -39,6 +40,9 @@ export default function LocationMap({
   const marker = useRef<L.Marker | null>(null);
   const circle = useRef<L.Circle | null>(null);
   const [loading, setLoading] = useState(false);
+  const [currentLat, setCurrentLat] = useState<number | null>(null);
+  const [currentLng, setCurrentLng] = useState<number | null>(null);
+  const [showStreetView, setShowStreetView] = useState(false);
 
   // Inicializar mapa Leaflet (GRATUITO - OpenStreetMap)
   useEffect(() => {
@@ -115,6 +119,10 @@ export default function LocationMap({
 
               if (!map.current) return;
 
+              // Salvar coordenadas para Street View
+              setCurrentLat(latNum);
+              setCurrentLng(lngNum);
+
               map.current.setView([latNum, lngNum], hasNumero ? 18 : 16);
 
               // Remover marcadores anteriores
@@ -190,6 +198,10 @@ export default function LocationMap({
             return;
           }
 
+          // Salvar coordenadas para Street View
+          setCurrentLat(latNum);
+          setCurrentLng(lngNum);
+
           map.current.setView([latNum, lngNum], zoomLevel);
 
           // Remover marcadores anteriores
@@ -240,6 +252,19 @@ export default function LocationMap({
     return () => clearTimeout(timer);
   }, [address, numero, municipio, estado, cep, onLocationSelect]);
 
+  // Abrir Street View no Google Maps (em nova aba)
+  const handleOpenStreetView = () => {
+    if (!currentLat || !currentLng) {
+      console.warn('⚠️ Coordenadas não disponíveis para Street View');
+      return;
+    }
+
+    // Abre Google Street View em nova aba (GRATUITO para visualização)
+    const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentLat},${currentLng}&heading=0&pitch=0&fov=80`;
+    window.open(streetViewUrl, '_blank');
+    console.log('🌍 Abrindo Street View:', streetViewUrl);
+  };
+
   return (
     <Card className="relative w-full h-[360px] overflow-hidden bg-slate-100 dark:bg-slate-900">
       <div ref={mapContainer} className="absolute inset-0 z-0" style={{ background: '#e5e7eb' }} />
@@ -250,10 +275,23 @@ export default function LocationMap({
         </div>
       )}
       
-      {/* Debug Info */}
-      <div className="absolute top-2 left-2 z-[1000] bg-black/70 text-white text-xs p-2 rounded">
-        <p>📍 {municipio || 'N/A'}, {estado || 'N/A'}</p>
-        <p>🗺️ Leaflet + OSM</p>
+      {/* Debug Info + Street View Button */}
+      <div className="absolute top-2 left-2 z-[1000] flex flex-col gap-2">
+        <div className="bg-black/70 text-white text-xs p-2 rounded">
+          <p>📍 {municipio || 'N/A'}, {estado || 'N/A'}</p>
+          <p>🗺️ Leaflet + OSM</p>
+        </div>
+        
+        {currentLat && currentLng && (
+          <Button
+            size="sm"
+            onClick={handleOpenStreetView}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+          >
+            <Eye className="h-3 w-3 mr-1" />
+            Ver Rua (Street View)
+          </Button>
+        )}
       </div>
     </Card>
   );
