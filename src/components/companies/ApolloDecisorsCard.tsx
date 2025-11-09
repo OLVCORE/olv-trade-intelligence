@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,9 +17,17 @@ import {
   Facebook,
   Github,
   MapPin,
-  GraduationCap
+  GraduationCap,
+  Filter
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 
 interface DecisorWithApollo {
@@ -65,11 +74,15 @@ interface ApolloDecisorsCardProps {
 }
 
 export function ApolloDecisorsCard({ decisors }: ApolloDecisorsCardProps) {
+  const [filterSeniority, setFilterSeniority] = useState<string>('all');
+  const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [filterLocation, setFilterLocation] = useState<string>('all');
+
   if (!decisors || decisors.length === 0) {
     return null;
   }
 
-  // Filtrar decisores que foram enriquecidos pelo Apollo (têm apollo_last_enriched_at ou source='apollo')
+  // Filtrar decisores que foram enriquecidos pelo Apollo
   const apolloDecisors = decisors.filter(d => 
     d.apollo_person_metadata || 
     d.email_status || 
@@ -82,6 +95,27 @@ export function ApolloDecisorsCard({ decisors }: ApolloDecisorsCardProps) {
   if (apolloDecisors.length === 0) {
     return null;
   }
+
+  // Extrair valores únicos para filtros
+  const uniqueSeniorities = [...new Set(apolloDecisors.map(d => d.seniority_level).filter(Boolean))];
+  const uniqueDepartments = [...new Set(apolloDecisors.flatMap(d => d.departments || []))];
+  const uniqueLocations = [...new Set(apolloDecisors.map(d => {
+    if (d.city && d.state) return `${d.city}, ${d.state}`;
+    if (d.city) return d.city;
+    if (d.state) return d.state;
+    return d.country;
+  }).filter(Boolean))];
+
+  // Aplicar filtros
+  const filteredDecisors = apolloDecisors.filter(d => {
+    if (filterSeniority !== 'all' && d.seniority_level !== filterSeniority) return false;
+    if (filterDepartment !== 'all' && !d.departments?.includes(filterDepartment)) return false;
+    if (filterLocation !== 'all') {
+      const location = d.city && d.state ? `${d.city}, ${d.state}` : d.city || d.state || d.country;
+      if (location !== filterLocation) return false;
+    }
+    return true;
+  });
 
   const getEmailStatusColor = (status?: string) => {
     switch (status) {
@@ -101,21 +135,73 @@ export function ApolloDecisorsCard({ decisors }: ApolloDecisorsCardProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <img src={apolloIcon} alt="Apollo" className="h-5 w-5" />
-          <div>
-            <CardTitle>Decisores & Contatos Apollo</CardTitle>
-            <CardDescription>
-              {apolloDecisors.length} contato(s) enriquecido(s) com dados verificados
-            </CardDescription>
+    <Card className="glass-card">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src={apolloIcon} alt="Apollo" className="h-4 w-4" />
+            <div>
+              <CardTitle className="text-base">Decisores & Contatos Apollo</CardTitle>
+              <CardDescription className="text-xs">
+                {filteredDecisors.length} de {apolloDecisors.length} contato(s) • Dados verificados
+              </CardDescription>
+            </div>
           </div>
+          <Filter className="h-4 w-4 text-muted-foreground" />
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {apolloDecisors.map((decisor, idx) => (
+      
+      {/* Filtros - 3 Colunas Compactas */}
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-muted/20 rounded-lg border">
+          <div className="space-y-1">
+            <label className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold">Senioridade</label>
+            <Select value={filterSeniority} onValueChange={setFilterSeniority}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {uniqueSeniorities.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold">Departamento</label>
+            <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {uniqueDepartments.map(d => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold">Localização</label>
+            <Select value={filterLocation} onValueChange={setFilterLocation}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {uniqueLocations.map(l => (
+                  <SelectItem key={l} value={l}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-3 max-h-[600px] overflow-y-auto">
+          {filteredDecisors.map((decisor, idx) => (
             <div key={decisor.id}>
               {idx > 0 && <Separator className="my-4" />}
               
