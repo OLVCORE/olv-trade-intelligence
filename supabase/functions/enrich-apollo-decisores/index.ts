@@ -164,23 +164,31 @@ serve(async (req) => {
 
     const apolloData = await apolloResponse.json();
 
-    console.log('[ENRICH-APOLLO] Pessoas encontradas:', apolloData.people?.length || 0);
+    console.log('[ENRICH-APOLLO] ✅ Apollo retornou:', apolloData.people?.length || 0, 'pessoas');
+    console.log('[ENRICH-APOLLO] Dados brutos:', JSON.stringify(apolloData.people?.slice(0, 2)));
 
-    const decisores = (apolloData.people || []).map((person: any) => ({
-      name: person.name || `${person.first_name} ${person.last_name}`,
-      first_name: person.first_name,
-      last_name: person.last_name,
-      title: person.title,
-      email: person.email,
-      linkedin_url: person.linkedin_url,
-      phone: person.phone_numbers?.[0]?.sanitized_number || null,
-      buying_power: classifyBuyingPower(person.title || ''),
-      seniority: person.seniority,
-      departments: person.departments || [],
-      city: person.city,
-      state: person.state,
-      country: person.country
-    }));
+    const decisores = (apolloData.people || []).map((person: any) => {
+      const fullName = person.name || `${person.first_name || ''} ${person.last_name || ''}`.trim();
+      console.log('[ENRICH-APOLLO] Processando:', fullName, '- Cargo:', person.title);
+      
+      return {
+        name: fullName,
+        first_name: person.first_name,
+        last_name: person.last_name,
+        title: person.title,
+        email: person.email,
+        linkedin_url: person.linkedin_url,
+        phone: person.phone_numbers?.[0]?.sanitized_number || null,
+        buying_power: classifyBuyingPower(person.title || ''),
+        seniority: person.seniority,
+        departments: person.departments || [],
+        city: person.city,
+        state: person.state,
+        country: person.country
+      };
+    });
+    
+    console.log('[ENRICH-APOLLO] Total mapeados:', decisores.length);
 
     // Separar por poder de decisão
     const decisionMakers = decisores.filter(d => d.buying_power === 'decision-maker');
@@ -223,17 +231,21 @@ serve(async (req) => {
           department: d.departments?.[0] || null
         }));
 
+      console.log('[ENRICH-APOLLO] Preparando para salvar:', decisoresToInsert.length, 'decisores');
+      console.log('[ENRICH-APOLLO] Primeiro decisor:', JSON.stringify(decisoresToInsert[0]));
+      
       if (decisoresToInsert.length > 0) {
-        const { error: insertError } = await supabaseClient
+        const { data: inserted, error: insertError } = await supabaseClient
           .from('decision_makers')
-          .insert(decisoresToInsert);
+          .insert(decisoresToInsert)
+          .select();
 
         if (insertError) {
-          console.error('[ENRICH-APOLLO] ❌ Erro ao salvar decisores:', insertError);
+          console.error('[ENRICH-APOLLO] ❌ Erro ao salvar decisores:', JSON.stringify(insertError));
           throw insertError;
         }
         
-        console.log('[ENRICH-APOLLO] ✅ Salvos:', decisoresToInsert.length, 'decisores');
+        console.log('[ENRICH-APOLLO] ✅ SALVOS:', inserted?.length || 0, 'decisores no banco!');
       } else {
         console.warn('[ENRICH-APOLLO] ⚠️ Nenhum decisor válido para salvar (todos sem nome)');
       }
