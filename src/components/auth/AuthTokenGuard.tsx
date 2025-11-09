@@ -13,6 +13,10 @@ export function AuthTokenGuard() {
   const { user, session } = useAuth();
 
   useEffect(() => {
+    // 🚫 GUARD DESABILITADO - Causando falsos positivos de "Sessão Inválida"
+    return;
+    
+    /* CÓDIGO ORIGINAL COMENTADO:
     if (!user || !session) return;
 
     // Verifica se o token está no localStorage
@@ -53,6 +57,7 @@ export function AuthTokenGuard() {
     const timer = setTimeout(checkTokenInStorage, 1000);
 
     return () => clearTimeout(timer);
+    */
   }, [user, session]);
 
   const forceTokenRefresh = async () => {
