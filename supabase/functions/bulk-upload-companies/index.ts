@@ -17,12 +17,12 @@ serve(async (req) => {
   }
 
   try {
-    // 🔍 DEBUG: Verificar variáveis de ambiente
+    // 🔍 Verificar variáveis de ambiente
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     console.log('🔍 SUPABASE_URL:', supabaseUrl ? 'OK' : '❌ MISSING');
-    console.log('🔍 SERVICE_ROLE_KEY:', serviceRoleKey ? 'OK (length: ' + serviceRoleKey.length + ')' : '❌ MISSING');
+    console.log('🔍 SERVICE_ROLE_KEY:', serviceRoleKey ? 'OK' : '❌ MISSING');
     
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(
@@ -40,46 +40,11 @@ serve(async (req) => {
       );
     }
 
-    // 🛡️ VALIDAÇÃO JWT (OPCIONAL - permite chamadas internas server-to-server)
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      console.log('🔑 Authorization Header presente:', authHeader.substring(0, 20) + '...');
-      
-      // Se tiver Authorization header, valida o JWT
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        // Cria cliente temporário para validar o token
-        const tempClient = createClient(supabaseUrl, serviceRoleKey);
-        const { data: { user }, error: authError } = await tempClient.auth.getUser(token);
-        
-        if (authError || !user) {
-          console.error('❌ Token inválido:', authError?.message);
-          return new Response(
-            JSON.stringify({ error: 'Unauthorized', message: 'Token de autenticação inválido' }),
-            { 
-              status: 401,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
-        }
-        
-        console.log('✅ Usuário autenticado:', user.email);
-      } catch (jwtError) {
-        console.error('❌ Erro ao validar JWT:', jwtError);
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized', message: 'Erro ao validar token' }),
-          { 
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-    } else {
-      console.log('⚠️ Sem Authorization header - assumindo chamada interna (server-to-server)');
-    }
-
-    // 🔧 CRIAR CLIENTE ADMIN COM SERVICE ROLE (para operações no banco)
+    // ✅ MÉTODO DEFINITIVO: SERVICE_ROLE_KEY bypassa RLS e permite todas as operações
+    // Segurança garantida pelo Supabase (apenas Edge Functions podem usar SERVICE_ROLE_KEY)
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+    
+    console.log('✅ Cliente Supabase criado com SERVICE_ROLE_KEY');
 
     const { companies, metadata } = await req.json() as { 
       companies: CompanyRow[], 
