@@ -19,6 +19,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 bulk-upload-temp iniciado');
+    console.log('📋 Method:', req.method);
+    console.log('📋 Headers:', Object.fromEntries(req.headers.entries()));
+    
     // 🔍 Verificar variáveis de ambiente
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -48,22 +52,33 @@ serve(async (req) => {
     
     console.log('✅ Cliente Supabase criado com SERVICE_ROLE_KEY');
 
-    const { companies, metadata } = await req.json() as { 
-      companies: CompanyRow[], 
-      metadata?: {
-        source_name?: string,
-        campaign?: string,
-        import_batch_id?: string,
-        destination?: string
-      }
-    };
+    let companies, metadata;
+    
+    try {
+      // Ler o body como texto primeiro para debug
+      const bodyText = await req.text();
+      console.log('📦 Body raw (primeiros 200 chars):', bodyText.substring(0, 200));
+      
+      // Parse manual
+      const body = JSON.parse(bodyText);
+      console.log('✅ JSON parseado com sucesso');
+      console.log('📦 Keys do body:', Object.keys(body));
+      
+      companies = body.companies;
+      metadata = body.metadata;
+    } catch (parseError) {
+      console.error('❌ Erro ao fazer parse do JSON:', parseError);
+      console.error('❌ Tipo do erro:', parseError.constructor.name);
+      console.error('❌ Mensagem:', parseError.message);
+      throw new Error('Erro ao processar JSON da requisição: ' + parseError.message);
+    }
 
     if (!companies || !Array.isArray(companies)) {
+      console.error('❌ companies não é array:', typeof companies);
       throw new Error('Invalid companies data');
     }
     
     console.log(`📦 METADATA RECEBIDA:`, metadata);
-
     console.log(`📊 Processing ${companies.length} companies with 87-column format...`);
 
     const results = {
