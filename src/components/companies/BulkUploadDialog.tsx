@@ -548,17 +548,17 @@ setProgress(100); // Completar barra
 toast.success('✅ Importação concluída!', {
   description: `${imported} empresas de "${sourceName}" adicionadas ao estoque`,
   action: {
-    label: 'Ir para Quarentena ICP',
-    onClick: () => navigate('/leads/icp-quarantine')
+    label: 'Ir para Gerenciar Empresas',
+    onClick: () => navigate('/companies')
   }
 });
 
 setIsUploading(false);
 setIsOpen(false);
 
-// Redirecionar para Quarentena ICP onde as empresas importadas aparecerão
+// Redirecionar para Gerenciar Empresas (página correta)
 setTimeout(() => {
-  navigate('/leads/icp-quarantine');
+  navigate('/companies');
 }, 1500);
 
     } catch (error) {
