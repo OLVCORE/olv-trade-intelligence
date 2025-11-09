@@ -8,6 +8,7 @@ import { ApolloImportDialog } from '@/components/companies/ApolloImportDialog';
 import { BulkActionsToolbar } from '@/components/companies/BulkActionsToolbar';
 import { CompanyRowActions } from '@/components/companies/CompanyRowActions';
 import { HeaderActionsMenu } from '@/components/companies/HeaderActionsMenu';
+import { CompaniesActionsMenu } from '@/components/companies/CompaniesActionsMenu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -167,6 +168,14 @@ export default function CompaniesManagementPage() {
     
     return filtered;
   }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterAnalysisStatus]);
+  
+  // 🔢 ALIASES PARA COMPATIBILIDADE COM QUARENTENA
+  const filteredCompanies = companies;
+  
+  // 🔢 APLICAR PAGINAÇÃO LOCALMENTE
+  const paginatedCompanies = pageSize === 9999 
+    ? filteredCompanies 
+    : filteredCompanies.slice(0, pageSize);
   
   const totalCount = companiesResult?.count || 0;
   const totalPages = companiesResult?.totalPages || 0;
@@ -1167,19 +1176,27 @@ export default function CompaniesManagementPage() {
         {/* Table */}
         <Card>
           <CardContent className="p-0">
-            {/* Bulk Actions Toolbar + Pagination Control */}
+            {/* ✅ BARRA DE AÇÕES WORLD-CLASS - PADRÃO QUARENTENA */}
             {companies.length > 0 && (
               <div className="flex items-center justify-between p-4 border-b">
-                <BulkActionsToolbar
-                  selectedCount={selectedCompanies.length}
-                  totalCount={companies.length}
-                  onSelectAll={toggleSelectAll}
-                onClearSelection={() => setSelectedCompanies([])}
-                onBulkDelete={handleBulkDelete}
-                onBulkEnrichReceita={handleBatchEnrichReceitaWS}
-                onBulkEnrich360={handleBatchEnrich360}
-                onBulkEnrichApollo={handleBatchEnrichApollo}
-                onBulkSendToQuarantine={async () => {
+                {/* LEFT: Contador */}
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {paginatedCompanies.length} de {filteredCompanies.length} {filteredCompanies.length === 1 ? 'empresa' : 'empresas'}
+                  </span>
+                  {selectedCompanies.length > 0 && (
+                    <span className="text-xs text-blue-600 font-medium">
+                      {selectedCompanies.length} selecionada{selectedCompanies.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* RIGHT: Ações */}
+                <div className="flex items-center gap-2">
+                  {/* Integrar ICP (apenas se tiver seleção) */}
+                  {selectedCompanies.length > 0 && (
+                    <Button
+                      onClick={async () => {
                   try {
                     toast.info('🎯 Integrando empresas ao ICP...', {
                       description: 'Todos os dados enriquecidos serão mantidos · Powered by OLV Internacional'
@@ -1295,8 +1312,24 @@ export default function CompaniesManagementPage() {
                     console.error('Error integrating to ICP:', error);
                     toast.error('Erro ao integrar empresas ao ICP');
                   }
-                }}
-                onBulkEnrichEconodata={async () => {
+                      }}
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                    >
+                      <Target className="h-3.5 w-3.5 mr-1.5" />
+                      Integrar ICP ({selectedCompanies.length})
+                    </Button>
+                  )}
+
+                  {/* Dropdown de Ações em Massa */}
+                  <CompaniesActionsMenu
+                    selectedCount={selectedCompanies.length}
+                    onBulkDelete={handleBulkDelete}
+                    onExport={handleExportCSV}
+                    onBulkEnrichReceita={handleBatchEnrichReceitaWS}
+                    onBulkEnrichApollo={handleBatchEnrichApollo}
+                    onBulkEnrich360={handleBatchEnrich360}
+                    onBulkEcoBooster={async () => {
                   try {
                     setIsBatchEnrichingEconodata(true);
                     toast.info('Iniciando enriquecimento em lote com Eco-Booster...');
@@ -1329,29 +1362,26 @@ export default function CompaniesManagementPage() {
                   } finally {
                     setIsBatchEnrichingEconodata(false);
                   }
-                }}
-                onExportSelected={handleExportCSV}
-                isProcessing={isBatchEnriching || isBatchEnriching360 || isBatchEnrichingApollo || isBatchEnrichingEconodata}
-              />
-                
-                {/* 🔢 DROPDOWN DE PAGINAÇÃO */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Mostrar por página:</span>
+                    }}
+                    isProcessing={isBatchEnriching || isBatchEnriching360 || isBatchEnrichingApollo || isBatchEnrichingEconodata}
+                  />
+
+                  {/* Paginação */}
                   <Select
                     value={pageSize.toString()}
                     onValueChange={(value) => {
                       setPageSize(Number(value));
-                      setPage(0); // Reset para primeira página
+                      setPage(0);
                     }}
                   >
-                    <SelectTrigger className="w-[120px]">
+                    <SelectTrigger className="w-[90px] h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="50">50</SelectItem>
                       <SelectItem value="100">100</SelectItem>
                       <SelectItem value="150">150</SelectItem>
-                      <SelectItem value="9999">Mostrar Todos</SelectItem>
+                      <SelectItem value="9999">Todos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1495,7 +1525,7 @@ export default function CompaniesManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {companies.map((company) => (
+                  {paginatedCompanies.map((company) => (
                     <TableRow key={company.id}>
                       <TableCell>
                         <Checkbox
