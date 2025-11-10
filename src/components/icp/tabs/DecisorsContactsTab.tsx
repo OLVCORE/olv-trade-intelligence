@@ -56,16 +56,29 @@ export function DecisorsContactsTab({
   // 🔥 BUSCAR DECISORES JÁ SALVOS (de enrichment em massa)
   useEffect(() => {
     const loadExistingDecisors = async () => {
-      if (!companyId) return;
+      if (!companyId) {
+        console.log('[DECISORES-TAB] ⚠️ companyId está vazio, não vai carregar dados');
+        return;
+      }
       
       console.log('[DECISORES-TAB] 🔄 Carregando dados para companyId:', companyId);
       
       // 1️⃣ Buscar dados da empresa (Apollo Organization - FONTE DOS CAMPOS!)
-      const { data: companyData } = await supabase
+      const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .select('raw_data, industry, name')
         .eq('id', companyId)
         .single();
+      
+      if (companyError) {
+        console.error('[DECISORES-TAB] ❌ Erro ao buscar empresa:', companyError);
+        return;
+      }
+      
+      if (!companyData) {
+        console.error('[DECISORES-TAB] ❌ Company data está null/undefined');
+        return;
+      }
       
       console.log('[DECISORES-TAB] 🏢 Company raw_data:', companyData?.raw_data);
       console.log('[DECISORES-TAB] 🏢 Apollo Organization:', companyData?.raw_data?.apollo_organization);
