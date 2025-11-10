@@ -901,10 +901,8 @@ export default function TOTVSCheckCard({
       {/* 💾 SAVEBAR - HEADER COMPACTO COM SAVE, PDF, HISTÓRICO, PROGRESSO */}
       <SaveBar
         statuses={getStatuses()}
-        onSaveAll={handleGlobalSave}
-        onApprove={async () => {
-          toast.info('Função de aprovação disponível na modal de quarentena');
-        }}
+        onSaveAll={handleSalvarNoSistema}
+        onApprove={handleApproveAndMoveToPool}
         onExportPdf={() => {
           toast.info('Exportação PDF em desenvolvimento');
         }}
