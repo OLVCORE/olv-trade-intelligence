@@ -393,11 +393,15 @@ export default function CompanyDetailPage() {
   const decisors = (company as any)?.decision_makers || [];
   
   console.log('[CompanyDetail] 🏢 receitaData:', receitaData ? 'EXISTE' : 'NULL');
-  console.log('[CompanyDetail] 📋 Campos Receita:', receitaData ? Object.keys(receitaData).slice(0, 20) : 'nenhum');
+  console.log('[CompanyDetail] 📋 Campos Receita:', receitaData ? Object.keys(receitaData) : 'nenhum');
   console.log('[CompanyDetail] 📊 Decisores carregados:', decisors.length);
-  console.log('[CompanyDetail] 📋 Primeiro decisor:', decisors[0]);
-  console.log('[CompanyDetail] 🏢 QSA (Sócios):', receitaData?.qsa ? `${receitaData.qsa.length} sócios` : 'NULL');
-  console.log('[CompanyDetail] 💼 CNAE Principal:', receitaData?.atividade_principal?.[0]?.text || 'NULL');
+  console.log('[CompanyDetail] 📋 Todos decisores:', decisors);
+  console.log('[CompanyDetail] 🏢 QSA (Sócios):', receitaData?.qsa || 'NULL');
+  console.log('[CompanyDetail] 💼 CNAE:', {
+    principal: receitaData?.atividade_principal,
+    codigo: receitaData?.atividade_principal?.[0]?.code,
+    texto: receitaData?.atividade_principal?.[0]?.text
+  });
   const digitalPresence = (company as any)?.digital_presence;
   const rawData = (company as any)?.raw_data || {};
   const situacaoReceita: string | undefined = receitaData?.situacao;
