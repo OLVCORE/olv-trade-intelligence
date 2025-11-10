@@ -50,7 +50,9 @@ const SEGMENT_PRIORITIES = {
   'Saúde': { primary: ['RM', 'Fluig ECM', 'TOTVS Cloud'], relevant: ['TOTVS BI', 'TOTVS Chatbot'] },
   'Tecnologia': { primary: ['Protheus', 'TOTVS CRM', 'RD Station'], relevant: ['Fluig BPM', 'TOTVS iPaaS', 'Carol AI'] },
   'Construção': { primary: ['Datasul', 'Fluig BPM'], relevant: ['TOTVS BI', 'TOTVS Assinatura Eletrônica'] },
-  'Agronegócio': { primary: ['Datasul', 'TOTVS BI'], relevant: ['Carol AI', 'TOTVS Cloud'] }
+  'Agronegócio': { primary: ['Datasul', 'TOTVS BI'], relevant: ['Carol AI', 'TOTVS Cloud'] },
+  'Sustentabilidade': { primary: ['Protheus', 'Fluig BPM', 'TOTVS BI'], relevant: ['TOTVS Cloud', 'Fluig ECM', 'TOTVS iPaaS'] },
+  'Reciclagem': { primary: ['Protheus', 'Fluig BPM', 'TOTVS BI'], relevant: ['TOTVS Cloud', 'Fluig ECM', 'TOTVS iPaaS'] }
 };
 
 serve(async (req) => {
@@ -85,6 +87,7 @@ serve(async (req) => {
 
     console.log('[PRODUCT-GAPS] ✨ EVOLUÇÃO v2.0: Produtos & Oportunidades');
     console.log('[PRODUCT-GAPS] 📊 Empresa:', companyName);
+    console.log('[PRODUCT-GAPS] 🏢 Setor:', sector, '| CNAE:', cnae, '| Funcionários:', employees);
     console.log('[PRODUCT-GAPS] 📦 Produtos detectados:', detectedProducts.length);
     console.log('[PRODUCT-GAPS] 🔍 Evidências:', detectedEvidences.length);
 
@@ -111,17 +114,44 @@ serve(async (req) => {
     console.log('[PRODUCT-GAPS] ✅ Produtos em uso:', productsInUse.length);
 
     // ==================================================================
-    // ETAPA 2: IDENTIFICAR SEGMENTO E BUSCAR MATRIZ
+    // ETAPA 2: IDENTIFICAR SEGMENTO E BUSCAR MATRIZ (INTELIGENTE)
     // ==================================================================
-    const normalizedSector = (sector || 'Serviços').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const segmentKey = Object.keys(SEGMENT_PRIORITIES).find(key =>
-      normalizedSector.toLowerCase().includes(key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
-    ) || 'Serviços';
+    
+    // Identificação inteligente baseada em CNAE + Setor
+    let segmentKey = 'Serviços'; // Fallback
+    
+    // Primeiro: Tentar identificar por CNAE específico
+    if (cnae) {
+      const cnaePrefix = cnae.replace(/[^\d]/g, '').substring(0, 2);
+      
+      // CNAEs específicos
+      if (cnaePrefix === '38') segmentKey = 'Sustentabilidade'; // 38 = Gestão de resíduos
+      else if (cnaePrefix === '01' || cnaePrefix === '02') segmentKey = 'Agronegócio'; // 01/02 = Agricultura/Pecuária
+      else if (cnaePrefix === '85') segmentKey = 'Educação'; // 85 = Educação
+      else if (cnaePrefix === '86') segmentKey = 'Saúde'; // 86 = Saúde
+      else if (cnaePrefix === '62' || cnaePrefix === '63') segmentKey = 'Tecnologia'; // 62/63 = TI
+      else if (cnaePrefix === '41' || cnaePrefix === '42' || cnaePrefix === '43') segmentKey = 'Construção'; // 41-43 = Construção
+      else if (cnaePrefix === '47') segmentKey = 'Varejo'; // 47 = Comércio varejista
+      else if (['10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33'].includes(cnaePrefix)) {
+        segmentKey = 'Indústria'; // 10-33 = Indústria de transformação
+      }
+    }
+    
+    // Segundo: Se não identificou por CNAE, usar setor
+    if (segmentKey === 'Serviços' && sector) {
+      const normalizedSector = sector.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      
+      const foundKey = Object.keys(SEGMENT_PRIORITIES).find(key =>
+        normalizedSector.includes(key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+      );
+      
+      if (foundKey) segmentKey = foundKey;
+    }
 
     const segmentMatrix = SEGMENT_PRIORITIES[segmentKey as keyof typeof SEGMENT_PRIORITIES] || 
                           SEGMENT_PRIORITIES['Serviços'];
 
-    console.log('[PRODUCT-GAPS] 🎯 Segmento:', segmentKey);
+    console.log('[PRODUCT-GAPS] 🎯 Segmento identificado:', segmentKey, '(CNAE:', cnae, '| Setor:', sector, ')');
 
     // ==================================================================
     // ETAPA 3: GAP ANALYSIS - OPORTUNIDADES PRIMÁRIAS E RELEVANTES
@@ -141,25 +171,41 @@ serve(async (req) => {
     // ETAPA 4: GERAR RECOMENDAÇÕES DETALHADAS COM IA
     // ==================================================================
     const competitorInfo = competitors.length > 0 ? 
-      `\nCONCORRENTES: ${competitors.map(c => c.name).join(', ')}` : '';
+      `\nCONCORRENTES DETECTADOS: ${competitors.map((c: any) => c.name).join(', ')}` : '';
 
-    const aiPrompt = `Você é especialista em produtos TOTVS e vendas B2B.
+    // 🎯 PROMPT EVOLUÍDO: Funciona mesmo SEM produtos detectados
+    const aiPrompt = `Você é consultor sênior de vendas TOTVS especializado no mercado brasileiro.
 
 EMPRESA: ${companyName}
-SETOR: ${sector || 'não especificado'}
-PORTE: ${size || 'médio'} (${employees || '?'} funcionários)
-CNAE: ${cnae || 'não especificado'}${competitorInfo}
-ESTRATÉGIA: ${strategy === 'cross-sell' ? 'CROSS-SELL (já é cliente TOTVS)' : 'NEW SALE (prospect)'}
+CNAE: ${cnae || 'não especificado'}
+SETOR: ${sector || segmentKey}
+PORTE: ${size || 'médio'} (${employees || '100'} funcionários)
+STATUS: ${strategy === 'cross-sell' ? '✅ JÁ É CLIENTE TOTVS' : '🎯 PROSPECT (NÃO É CLIENTE)'}${competitorInfo}
 
-PRODUTOS JÁ EM USO: ${detectedProducts.length > 0 ? detectedProducts.join(', ') : 'Nenhum'}
+${detectedProducts.length > 0 ? `
+PRODUTOS TOTVS JÁ EM USO:
+${detectedProducts.join(', ')}
 
-OPORTUNIDADES PRIMÁRIAS (nucleares, alta prioridade):
-${primaryGaps.slice(0, 3).join(', ') || 'Nenhuma'}
+OBJETIVO: Recomendar produtos COMPLEMENTARES para CROSS-SELL/UP-SELL.
+` : `
+SITUAÇÃO: Empresa NÃO é cliente TOTVS ainda.
 
-OPORTUNIDADES RELEVANTES (complementares, média prioridade):
-${relevantGaps.slice(0, 3).join(', ') || 'Nenhuma'}
+OBJETIVO: Recomendar STACK INICIAL de produtos TOTVS baseado em:
+- CNAE real da empresa
+- Setor de atuação
+- Porte e número de funcionários
+- Best practices do segmento ${segmentKey}
 
-TAREFA: Gere recomendações COMPLETAS para os produtos acima.
+IMPORTANTE: Use o CNAE para entender a atividade REAL da empresa e recomendar produtos específicos!
+`}
+
+PRODUTOS DISPONÍVEIS POR SEGMENTO ${segmentKey}:
+PRIMÁRIOS (nucleares): ${segmentMatrix.primary.join(', ')}
+RELEVANTES (complementares): ${segmentMatrix.relevant.join(', ')}
+
+TAREFA: Gere recomendações ESTRATÉGICAS e ESPECÍFICAS para esta empresa.
+Use o CNAE para personalizar use cases REAIS do setor dela.
+Cite cases de sucesso REAIS de empresas similares quando possível.
 
 Responda APENAS JSON válido:
 {

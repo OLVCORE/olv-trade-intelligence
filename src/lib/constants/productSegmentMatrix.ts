@@ -622,6 +622,82 @@ export const PRODUCT_SEGMENT_MATRIX: Record<string, SegmentMatrix> = {
   },
 
   // ========================================
+  // SUSTENTABILIDADE / RECICLAGEM
+  // ========================================
+  'Sustentabilidade': {
+    segment: 'Sustentabilidade',
+    primary: [
+      {
+        name: 'Protheus',
+        category: 'ERP',
+        priority: 'primary',
+        useCase: 'Gestão de recebimento de materiais recicláveis, rastreabilidade de lotes, controle de estoque por tipo de material',
+        estimatedROI: '12-18 meses',
+        typicalARR: 'R$ 250K-600K',
+        implementationTime: '6-12 meses'
+      },
+      {
+        name: 'Fluig BPM',
+        category: 'Fluig',
+        priority: 'primary',
+        useCase: 'Automação de logística reversa, workflow de aprovações, rastreabilidade de embalagens e resíduos',
+        estimatedROI: '9-15 meses',
+        typicalARR: 'R$ 100K-280K',
+        implementationTime: '4-8 meses'
+      },
+      {
+        name: 'TOTVS BI',
+        category: 'Analytics',
+        priority: 'primary',
+        useCase: 'Dashboards de volumes reciclados, indicadores ESG, compliance ambiental, rastreabilidade de materiais',
+        estimatedROI: '12-18 meses',
+        typicalARR: 'R$ 80K-200K',
+        implementationTime: '3-6 meses'
+      }
+    ],
+    relevant: [
+      {
+        name: 'TOTVS Cloud',
+        category: 'Cloud',
+        priority: 'relevant',
+        useCase: 'Infraestrutura segura para dados de rastreabilidade e compliance ISO 14001/ISO 9001',
+        estimatedROI: '18-24 meses',
+        typicalARR: 'R$ 60K-150K',
+        implementationTime: '2-4 meses'
+      },
+      {
+        name: 'Fluig ECM',
+        category: 'Fluig',
+        priority: 'relevant',
+        useCase: 'Gestão documental de certificados ambientais, licenças, auditorias',
+        estimatedROI: '12-18 meses',
+        typicalARR: 'R$ 70K-180K',
+        implementationTime: '3-6 meses'
+      },
+      {
+        name: 'TOTVS iPaaS',
+        category: 'iPaaS',
+        priority: 'relevant',
+        useCase: 'Integração com sistemas de parceiros da cadeia de reciclagem',
+        estimatedROI: '15-24 meses',
+        typicalARR: 'R$ 50K-120K',
+        implementationTime: '3-6 meses'
+      }
+    ],
+    future: [
+      {
+        name: 'Carol AI',
+        category: 'IA',
+        priority: 'future',
+        useCase: 'Predição de volumes de recicláveis, otimização de rotas de coleta',
+        estimatedROI: '18-30 meses',
+        typicalARR: 'R$ 120K-300K',
+        implementationTime: '9-15 meses'
+      }
+    ]
+  },
+
+  // ========================================
   // FALLBACK (OUTROS SEGMENTOS)
   // ========================================
   'Outros': {
