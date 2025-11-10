@@ -14,6 +14,9 @@ interface EnrichApolloRequest {
   apollo_org_id?: string; // NOVO: Apollo Organization ID manual
   positions?: string[]; // optional: custom positions list
   modes?: string[]; // ['people', 'company']
+  city?: string; // 🎯 FILTRO INTELIGENTE: cidade da empresa
+  state?: string; // 🎯 FILTRO INTELIGENTE: estado da empresa
+  industry?: string; // 🎯 FILTRO INTELIGENTE: setor/CNAE
 }
 
 // Classificar poder de decisão baseado no título
@@ -83,7 +86,9 @@ serve(async (req) => {
     console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado');
     const companyId = body.company_id || body.companyId;
     const companyName = body.company_name || body.companyName;
-    const { domain, positions, apollo_org_id } = body;
+    const { domain, positions, apollo_org_id, city, state, industry } = body;
+    
+    console.log('[ENRICH-APOLLO] 🎯 Filtros inteligentes:', { city, state, industry });
 
     console.log('[ENRICH-APOLLO-DECISORES] Buscando decisores para:', companyName);
     console.log('[ENRICH-APOLLO-DECISORES] Apollo Org ID fornecido:', apollo_org_id || 'N/A');
@@ -135,23 +140,55 @@ serve(async (req) => {
           if (orgData.organizations && orgData.organizations.length > 0) {
             console.log('[ENRICH-APOLLO-DECISORES] 🔍 Encontradas', orgData.organizations.length, 'empresas com nome', name);
             
-            // 🎯 FILTRO INTELIGENTE: Priorizar empresa do BRASIL
-            const brazilOrg = orgData.organizations.find((org: any) => 
-              org.country === 'Brazil' || 
-              org.country === 'Brasil' ||
-              org.primary_domain?.includes('.br') ||
-              org.website_url?.includes('.br')
-            );
+            // 🎯 FILTRO INTELIGENTE: Priorizar por Brasil → Cidade → Estado
+            let selectedOrg = null;
+            let criterio = '';
             
-            const selectedOrg = brazilOrg || orgData.organizations[0];
+            // 1️⃣ MELHOR: Mesma cidade + Brasil
+            if (city) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                (org.country === 'Brazil' || org.country === 'Brasil') &&
+                org.city?.toLowerCase().includes(city.toLowerCase())
+              );
+              if (selectedOrg) criterio = `Cidade ${city} + Brasil (PERFEITO)`;
+            }
+            
+            // 2️⃣ BOM: Mesmo estado + Brasil
+            if (!selectedOrg && state) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                (org.country === 'Brazil' || org.country === 'Brasil') &&
+                org.state?.toLowerCase().includes(state.toLowerCase())
+              );
+              if (selectedOrg) criterio = `Estado ${state} + Brasil (BOM)`;
+            }
+            
+            // 3️⃣ OK: Qualquer do Brasil
+            if (!selectedOrg) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                org.country === 'Brazil' || 
+                org.country === 'Brasil' ||
+                org.primary_domain?.includes('.br') ||
+                org.website_url?.includes('.br')
+              );
+              if (selectedOrg) criterio = 'Brasil genérico (OK)';
+            }
+            
+            // 4️⃣ FALLBACK: Primeira da lista
+            if (!selectedOrg) {
+              selectedOrg = orgData.organizations[0];
+              criterio = 'Primeira da lista (FALLBACK - pode estar errado!)';
+            }
+            
             organizationId = selectedOrg.id;
             
             console.log('[ENRICH-APOLLO-DECISORES] ✅ Organização selecionada:', {
               id: organizationId,
               nome: selectedOrg.name,
               country: selectedOrg.country,
+              city: selectedOrg.city,
+              state: selectedOrg.state,
               employees: selectedOrg.estimated_num_employees,
-              criterio: brazilOrg ? 'Brasil (filtrado)' : 'Primeira (fallback)'
+              criterio
             });
             break;
           }

@@ -268,14 +268,17 @@ export default function CompanyDetailPage() {
           .eq('id', id);
       }
       
-      // Usar função simplificada enrich-apollo-decisores
+      // Usar função simplificada enrich-apollo-decisores COM FILTROS INTELIGENTES
       const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
           company_id: id,
           company_name: company.name,
           domain: company.domain || company.website,
           apollo_org_id: apolloOrgId || company.apollo_organization_id,
-          modes: ['people', 'company']
+          modes: ['people', 'company'],
+          city: receitaData?.municipio || company.city,
+          state: receitaData?.uf || company.state,
+          industry: company.industry
         }
       });
       
@@ -328,7 +331,10 @@ export default function CompanyDetailPage() {
           company_name: searchName,
           domain: cleanedDomain,
           modes: ['people', 'company'],
-          positions: ['CEO','CTO','CFO','Diretor','Gerente','VP']
+          positions: ['CEO','CTO','CFO','Diretor','Gerente','VP'],
+          city: receitaData?.municipio || company.city,
+          state: receitaData?.uf || company.state,
+          industry: company.industry
         }
       });
       

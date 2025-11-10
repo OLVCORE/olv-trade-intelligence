@@ -256,7 +256,10 @@ export async function performFullLinkedInAnalysis(
   companyName: string,
   linkedinCompanyUrl?: string,
   companyDomain?: string,
-  companyId?: string // 🔥 NOVO: company_id para salvar no banco
+  companyId?: string, // 🔥 NOVO: company_id para salvar no banco
+  city?: string, // 🎯 FILTRO INTELIGENTE
+  state?: string, // 🎯 FILTRO INTELIGENTE
+  industry?: string // 🎯 FILTRO INTELIGENTE
 ): Promise<{
   companyData: LinkedInCompanyEnhanced | null;
   decisors: any[];
@@ -264,7 +267,7 @@ export async function performFullLinkedInAnalysis(
   insights: string[];
 }> {
   console.log('[Apollo+Phantom] 🔥 Extração híbrida:', companyName, '| companyId:', companyId);
-  console.log('[Apollo+Phantom] 🔍 Params recebidos:', { companyName, companyId, linkedinCompanyUrl, companyDomain });
+  console.log('[Apollo+Phantom] 🔍 Params recebidos:', { companyName, companyId, linkedinCompanyUrl, companyDomain, city, state, industry });
 
   const insights: string[] = [];
   
@@ -278,7 +281,10 @@ export async function performFullLinkedInAnalysis(
     companyName, // backward compatibility
     domain: companyDomain,
     modes: ['people', 'company'],
-    positions: ['CEO','CFO','CIO','CTO','COO','Diretor','Gerente','VP','Head','Presidente','Sócio','Coordenador']
+    positions: ['CEO','CFO','CIO','CTO','COO','Diretor','Gerente','VP','Head','Presidente','Sócio','Coordenador'],
+    city, // 🎯 FILTRO INTELIGENTE
+    state, // 🎯 FILTRO INTELIGENTE
+    industry // 🎯 FILTRO INTELIGENTE
   };
   
   console.log('[Apollo+Phantom] 📦 Request body:', JSON.stringify(requestBody, null, 2));

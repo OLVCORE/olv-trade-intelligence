@@ -295,13 +295,16 @@ export default function ICPQuarantine() {
         throw new Error('company_id não encontrado');
       }
 
-      // 🔥 EDGE FUNCTION Apollo com auth de usuário
+      // 🔥 EDGE FUNCTION Apollo com FILTROS INTELIGENTES
       const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
           company_id: targetCompanyId,
           company_name: analysis.company_name || analysis.name,
           domain: analysis.website || analysis.domain,
-          modes: ['people', 'company']
+          modes: ['people', 'company'],
+          city: analysis.city || analysis.municipio,
+          state: analysis.state || analysis.uf,
+          industry: analysis.industry || analysis.setor
         }
       });
       

@@ -732,13 +732,16 @@ export default function CompaniesManagementPage() {
             throw new Error('Domínio inválido');
           }
 
-          // 🔥 EDGE FUNCTION Apollo com auth de usuário
+          // 🔥 EDGE FUNCTION Apollo com FILTROS INTELIGENTES
           const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: { 
               company_id: company.id,
               company_name: company.company_name || company.name,
               domain: domain,
-              modes: ['people', 'company']
+              modes: ['people', 'company'],
+              city: (company as any).raw_data?.receita_federal?.municipio || (company as any).city,
+              state: (company as any).raw_data?.receita_federal?.uf || (company as any).state,
+              industry: company.industry
             }
           });
           
