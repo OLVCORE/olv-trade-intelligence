@@ -784,10 +784,10 @@ export default function TOTVSCheckCard({
     dgroupEnd();
   }
 
+  console.log('[TOTVS-CARD] 🏢 Renderizando TOTVSCheckCard:', { companyName, cnpj, domain, stcHistoryId });
+
   return (
     <Card className="p-6">
-      {/* SaveBar REMOVIDA - Botões no header */}
-
       {/* 🔒 AVISO DE MODO READ-ONLY */}
       {readOnly && snapshot && (
         <div className="mt-6 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-500 dark:border-blue-600 rounded-xl">
