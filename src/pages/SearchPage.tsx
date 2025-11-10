@@ -694,6 +694,12 @@ export default function SearchPage() {
       });
       
       // 2. Salvar empresa no funil de vendas
+      console.log('[SEARCH] 💾 Salvando empresa:', {
+        company_name: previewData.company.name,
+        cnpj: previewData.company.cnpj,
+        decision_makers_count: previewData.decision_makers?.length || 0
+      });
+      
       const { data, error } = await supabase.functions.invoke('save-company', {
         body: {
           company: previewData.company,
@@ -702,7 +708,12 @@ export default function SearchPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[SEARCH] ❌ Erro ao salvar:', error);
+        throw error;
+      }
+      
+      console.log('[SEARCH] ✅ Empresa salva:', data);
 
       setResult(data);
       setShowPreview(false);
