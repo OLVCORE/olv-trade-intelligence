@@ -120,14 +120,18 @@ export function HeaderActionsMenu({
             Buscar Empresas
           </DropdownMenuItem>
 
+          {/* ✅ BUSCAR POR SÓCIOS - Descobrir empresas via proprietários */}
           {onPartnerSearch && (
             <DropdownMenuItem 
               onClick={onPartnerSearch}
               disabled={isEnriching}
               className="transition-all duration-200 cursor-pointer hover:bg-accent hover:shadow-md hover:border-l-2 hover:border-primary"
             >
-              <Users className="h-4 w-4 mr-2" />
-              Buscar por Sócios
+              <Users className="h-4 w-4 mr-2 text-purple-600" />
+              <div className="flex flex-col">
+                <span>Buscar por Sócios</span>
+                <span className="text-[10px] text-muted-foreground">Descobrir empresas via proprietários</span>
+              </div>
             </DropdownMenuItem>
           )}
         </DropdownMenuGroup>
