@@ -57,15 +57,28 @@ export function DecisorsContactsTab({
     const loadExistingDecisors = async () => {
       if (!companyId) return;
       
-      // 1️⃣ Buscar dados da empresa (Apollo Organization)
+      // 1️⃣ Buscar dados da empresa (Apollo Organization - FONTE DOS CAMPOS!)
       const { data: companyData } = await supabase
         .from('companies')
-        .select('raw_data, industry')
+        .select('raw_data, industry, name')
         .eq('id', companyId)
         .single();
       
       console.log('[DECISORES-TAB] 🏢 Company raw_data:', companyData?.raw_data);
       console.log('[DECISORES-TAB] 🏢 Apollo Organization:', companyData?.raw_data?.apollo_organization);
+      console.log('[DECISORES-TAB] 🏢 Enriched Apollo:', companyData?.raw_data?.enriched_apollo);
+      
+      // Normalizar dados da empresa (Apollo Organization)
+      const companyApolloData = companyData?.raw_data?.apollo_organization || 
+                                companyData?.raw_data?.enriched_apollo || 
+                                {};
+      
+      console.log('[DECISORES-TAB] 🏢 Company Apollo Data extraído:', {
+        name: companyApolloData?.name || companyData?.name,
+        employees: companyApolloData?.estimated_num_employees,
+        industry: companyApolloData?.industry,
+        keywords: companyApolloData?.keywords
+      });
       
       // 2️⃣ Buscar decisores salvos na tabela decision_makers
       const { data: existingDecisors } = await supabase
@@ -215,9 +228,9 @@ export function DecisorsContactsTab({
         const formattedDecisors = existingDecisors.map(d => {
           console.log('[DECISORES-TAB] 🔍 raw_data para', d.full_name || d.name, ':', d.raw_data);
           
-          // Normalizar dados Apollo
+          // Normalizar dados Apollo do DECISOR
           const apolloNormalized = normalizeApolloData(d.raw_data);
-          console.log('[DECISORES-TAB] 📦 Apollo normalizado:', apolloNormalized);
+          console.log('[DECISORES-TAB] 📦 Apollo normalizado (decisor):', apolloNormalized);
           
           return {
             name: d.full_name || d.name,
@@ -235,14 +248,24 @@ export function DecisorsContactsTab({
             country: d.country || 'Brazil',
             photo_url: d.photo_url,
             headline: d.headline,
-            // 🔥 CAMPOS APOLLO NORMALIZADOS (fallback hierarchy)
+            // 🔥 CAMPOS APOLLO: PRIORIDADE 1 = Company, PRIORIDADE 2 = Decisor raw_data
             apollo_score: apolloNormalized.apollo_score || d.apollo_score,
-            organization_name: apolloNormalized.organization_name || d.organization_name,
-            organization_employees: apolloNormalized.organization_employees || d.organization_employees,
-            organization_industry: apolloNormalized.organization_industry || d.organization_industry,
-            organization_keywords: Array.isArray(apolloNormalized.organization_keywords) && apolloNormalized.organization_keywords.length > 0
-              ? apolloNormalized.organization_keywords 
-              : (d.organization_keywords || []),
+            organization_name: companyApolloData?.name || 
+                              apolloNormalized.organization_name || 
+                              d.organization_name ||
+                              companyData?.name,
+            organization_employees: companyApolloData?.estimated_num_employees || 
+                                   apolloNormalized.organization_employees || 
+                                   d.organization_employees,
+            organization_industry: companyApolloData?.industry || 
+                                  apolloNormalized.organization_industry || 
+                                  d.organization_industry ||
+                                  companyData?.industry,
+            organization_keywords: (companyApolloData?.keywords && companyApolloData.keywords.length > 0)
+              ? companyApolloData.keywords
+              : (Array.isArray(apolloNormalized.organization_keywords) && apolloNormalized.organization_keywords.length > 0)
+                ? apolloNormalized.organization_keywords 
+                : (d.organization_keywords || []),
             phone_numbers: Array.isArray(apolloNormalized.phone_numbers) && apolloNormalized.phone_numbers.length > 0
               ? apolloNormalized.phone_numbers 
               : (d.phone_numbers || []),
@@ -256,6 +279,15 @@ export function DecisorsContactsTab({
           decisors: formattedDecisors,
           decisorsWithEmails: formattedDecisors, // 🔥 SEMPRE mostrar todos (mesmo sem email)
           insights: [`${existingDecisors.length} decisores já identificados por enrichment anterior`],
+          // 🏢 Adicionar dados da empresa para exibir no resumo
+          companyApolloOrg: {
+            name: companyApolloData?.name || companyData?.name,
+            employees: companyApolloData?.estimated_num_employees,
+            industry: companyApolloData?.industry || companyData?.industry,
+            keywords: companyApolloData?.keywords || [],
+            city: formattedDecisors[0]?.city,
+            country: formattedDecisors[0]?.country
+          },
           companyData: { 
             source: 'database',
             followers: 0,
@@ -774,47 +806,46 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* 🏢 RESUMO DA EMPRESA (do 1º Decisor Apollo) - TEMA ESCURO */}
-          {analysisData?.decisorsWithEmails?.length > 0 && (
-            <Card className="p-6 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
+          {/* 🏢 RESUMO DA EMPRESA (Apollo Organization) - TEMA ESCURO PREMIUM */}
+          {analysisData?.companyApolloOrg && (
+            <Card className="p-6 bg-gradient-to-br from-blue-900/40 to-slate-900 border-2 border-blue-500/30">
               <div className="flex items-start gap-4 mb-4">
-                <div className="p-3 rounded-full bg-blue-500/20">
+                <div className="p-3 rounded-full bg-blue-500/20 border border-blue-500/30">
                   <Building2 className="w-8 h-8 text-blue-400" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold text-white mb-1">
-                    {analysisData?.decisorsWithEmails?.[0]?.organization_name || companyName}
+                    {analysisData.companyApolloOrg.name || companyName}
                   </h3>
-                  {analysisData?.decisorsWithEmails?.[0]?.organization_industry && (
-                    <p className="text-sm text-emerald-400 mb-2">
-                      {analysisData.decisorsWithEmails[0].organization_industry}
+                  {analysisData.companyApolloOrg.industry && (
+                    <p className="text-sm text-emerald-400 font-medium mb-2">
+                      {analysisData.companyApolloOrg.industry}
                     </p>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-slate-400">
-                    {analysisData?.decisorsWithEmails?.[0]?.city && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {analysisData.decisorsWithEmails[0].city}, {analysisData.decisorsWithEmails[0].country || 'Brazil'}
+                  <div className="flex items-center gap-4 text-sm text-slate-300">
+                    {analysisData.companyApolloOrg.city && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-blue-400" />
+                        {analysisData.companyApolloOrg.city}, {analysisData.companyApolloOrg.country || 'Brazil'}
                       </span>
                     )}
-                    {analysisData?.decisorsWithEmails?.[0]?.organization_employees && (
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {analysisData.decisorsWithEmails[0].organization_employees} funcionários
+                    {analysisData.companyApolloOrg.employees && (
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-emerald-400" />
+                        <strong>{analysisData.companyApolloOrg.employees}</strong> funcionários
                       </span>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Keywords / Industries */}
-              {analysisData?.decisorsWithEmails?.[0]?.organization_keywords && 
-               analysisData.decisorsWithEmails[0].organization_keywords.length > 0 && (
+              {/* Keywords Apollo */}
+              {analysisData.companyApolloOrg.keywords && analysisData.companyApolloOrg.keywords.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-slate-700">
-                  <span className="text-xs font-medium text-slate-400 mb-2 block">Keywords:</span>
+                  <span className="text-xs font-semibold text-slate-300 mb-2 block uppercase tracking-wide">Company Keywords:</span>
                   <div className="flex flex-wrap gap-2">
-                    {analysisData.decisorsWithEmails[0].organization_keywords.map((kw: string, idx: number) => (
-                      <Badge key={idx} variant="secondary" className="text-xs bg-slate-700 text-slate-300">
+                    {analysisData.companyApolloOrg.keywords.map((kw: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="text-xs bg-blue-600/20 text-blue-300 border border-blue-500/30">
                         {kw}
                       </Badge>
                     ))}
