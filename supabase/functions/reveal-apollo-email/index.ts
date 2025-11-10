@@ -68,11 +68,22 @@ serve(async (req) => {
 
         if (apolloResponse.ok) {
           const apolloData = await apolloResponse.json();
-          if (apolloData.person?.email && !apolloData.person.email.includes('email_not_unlocked')) {
-            revealedEmail = apolloData.person.email;
-            revealedPhone = apolloData.person.phone_numbers?.[0]?.sanitized_number || decisor.phone;
+          
+          // 🔍 VALIDAR se dados existem e são reais
+          const hasValidEmail = apolloData.person?.email && 
+                               !apolloData.person.email.includes('email_not_unlocked') &&
+                               !apolloData.person.email.includes('@domain.com') &&
+                               apolloData.person.email.includes('@');
+          
+          const hasValidPhone = apolloData.person?.phone_numbers?.[0]?.sanitized_number;
+          
+          if (hasValidEmail || hasValidPhone) {
+            revealedEmail = hasValidEmail ? apolloData.person.email : null;
+            revealedPhone = hasValidPhone ? apolloData.person.phone_numbers[0].sanitized_number : decisor.phone;
             source = 'apollo_reveal';
-            console.log('[REVEAL-EMAIL] ✅ Apollo revelou email:', revealedEmail);
+            console.log('[REVEAL-EMAIL] ✅ Apollo revelou:', { email: revealedEmail, phone: revealedPhone });
+          } else {
+            console.warn('[REVEAL-EMAIL] ⚠️ Apollo não tem dados válidos (email_not_unlocked ou vazio)');
           }
         } else {
           console.warn('[REVEAL-EMAIL] ⚠️ Apollo Reveal falhou:', apolloResponse.status);

@@ -1455,27 +1455,26 @@ export default function CompanyDetailPage() {
                           </p>
                         </div>
                         
-                        {/* 💎 BOTÃO VIP LUSHA (apenas C-Level) */}
-                        {isVIPDecisor(dec.title || dec.position, dec.seniority_level) && (
-                          <div className="mb-2 p-2 bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded border border-amber-600/50">
-                            <p className="text-xs text-amber-400 flex items-center gap-1.5">
-                              <span className="flex-1">💎 Mobile pessoal (VIP)</span>
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-5 px-2 text-[10px] text-amber-400 hover:text-amber-300 disabled:opacity-50"
-                                onClick={() => handleRevealPersonalContact(dec)}
-                                disabled={revealingContacts.has(dec.id)}
-                              >
-                                {revealingContacts.has(dec.id) ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  'Revelar (~3 💰)'
-                                )}
-                              </Button>
-                            </p>
-                          </div>
-                        )}
+                        {/* 💎 BOTÃO LUSHA (Para TODOS, não só C-Level) */}
+                        <div className="mb-2 p-2 bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded border border-amber-600/50">
+                          <p className="text-xs text-amber-400 flex items-center gap-1.5">
+                            <span className="flex-1">💎 Mobile pessoal (Lusha)</span>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-5 px-2 text-[10px] text-amber-400 hover:text-amber-300 disabled:opacity-50"
+                              onClick={() => handleRevealPersonalContact(dec)}
+                              disabled={revealingContacts.has(dec.id)}
+                              title="Revelar mobile pessoal via Lusha (se disponível)"
+                            >
+                              {revealingContacts.has(dec.id) ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                'Revelar (~3 💰)'
+                              )}
+                            </Button>
+                          </p>
+                        </div>
                         
                         {/* LinkedIn */}
                         {dec.linkedin_url && (

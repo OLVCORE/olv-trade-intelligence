@@ -98,16 +98,25 @@ serve(async (req) => {
     const lushaData = await lushaResponse.json();
     console.log('[REVEAL-LUSHA] ✅ Resposta Lusha:', JSON.stringify(lushaData, null, 2));
     
-    // Extrair dados relevantes
-    const mobilePhone = lushaData.phoneNumbers?.find((p: any) => p.type === 'mobile')?.number;
-    const personalEmail = lushaData.emailAddresses?.find((e: any) => !e.type?.includes('work'))?.address;
+    // 🔍 VALIDAR se dados existem e são reais
+    const phoneNumbers = lushaData.phoneNumbers || [];
+    const emailAddresses = lushaData.emailAddresses || [];
     
-    if (!mobilePhone && !personalEmail) {
-      console.warn('[REVEAL-LUSHA] ⚠️ Nenhum contato pessoal encontrado');
+    // Extrair dados relevantes
+    const mobilePhone = phoneNumbers.find((p: any) => p.type === 'mobile' && p.number)?.number;
+    const personalEmail = emailAddresses.find((e: any) => !e.type?.includes('work') && e.address)?.address;
+    
+    // ✅ Verificar se é verificado/disponível
+    const hasValidMobile = mobilePhone && !mobilePhone.includes('unavailable') && mobilePhone.length > 5;
+    const hasValidEmail = personalEmail && personalEmail.includes('@') && !personalEmail.includes('unavailable');
+    
+    if (!hasValidMobile && !hasValidEmail) {
+      console.warn('[REVEAL-LUSHA] ⚠️ Nenhum contato pessoal VÁLIDO encontrado');
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: 'Nenhum contato pessoal disponível'
+          error: 'Nenhum contato pessoal disponível ou verificado',
+          raw_data: lushaData // Para debug
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
