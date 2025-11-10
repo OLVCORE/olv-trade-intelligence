@@ -112,6 +112,26 @@ export default function DigitalIntelligenceTab({
 }: DigitalIntelligenceTabProps) {
   const [isUrlsExpanded, setIsUrlsExpanded] = useState(false);
   
+  // 🔥 BUSCAR DADOS JÁ EXISTENTES (de enrichment em massa)
+  const { data: existingData } = useQuery({
+    queryKey: ['digital-existing', companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+      const { data } = await supabase
+        .from('companies')
+        .select('raw_data, website')
+        .eq('id', companyId)
+        .single();
+      
+      if (data?.raw_data?.enriched_360) {
+        console.log('[DIGITAL-TAB] ✅ Dados 360° encontrados, carregando...');
+        return data.raw_data.enriched_360;
+      }
+      return null;
+    },
+    enabled: !!companyId
+  });
+  
   // ⚠️ Se é NO-GO (já cliente TOTVS), não faz sentido analisar vendas
   const isExistingClient = stcStatus === 'no-go';
 

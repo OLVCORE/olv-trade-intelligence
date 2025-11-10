@@ -786,16 +786,7 @@ export default function TOTVSCheckCard({
 
   return (
     <Card className="p-6">
-      {/* 🎯 SAVEBAR: Barra fixa de ações críticas (SPEC #005) */}
-      <SaveBar
-        statuses={getStatuses()}
-        onSaveAll={handleSalvarNoSistema}
-        onApprove={handleApproveAndMoveToPool}
-        onExportPdf={undefined} // TODO: Implementar exportação de PDF
-        onShowHistory={() => setShowHistoryModal(true)} // 📜 Abrir modal de histórico
-        readOnly={readOnly}
-        isSaving={isSaving}
-      />
+      {/* SaveBar REMOVIDA - Botões no header */}
 
       {/* 🔒 AVISO DE MODO READ-ONLY */}
       {readOnly && snapshot && (
@@ -908,7 +899,7 @@ export default function TOTVSCheckCard({
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
-        <TabsList className="grid w-full grid-cols-9 mb-6 h-auto bg-muted/30 p-1 rounded-lg">
+        <TabsList className="sticky top-0 z-50 grid w-full grid-cols-9 mb-6 h-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-1 rounded-lg shadow-lg border-b-2 border-primary/20">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
           <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg">
             <Search className="w-4 h-4" />
