@@ -1493,8 +1493,17 @@ export default function TOTVSCheckCard({
         <TabsContent value="products" className="mt-0 flex-1 overflow-hidden">
           <UniversalTabWrapper tabName="Produtos Recomendados">
           <RecommendedProductsTab
+            companyId={companyId}
             companyName={companyName}
+            cnpj={cnpj}
             stcResult={data}
+            similarCompanies={similarCompaniesData}
+            stcHistoryId={stcHistoryId}
+            onDataChange={(productsData) => {
+              if (stcHistoryId) {
+                tabDataRef.current['products'] = productsData;
+              }
+            }}
           />
           </UniversalTabWrapper>
         </TabsContent>

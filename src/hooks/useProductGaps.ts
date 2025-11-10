@@ -10,6 +10,10 @@ interface UseProductGapsParams {
   size?: string;
   employees?: number;
   detectedProducts?: string[];
+  detectedEvidences?: Array<{
+    product: string;
+    sources: Array<{ url: string; title: string; source_name: string }>;
+  }>;
   competitors?: any[];
   similarCompanies?: any[];
   enabled?: boolean;
@@ -24,14 +28,18 @@ export function useProductGaps({
   size,
   employees,
   detectedProducts = [],
+  detectedEvidences = [],
   competitors = [],
   similarCompanies = [],
   enabled = true
 }: UseProductGapsParams) {
   return useQuery({
-    queryKey: ['product-gaps', companyId, companyName, detectedProducts.join(',')],
+    queryKey: ['product-gaps', companyId, companyName, sector, detectedProducts.join(',')],
     queryFn: async () => {
-      console.log('[useProductGaps] Buscando recomendações para:', companyName);
+      console.log('[useProductGaps] 📊 Buscando recomendações para:', companyName);
+      console.log('[useProductGaps] 📦 Setor:', sector, '| CNAE:', cnae, '| Funcionários:', employees);
+      console.log('[useProductGaps] 🔍 Produtos detectados:', detectedProducts.length);
+      console.log('[useProductGaps] 📋 Evidências:', detectedEvidences.length);
 
       const { data, error } = await supabase.functions.invoke('generate-product-gaps', {
         body: {
@@ -43,6 +51,7 @@ export function useProductGaps({
           size,
           employees,
           detectedProducts,
+          detectedEvidences,
           competitors,
           similarCompanies
         }

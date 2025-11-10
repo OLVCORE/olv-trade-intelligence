@@ -11,6 +11,8 @@ import {
   DollarSign, Clock, Award, Lightbulb
 } from 'lucide-react';
 import { useProductGaps } from '@/hooks/useProductGaps';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { registerTab, unregisterTab } from './tabsRegistry';
 
@@ -46,16 +48,65 @@ export function RecommendedProductsTab({
   
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
+  // 🔍 BUSCAR DADOS DA EMPRESA (se companyId fornecido)
+  const { data: companyData } = useQuery({
+    queryKey: ['company-for-products', companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+      const { data } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+      return data;
+    },
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5 // 5 min
+  });
+
+  // 📊 EXTRAIR DADOS (priorizar companyData, fallback props)
+  const enrichedSector = companyData?.industry || sector || stcResult?.sector || 'Serviços';
+  const enrichedCNAE = companyData?.raw_data?.cnae || cnae;
+  const enrichedSize = companyData?.raw_data?.porte || size || 'EPP';
+  const enrichedEmployees = companyData?.employees || employees || 100;
+  
+  // 🔍 EXTRAIR PRODUTOS DETECTADOS + EVIDÊNCIAS do TOTVS Check
+  const detectedProducts = stcResult?.detected_products || [];
+  const evidences = stcResult?.evidences || [];
+  
+  // 📦 MONTAR EVIDÊNCIAS POR PRODUTO
+  const detectedEvidences = detectedProducts.map((product: string) => ({
+    product,
+    sources: evidences
+      .filter((ev: any) => ev.detected_products?.includes(product))
+      .map((ev: any) => ({
+        url: ev.url,
+        title: ev.title,
+        source_name: ev.source_name || ev.source
+      }))
+      .slice(0, 5) // Top 5 evidências por produto
+  }));
+
+  console.log('[PRODUCTS-TAB] 📊 Dados enriquecidos:', {
+    companyName,
+    enrichedSector,
+    enrichedCNAE,
+    enrichedEmployees,
+    detectedProducts: detectedProducts.length,
+    detectedEvidences: detectedEvidences.length
+  });
+
   // Buscar produtos recomendados REAIS via Edge Function EVOLUÍDA
   const { data: productGapsData, isLoading, error } = useProductGaps({
     companyId,
     companyName: companyName || '',
     cnpj,
-    sector,
-    cnae,
-    size,
-    employees,
-    detectedProducts: stcResult?.detected_products || [],
+    sector: enrichedSector,
+    cnae: enrichedCNAE,
+    size: enrichedSize,
+    employees: enrichedEmployees,
+    detectedProducts: detectedProducts,
+    detectedEvidences: detectedEvidences,
     competitors: stcResult?.competitors || [],
     similarCompanies: similarCompanies || []
   });
