@@ -158,6 +158,14 @@ export function DecisorsContactsTab({
               'company.name',
               'company_name'
             ],
+            organization_description: [
+              'organization.short_description',
+              'organization.description',
+              'organization_data.short_description',
+              'organization_description',
+              'company.description',
+              'description'
+            ],
             organization_employees: [
               'organization.estimated_num_employees',
               'organization_data.estimated_num_employees',
@@ -179,6 +187,13 @@ export function DecisorsContactsTab({
               'organization_keywords',
               'company.keywords',
               'keywords'
+            ],
+            organization_founded_year: [
+              'organization.founded_year',
+              'organization_data.founded_year',
+              'organization_founded_year',
+              'company.founded_year',
+              'founded_year'
             ],
             apollo_score: [
               'person_score',
@@ -216,9 +231,11 @@ export function DecisorsContactsTab({
           
           return {
             organization_name: getValue(rawData, paths.organization_name),
+            organization_description: getValue(rawData, paths.organization_description),
             organization_employees: getValue(rawData, paths.organization_employees),
             organization_industry: getValue(rawData, paths.organization_industry),
             organization_keywords: getValue(rawData, paths.organization_keywords) || [],
+            organization_founded_year: getValue(rawData, paths.organization_founded_year),
             apollo_score: getValue(rawData, paths.apollo_score),
             phone_numbers: getValue(rawData, paths.phone_numbers) || []
           };
@@ -279,12 +296,14 @@ export function DecisorsContactsTab({
           decisors: formattedDecisors,
           decisorsWithEmails: formattedDecisors, // 🔥 SEMPRE mostrar todos (mesmo sem email)
           insights: [`${existingDecisors.length} decisores já identificados por enrichment anterior`],
-          // 🏢 Adicionar dados da empresa para exibir no resumo
+          // 🏢 Adicionar TODOS dados da empresa (Apollo Organization)
           companyApolloOrg: {
             name: companyApolloData?.name || companyData?.name,
+            description: companyApolloData?.short_description || companyApolloData?.description,
             employees: companyApolloData?.estimated_num_employees,
             industry: companyApolloData?.industry || companyData?.industry,
             keywords: companyApolloData?.keywords || [],
+            founded_year: companyApolloData?.founded_year,
             city: formattedDecisors[0]?.city,
             country: formattedDecisors[0]?.country
           },
@@ -806,7 +825,7 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* 🏢 RESUMO DA EMPRESA (Apollo Organization) - TEMA ESCURO PREMIUM */}
+          {/* 🏢 RESUMO DA EMPRESA (Apollo Organization) - 100% COMPLETO */}
           {analysisData?.companyApolloOrg && (
             <Card className="p-6 bg-gradient-to-br from-blue-900/40 to-slate-900 border-2 border-blue-500/30">
               <div className="flex items-start gap-4 mb-4">
@@ -814,15 +833,19 @@ export function DecisorsContactsTab({
                   <Building2 className="w-8 h-8 text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-white mb-1">
+                  <h3 className="text-2xl font-bold text-white mb-2">
                     {analysisData.companyApolloOrg.name || companyName}
                   </h3>
+                  
+                  {/* Industry */}
                   {analysisData.companyApolloOrg.industry && (
-                    <p className="text-sm text-emerald-400 font-medium mb-2">
+                    <p className="text-sm text-emerald-400 font-medium mb-3">
                       {analysisData.companyApolloOrg.industry}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-slate-300">
+                  
+                  {/* Location + Employees + Founded Year */}
+                  <div className="flex items-center gap-4 text-sm text-slate-300 mb-3">
                     {analysisData.companyApolloOrg.city && (
                       <span className="flex items-center gap-1.5">
                         <MapPin className="w-4 h-4 text-blue-400" />
@@ -835,23 +858,48 @@ export function DecisorsContactsTab({
                         <strong>{analysisData.companyApolloOrg.employees}</strong> funcionários
                       </span>
                     )}
+                    {analysisData.companyApolloOrg.founded_year && (
+                      <span className="flex items-center gap-1.5 text-slate-400">
+                        🗓️ Fundada em <strong>{analysisData.companyApolloOrg.founded_year}</strong>
+                      </span>
+                    )}
                   </div>
+
+                  {/* Description */}
+                  {analysisData.companyApolloOrg.description && (
+                    <p className="text-xs text-slate-400 leading-relaxed border-l-2 border-blue-500/30 pl-3">
+                      {analysisData.companyApolloOrg.description}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Keywords Apollo */}
-              {analysisData.companyApolloOrg.keywords && analysisData.companyApolloOrg.keywords.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-700">
-                  <span className="text-xs font-semibold text-slate-300 mb-2 block uppercase tracking-wide">Company Keywords:</span>
-                  <div className="flex flex-wrap gap-2">
-                    {analysisData.companyApolloOrg.keywords.map((kw: string, idx: number) => (
-                      <Badge key={idx} variant="secondary" className="text-xs bg-blue-600/20 text-blue-300 border border-blue-500/30">
-                        {kw}
-                      </Badge>
-                    ))}
+              {/* Industries + Keywords */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700">
+                {/* Industries */}
+                {analysisData.companyApolloOrg.industry && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-300 mb-2 block uppercase tracking-wide">Industries:</span>
+                    <Badge variant="secondary" className="text-xs bg-emerald-600/20 text-emerald-300 border border-emerald-500/30">
+                      {analysisData.companyApolloOrg.industry}
+                    </Badge>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Keywords */}
+                {analysisData.companyApolloOrg.keywords && analysisData.companyApolloOrg.keywords.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-300 mb-2 block uppercase tracking-wide">Keywords:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {analysisData.companyApolloOrg.keywords.map((kw: string, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="text-xs bg-blue-600/20 text-blue-300 border border-blue-500/30">
+                          {kw}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </Card>
           )}
 
@@ -911,12 +959,13 @@ export function DecisorsContactsTab({
 
               {/* Tabela Responsiva Premium com SCROLL HORIZONTAL */}
               <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full border-collapse min-w-[1800px]">
+                <table className="w-full border-collapse min-w-[2000px]">
                   <thead>
                     <tr className="border-b-2 border-slate-700">
                       <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Name</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Job Title</th>
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Company Info</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Links</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Company</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Employees</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Industries</th>
                       <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Keywords</th>
@@ -988,55 +1037,72 @@ export function DecisorsContactsTab({
                         )}
                       </td>
 
-                      {/* 3. COMPANY INFO */}
-                      <td className="p-3">
-                        {decisor.organization_name ? (
-                          <div>
-                            <p className="text-xs font-medium text-slate-300 max-w-[180px] truncate">{decisor.organization_name}</p>
-                            {decisor.organization_industry && (
-                              <p className="text-[10px] text-slate-500 mt-0.5 max-w-[180px] truncate">{decisor.organization_industry}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-600">N/A</span>
+                      {/* 3. LINKS (LinkedIn) */}
+                      <td className="p-3 text-center">
+                        {decisor.linkedin_url && (
+                          <a 
+                            href={decisor.linkedin_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 transition-colors"
+                            title="Ver LinkedIn"
+                          >
+                            <Linkedin className="w-4 h-4 text-blue-400" />
+                          </a>
                         )}
                       </td>
 
-                      {/* 4. EMPLOYEES */}
+                      {/* 4. COMPANY */}
+                      <td className="p-3">
+                        {decisor.organization_name ? (
+                          <p className="text-xs font-medium text-slate-300 max-w-[180px] truncate">{decisor.organization_name}</p>
+                        ) : (
+                          <span className="text-xs text-slate-600">-</span>
+                        )}
+                      </td>
+
+                      {/* 5. EMPLOYEES */}
                       <td className="p-3 whitespace-nowrap">
                         {decisor.organization_employees ? (
                           <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3 text-slate-400" />
-                            <span className="text-xs text-slate-300">{decisor.organization_employees}</span>
+                            <Users className="w-3 h-3 text-emerald-400" />
+                            <span className="text-xs text-slate-300 font-medium">{decisor.organization_employees}</span>
                           </div>
                         ) : (
                           <span className="text-xs text-slate-600">-</span>
                         )}
                       </td>
 
-                      {/* 5. INDUSTRIES */}
+                      {/* 6. INDUSTRIES */}
                       <td className="p-3">
                         {decisor.organization_industry ? (
-                          <p className="text-xs text-slate-300 max-w-[150px] truncate">{decisor.organization_industry}</p>
+                          <Badge variant="secondary" className="text-[10px] bg-emerald-600/20 text-emerald-300 border-emerald-500/30">
+                            {decisor.organization_industry}
+                          </Badge>
                         ) : (
                           <span className="text-xs text-slate-600">-</span>
                         )}
                       </td>
 
-                      {/* 6. KEYWORDS */}
+                      {/* 7. KEYWORDS */}
                       <td className="p-3">
                         {decisor.organization_keywords && decisor.organization_keywords.length > 0 ? (
-                          <div className="flex flex-col gap-1 max-w-[180px]">
+                          <div className="flex flex-col gap-1 max-w-[200px]">
                             {decisor.organization_keywords.slice(0, 3).map((kw: string, i: number) => (
-                              <Badge key={i} variant="secondary" className="text-[9px] bg-slate-700 text-slate-300 w-fit">{kw}</Badge>
+                              <Badge key={i} variant="secondary" className="text-[9px] bg-blue-600/20 text-blue-300 border-blue-500/30 w-fit">
+                                {kw}
+                              </Badge>
                             ))}
+                            {decisor.organization_keywords.length > 3 && (
+                              <span className="text-[9px] text-slate-500">+{decisor.organization_keywords.length - 3} mais</span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-slate-600">-</span>
                         )}
                       </td>
 
-                      {/* 7. EMAIL */}
+                      {/* 8. EMAIL */}
                       <td className="p-3">
                         {decisor.email && decisor.email !== 'email_not_unlocked@domain.com' ? (
                           <div className="flex items-center gap-1.5">
@@ -1052,14 +1118,13 @@ export function DecisorsContactsTab({
                             </a>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 text-amber-500">
-                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="text-xs">Bloqueado</span>
-                          </div>
+                          <Button size="sm" variant="ghost" className="h-7 text-[10px] text-amber-500 hover:text-amber-400">
+                            🔓 Revelar
+                          </Button>
                         )}
                       </td>
 
-                      {/* 8. PHONE */}
+                      {/* 9. PHONE */}
                       <td className="p-3 whitespace-nowrap">
                         {decisor.phone ? (
                           <div className="flex items-center gap-1.5">
@@ -1072,19 +1137,15 @@ export function DecisorsContactsTab({
                             </a>
                           </div>
                         ) : decisor.phone_numbers && decisor.phone_numbers.length > 0 ? (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                            <span className="text-blue-400 text-xs">{decisor.phone_numbers.length}x</span>
-                          </div>
+                          <Button size="sm" variant="ghost" className="h-7 text-[10px] text-blue-400 hover:text-blue-300">
+                            📞 {decisor.phone_numbers.length}x
+                          </Button>
                         ) : (
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="text-xs">-</span>
-                          </div>
+                          <span className="text-xs text-slate-600">-</span>
                         )}
                       </td>
 
-                      {/* 9. LOCATION */}
+                      {/* 10. LOCATION */}
                       <td className="p-3 whitespace-nowrap">
                         {decisor.city && (
                           <div className="flex items-center gap-1.5">
@@ -1094,7 +1155,7 @@ export function DecisorsContactsTab({
                         )}
                       </td>
 
-                      {/* 10. APOLLO SCORE */}
+                      {/* 11. APOLLO SCORE */}
                       <td className="p-3 whitespace-nowrap text-center">
                         {decisor.apollo_score ? (
                           <Badge variant="outline" className="text-[10px] bg-purple-500/10 border-purple-500/30 text-purple-300">
@@ -1105,24 +1166,12 @@ export function DecisorsContactsTab({
                         )}
                       </td>
 
-                      {/* 11. ACTIONS */}
+                      {/* 12. ACTIONS */}
                       <td className="p-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {decisor.linkedin_url && (
-                            <a 
-                              href={decisor.linkedin_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 transition-colors inline-flex"
-                              title="LinkedIn"
-                            >
-                              <Linkedin className="w-3.5 h-3.5 text-blue-400" />
-                            </a>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2 text-slate-400 hover:text-white">
-                            <ExternalLink className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2 text-slate-400 hover:text-white">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Ver Mais
+                        </Button>
                       </td>
                     </tr>
                   );
