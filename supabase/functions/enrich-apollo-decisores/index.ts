@@ -67,6 +67,17 @@ serve(async (req) => {
       }
     );
 
+    // ✅ Verificar autenticação
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error('[ENRICH-APOLLO] ❌ Erro de autenticação:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('[ENRICH-APOLLO] ✅ Usuário autenticado:', user.email);
+
     const body: EnrichApolloRequest = await req.json();
     const companyId = body.company_id || body.companyId;
     const companyName = body.company_name || body.companyName;
