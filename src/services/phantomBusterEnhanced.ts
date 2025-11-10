@@ -282,7 +282,8 @@ export async function performFullLinkedInAnalysis(
     },
     body: JSON.stringify({
       company_id: companyId,
-      companyName,
+      company_name: companyName, // ✅ CORRIGIR: usar company_name (não companyName)
+      companyName, // ✅ Manter backward compatibility
       domain: companyDomain,
       modes: ['people', 'company'],
       positions: ['CEO','CFO','CIO','CTO','COO','Diretor','Gerente','VP','Head','Presidente','Sócio','Coordenador']
