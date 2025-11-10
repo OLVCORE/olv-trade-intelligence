@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FloatingNavigation } from '@/components/common/FloatingNavigation';
-import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle, Building2, Filter } from 'lucide-react';
+import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle, Building2, Filter, RefreshCw } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -365,10 +365,45 @@ export function DecisorsContactsTab({
   }, [companyId]);
   
   // 🔄 Função para forçar reload manual
-  const handleRefreshData = () => {
+  const handleRefreshData = async () => {
     console.log('[DECISORES-TAB] 🔄 REFRESH MANUAL acionado');
-    setAnalysisData(null); // Limpar estado
-    // useEffect vai re-executar automaticamente
+    
+    if (!companyId) return;
+    
+    try {
+      // Limpar estado temporariamente
+      setAnalysisData(null);
+      
+      // Re-buscar dados
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('raw_data, industry, name')
+        .eq('id', companyId)
+        .single();
+
+      const { data: existingDecisors } = await supabase
+        .from('decision_makers')
+        .select('*')
+        .eq('company_id', companyId);
+
+      if (existingDecisors && existingDecisors.length > 0) {
+        // Re-processar dados (usar mesma lógica do useEffect)
+        window.location.reload(); // Força reload completo
+      } else {
+        toast({
+          title: 'Nenhum decisor encontrado',
+          description: 'Execute "Extrair Decisores" primeiro',
+          variant: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('[DECISORES-TAB] Erro ao recarregar:', error);
+      toast({
+        title: 'Erro ao recarregar',
+        description: 'Tente novamente',
+        variant: 'destructive'
+      });
+    }
   };
   
   // 🔗 REGISTRY: Registrar aba para SaveBar global
@@ -654,9 +689,10 @@ export function DecisorsContactsTab({
               variant="outline"
               size="sm"
               className="gap-2"
+              title="Recarregar dados do banco após enrichment"
             >
-              <Loader2 className="h-4 w-4" />
-              Recarregar Dados
+              <RefreshCw className="h-4 w-4" />
+              Recarregar
             </Button>
             
             <Button
