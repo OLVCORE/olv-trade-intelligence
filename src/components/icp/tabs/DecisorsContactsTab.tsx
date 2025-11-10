@@ -797,17 +797,22 @@ export function DecisorsContactsTab({
                 </Badge>
               </div>
 
-              {/* Tabela Responsiva Premium */}
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              {/* Tabela Responsiva Premium com SCROLL HORIZONTAL */}
+              <div className="overflow-x-auto -mx-6 px-6">
+                <table className="w-full border-collapse min-w-[1800px]">
                   <thead>
                     <tr className="border-b-2 border-slate-700">
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Decisor</th>
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cargo & Empresa</th>
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Contato</th>
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Localização</th>
-                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Score</th>
-                      <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ações</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Name</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Job Title</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Company Info</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Employees</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Industries</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Keywords</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Email</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Phone</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Location</th>
+                      <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Apollo Score</th>
+                      <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -824,162 +829,186 @@ export function DecisorsContactsTab({
                   
                   return (
                     <tr key={idx} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
-                      {/* COLUNA 1: DECISOR (Foto + Nome + Badges) */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {/* Foto/Avatar */}
+                      {/* 1. NAME (Foto + Nome + Badges) */}
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
                           <div className="flex-shrink-0">
                             {decisor.photo_url ? (
                               <img 
                                 src={decisor.photo_url} 
                                 alt={decisor.name}
-                                className="w-12 h-12 rounded-full border-2 border-emerald-500/30 object-cover"
+                                className="w-10 h-10 rounded-full border-2 border-emerald-500/30 object-cover"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
                                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                 }}
                               />
                             ) : null}
-                            <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-emerald-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm border-2 border-emerald-500/50 ${decisor.photo_url ? 'hidden' : ''}`}>
+                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-emerald-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs border-2 border-emerald-500/50 ${decisor.photo_url ? 'hidden' : ''}`}>
                               {initials}
                             </div>
                           </div>
-                          {/* Nome + Badges */}
-                          <div className="min-w-0">
-                            <p className="font-bold text-white text-sm mb-1">{decisor.name}</p>
-                            <div className="flex flex-wrap gap-1">
+                          <div>
+                            <p className="font-semibold text-white text-xs">{decisor.name}</p>
+                            <div className="flex gap-1 mt-0.5">
                               {decisor.buying_power === 'decision-maker' && (
-                                <Badge className="text-[10px] bg-emerald-600 text-white border-0">Decision Maker</Badge>
+                                <Badge className="text-[9px] px-1.5 py-0 bg-emerald-600 border-0">DM</Badge>
                               )}
                               {decisor.buying_power === 'influencer' && (
-                                <Badge className="text-[10px] bg-blue-600 text-white border-0">Influencer</Badge>
-                              )}
-                              {decisor.buying_power === 'user' && (
-                                <Badge variant="secondary" className="text-[10px]">Usuário</Badge>
+                                <Badge className="text-[9px] px-1.5 py-0 bg-blue-600 border-0">Inf</Badge>
                               )}
                               {decisor.seniority_level && (
-                                <Badge variant="outline" className="text-[9px] border-slate-600 text-slate-300">{decisor.seniority_level}</Badge>
+                                <Badge variant="outline" className="text-[8px] px-1.5 py-0 border-slate-600 text-slate-400">{decisor.seniority_level}</Badge>
                               )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* COLUNA 2: CARGO & EMPRESA */}
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-white">{decisor.title || decisor.position}</p>
-                          {decisor.headline && (
-                            <p className="text-xs text-blue-400 italic line-clamp-1">"{decisor.headline}"</p>
-                          )}
-                          {decisor.department && (
-                            <p className="text-xs text-slate-400">📁 {decisor.department}</p>
-                          )}
-                          {decisor.organization_name && (
-                            <p className="text-xs text-slate-400 flex items-center gap-1">
-                              <Building2 className="w-3 h-3" />
-                              {decisor.organization_name}
-                            </p>
-                          )}
-                          {decisor.organization_industry && (
-                            <p className="text-xs text-slate-500">{decisor.organization_industry}</p>
-                          )}
-                        </div>
+                      {/* 2. JOB TITLE */}
+                      <td className="p-3">
+                        <p className="text-xs font-medium text-white max-w-[200px]">{decisor.title || decisor.position}</p>
+                        {decisor.headline && (
+                          <p className="text-[10px] text-blue-400 italic line-clamp-2 max-w-[200px] mt-0.5">"{decisor.headline}"</p>
+                        )}
+                        {decisor.department && (
+                          <p className="text-[10px] text-slate-500 mt-0.5">📁 {decisor.department}</p>
+                        )}
                       </td>
 
-                      {/* COLUNA 3: CONTATO */}
-                      <td className="p-4">
-                        <div className="space-y-2">
-                          {/* Email */}
-                          {decisor.email && decisor.email !== 'email_not_unlocked@domain.com' ? (
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-emerald-400" />
-                              <a 
-                                href={`mailto:${decisor.email}`} 
-                                className="text-emerald-400 hover:text-emerald-300 text-xs hover:underline font-medium" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                {decisor.email}
-                              </a>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-amber-400">
-                              <AlertCircle className="w-4 h-4" />
-                              <span className="text-xs">Email bloqueado</span>
-                            </div>
-                          )}
-                          
-                          {/* Phone */}
-                          {decisor.phone ? (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4 text-blue-400" />
-                              <a 
-                                href={`tel:${decisor.phone}`} 
-                                className="text-blue-400 hover:text-blue-300 text-xs hover:underline font-medium"
-                              >
-                                {decisor.phone}
-                              </a>
-                            </div>
-                          ) : decisor.phone_numbers && decisor.phone_numbers.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4 text-blue-400" />
-                              <span className="text-blue-400 text-xs">{decisor.phone_numbers.length} telefone(s)</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-slate-500">
-                              <Phone className="w-4 h-4" />
-                              <span className="text-xs">Bloqueado</span>
-                            </div>
-                          )}
-                        </div>
+                      {/* 3. COMPANY INFO */}
+                      <td className="p-3">
+                        {decisor.organization_name ? (
+                          <div>
+                            <p className="text-xs font-medium text-slate-300 max-w-[180px] truncate">{decisor.organization_name}</p>
+                            {decisor.organization_industry && (
+                              <p className="text-[10px] text-slate-500 mt-0.5 max-w-[180px] truncate">{decisor.organization_industry}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-600">N/A</span>
+                        )}
                       </td>
 
-                      {/* COLUNA 4: LOCALIZAÇÃO */}
-                      <td className="p-4">
-                        {decisor.city && (
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <MapPin className="w-4 h-4" />
-                            <span>{decisor.city}, {decisor.state}</span>
+                      {/* 4. EMPLOYEES */}
+                      <td className="p-3 whitespace-nowrap">
+                        {decisor.organization_employees ? (
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3 text-slate-400" />
+                            <span className="text-xs text-slate-300">{decisor.organization_employees}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-600">-</span>
+                        )}
+                      </td>
+
+                      {/* 5. INDUSTRIES */}
+                      <td className="p-3">
+                        {decisor.organization_industry ? (
+                          <p className="text-xs text-slate-300 max-w-[150px] truncate">{decisor.organization_industry}</p>
+                        ) : (
+                          <span className="text-xs text-slate-600">-</span>
+                        )}
+                      </td>
+
+                      {/* 6. KEYWORDS */}
+                      <td className="p-3">
+                        {decisor.organization_keywords && decisor.organization_keywords.length > 0 ? (
+                          <div className="flex flex-col gap-1 max-w-[180px]">
+                            {decisor.organization_keywords.slice(0, 3).map((kw: string, i: number) => (
+                              <Badge key={i} variant="secondary" className="text-[9px] bg-slate-700 text-slate-300 w-fit">{kw}</Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-600">-</span>
+                        )}
+                      </td>
+
+                      {/* 7. EMAIL */}
+                      <td className="p-3">
+                        {decisor.email && decisor.email !== 'email_not_unlocked@domain.com' ? (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <a 
+                              href={`mailto:${decisor.email}`} 
+                              className="text-emerald-400 hover:text-emerald-300 text-xs hover:underline font-medium max-w-[180px] truncate" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              title={decisor.email}
+                            >
+                              {decisor.email}
+                            </a>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-500">
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="text-xs">Bloqueado</span>
                           </div>
                         )}
                       </td>
 
-                      {/* COLUNA 5: SCORE */}
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          {decisor.apollo_score && (
-                            <Badge variant="outline" className="text-[10px] bg-purple-500/10 border-purple-500/30">
-                              ⭐ {decisor.apollo_score}
-                            </Badge>
-                          )}
-                          {decisor.organization_keywords && decisor.organization_keywords.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {decisor.organization_keywords.slice(0, 2).map((kw: string, i: number) => (
-                                <Badge key={i} variant="secondary" className="text-[9px] bg-slate-700">{kw}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                      {/* 8. PHONE */}
+                      <td className="p-3 whitespace-nowrap">
+                        {decisor.phone ? (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                            <a 
+                              href={`tel:${decisor.phone}`} 
+                              className="text-blue-400 hover:text-blue-300 text-xs hover:underline font-medium"
+                            >
+                              {decisor.phone}
+                            </a>
+                          </div>
+                        ) : decisor.phone_numbers && decisor.phone_numbers.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                            <span className="text-blue-400 text-xs">{decisor.phone_numbers.length}x</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="text-xs">-</span>
+                          </div>
+                        )}
                       </td>
 
-                      {/* COLUNA 6: AÇÕES */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      {/* 9. LOCATION */}
+                      <td className="p-3 whitespace-nowrap">
+                        {decisor.city && (
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="text-xs text-slate-300">{decisor.city}, {decisor.state}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 10. APOLLO SCORE */}
+                      <td className="p-3 whitespace-nowrap text-center">
+                        {decisor.apollo_score ? (
+                          <Badge variant="outline" className="text-[10px] bg-purple-500/10 border-purple-500/30 text-purple-300">
+                            ⭐ {decisor.apollo_score}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-slate-600">-</span>
+                        )}
+                      </td>
+
+                      {/* 11. ACTIONS */}
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           {decisor.linkedin_url && (
                             <a 
                               href={decisor.linkedin_url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 transition-colors"
-                              title="Ver LinkedIn"
+                              className="p-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 transition-colors inline-flex"
+                              title="LinkedIn"
                             >
-                              <Linkedin className="w-4 h-4 text-blue-400" />
+                              <Linkedin className="w-3.5 h-3.5 text-blue-400" />
                             </a>
                           )}
-                          <Button size="sm" variant="ghost" className="h-8 text-xs text-slate-400 hover:text-white">
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            Detalhes
+                          <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2 text-slate-400 hover:text-white">
+                            <ExternalLink className="w-3 h-3" />
                           </Button>
                         </div>
                       </td>
