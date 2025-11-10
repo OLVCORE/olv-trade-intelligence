@@ -34,7 +34,7 @@ import { registerTab as registerTabInGlobal, unregisterTab as unregisterTabInGlo
 import { saveAllTabs, hasNonCompleted, getStatuses, getStatusCounts } from '@/components/icp/tabs/tabsRegistry';
 import { createSnapshotFromFullReport, loadSnapshot, isReportClosed, generatePdfFromSnapshot, type Snapshot } from '@/components/icp/tabs/snapshotReport';
 import { ReportHistoryModal } from '@/components/icp/ReportHistoryModal';
-import SaveBar from './SaveBar';
+// SaveBar removido - botões movidos para header
 import { toast } from 'sonner';
 import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
 import {
