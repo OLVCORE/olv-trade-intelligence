@@ -898,6 +898,16 @@ export default function TOTVSCheckCard({
         </div>
       </div>
 
+      {/* 💾 SAVEBAR - HEADER COMPACTO COM SAVE, PDF, HISTÓRICO, PROGRESSO */}
+      <SaveBar
+        companyId={companyId}
+        companyName={companyName || 'Empresa'}
+        stcHistoryId={stcHistoryId}
+        onSave={handleGlobalSave}
+        onShowHistory={() => setShowHistoryModal(true)}
+        tabsStatus={getStatuses()}
+      />
+
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
         <TabsList className="sticky top-0 z-50 grid w-full grid-cols-9 mb-6 h-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-1 rounded-lg shadow-lg border-b-2 border-primary/20">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
@@ -1513,16 +1523,6 @@ export default function TOTVSCheckCard({
           </UniversalTabWrapper>
         </TabsContent>
       </Tabs>
-
-      {/* 💾 SAVEBAR - HEADER COMPACTO NO TOPO */}
-      <SaveBar
-        companyId={companyId}
-        companyName={companyName || 'Empresa'}
-        stcHistoryId={stcHistoryId}
-        onSave={handleGlobalSave}
-        onShowHistory={() => setShowHistoryModal(true)}
-        tabsStatus={getStatuses()}
-      />
 
       {/* 🔗 REGISTRY: Diálogo de confirmação ao detectar rascunhos */}
       <AlertDialog open={showCloseConfirmDialog} onOpenChange={setShowCloseConfirmDialog}>
