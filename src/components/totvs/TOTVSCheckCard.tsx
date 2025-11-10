@@ -34,7 +34,7 @@ import { registerTab as registerTabInGlobal, unregisterTab as unregisterTabInGlo
 import { saveAllTabs, hasNonCompleted, getStatuses, getStatusCounts } from '@/components/icp/tabs/tabsRegistry';
 import { createSnapshotFromFullReport, loadSnapshot, isReportClosed, generatePdfFromSnapshot, type Snapshot } from '@/components/icp/tabs/snapshotReport';
 import { ReportHistoryModal } from '@/components/icp/ReportHistoryModal';
-import { SaveBar } from './SaveBar';
+import SaveBar from './SaveBar';
 import { toast } from 'sonner';
 import { isDiagEnabled, dlog, dgroup, dgroupEnd, dtable } from '@/lib/diag';
 import {
@@ -900,12 +900,16 @@ export default function TOTVSCheckCard({
 
       {/* 💾 SAVEBAR - HEADER COMPACTO COM SAVE, PDF, HISTÓRICO, PROGRESSO */}
       <SaveBar
-        companyId={companyId}
-        companyName={companyName || 'Empresa'}
-        stcHistoryId={stcHistoryId}
-        onSave={handleGlobalSave}
+        statuses={getStatuses()}
+        onSaveAll={handleGlobalSave}
+        onApprove={async () => {
+          toast.info('Função de aprovação disponível na modal de quarentena');
+        }}
+        onExportPdf={() => {
+          toast.info('Exportação PDF em desenvolvimento');
+        }}
         onShowHistory={() => setShowHistoryModal(true)}
-        tabsStatus={getStatuses()}
+        isSaving={isSavingAll}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
