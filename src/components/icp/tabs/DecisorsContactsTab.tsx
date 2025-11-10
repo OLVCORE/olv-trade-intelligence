@@ -647,7 +647,7 @@ export function DecisorsContactsTab({
         description: 'Extraindo decisores, posts e dados da empresa',
       });
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setAnalysisData(data);
       onDataChange?.(data); // 🔥 NOTIFICAR MUDANÇA PARA SALVAMENTO
       
@@ -657,6 +657,35 @@ export function DecisorsContactsTab({
         title: '✅ Análise LinkedIn concluída!',
         description: `${data.decisors?.length || 0} decisores | ${emailsFound} emails | ${data.insights?.length || 0} insights`,
       });
+      
+      // 🔥 RECARREGAR DADOS DA EMPRESA (Apollo Organization) após enrichment
+      if (companyId) {
+        console.log('[DECISORES-TAB] 🔄 Recarregando dados Apollo Organization após enrichment...');
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('raw_data, industry, name')
+          .eq('id', companyId)
+          .single();
+        
+        if (companyData?.raw_data?.apollo_organization) {
+          const apolloOrg = companyData.raw_data.apollo_organization;
+          console.log('[DECISORES-TAB] ✅ Apollo Organization recarregado:', apolloOrg);
+          
+          setAnalysisData((prev: any) => ({
+            ...prev,
+            companyApolloOrg: {
+              name: apolloOrg.name || companyData.name,
+              description: apolloOrg.short_description,
+              employees: apolloOrg.estimated_num_employees,
+              industry: apolloOrg.industry || companyData.industry,
+              keywords: apolloOrg.keywords || [],
+              founded_year: apolloOrg.founded_year,
+              city: data.decisors?.[0]?.city,
+              country: data.decisors?.[0]?.country
+            }
+          }));
+        }
+      }
     },
     onError: (error) => {
       toast({
