@@ -278,11 +278,10 @@ export default function ICPQuarantine() {
 
       if (!analysis) throw new Error('Empresa não encontrada');
 
-      // 🔍 Buscar company_id (pode estar em analysis ou precisar criar)
+      // 🔍 Buscar company_id
       let targetCompanyId = analysis.company_id;
       
       if (!targetCompanyId) {
-        // Se não tem company_id, pode estar em leads_pool
         const { data: lead } = await supabase
           .from('leads_pool')
           .select('company_id')
@@ -293,22 +292,22 @@ export default function ICPQuarantine() {
       }
 
       if (!targetCompanyId) {
-        throw new Error('company_id não encontrado para esta empresa');
+        throw new Error('company_id não encontrado');
       }
 
-      // 🔥 CHAMADA DIRETA APOLLO (sem Edge Function, evita CORS/401)
-      const { enrichCompanyWithApollo } = await import('@/services/apolloEnrichment');
-      const result = await enrichCompanyWithApollo(
-        targetCompanyId,
-        analysis.company_name || analysis.name || '',
-        analysis.website || analysis.domain || undefined
-      );
+      // 🔥 EDGE FUNCTION com SERVICE_ROLE_KEY
+      const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
+        body: {
+          company_id: targetCompanyId,
+          company_name: analysis.company_name || analysis.name,
+          domain: analysis.website || analysis.domain,
+          modes: ['people', 'company']
+        }
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Falha ao enriquecer com Apollo');
-      }
+      if (error) throw error;
       
-      console.log('[QUARANTINE] ✅ Apollo enrichment concluído:', result.decisores?.length, 'decisores');
+      console.log('[QUARANTINE] ✅ Apollo enrichment concluído');
     },
     onSuccess: () => {
       toast.success('✅ Apollo atualizado - Website e decisores adicionados');

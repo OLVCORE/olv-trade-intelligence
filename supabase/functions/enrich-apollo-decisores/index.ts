@@ -57,26 +57,13 @@ serve(async (req) => {
   }
 
   try {
+    // 🔥 USAR SERVICE_ROLE_KEY para evitar problemas de autenticação
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // ✅ Verificar autenticação
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      console.error('[ENRICH-APOLLO] ❌ Erro de autenticação:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    console.log('[ENRICH-APOLLO] ✅ Usuário autenticado:', user.email);
+    console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado com SERVICE_ROLE_KEY');
 
     const body: EnrichApolloRequest = await req.json();
     const companyId = body.company_id || body.companyId;
