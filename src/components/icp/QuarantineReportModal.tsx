@@ -340,19 +340,8 @@ export function QuarantineReportModal({
             />
           </div>
 
-          {/* Footer fixo */}
+          {/* Footer fixo - SIMPLIFICADO */}
           <div className="shrink-0 border-t bg-muted/30 p-4">
-            {/* 💡 SPEC #BOTÕES-UNIF: Aviso para usar SaveBar */}
-            <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-400 dark:border-blue-600 rounded-lg">
-              <p className="text-sm font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2 mb-2">
-                💡 Use a <strong>SaveBar (barra no topo)</strong> para:
-              </p>
-              <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1 ml-4 list-disc">
-                <li><strong>Salvar Relatório</strong> → Salva todas as abas processadas (full_report)</li>
-                <li><strong>Aprovar & Mover para Pool</strong> → Cria snapshot final e envia para pipeline</li>
-              </ul>
-            </div>
-            
             <DialogFooter className="gap-3 flex justify-between items-center">
               <Button 
                 variant="ghost" 
