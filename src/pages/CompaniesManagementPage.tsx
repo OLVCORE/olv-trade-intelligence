@@ -737,7 +737,7 @@ export default function CompaniesManagementPage() {
               company_id: company.id,
               company_name: company.company_name || company.name,
               domain: domain,
-              modes: ['people'] // APENAS pessoas, não consome créditos
+              modes: ['people', 'company'] // 🔥 PESSOAS + DADOS DA EMPRESA (keywords, industry, employees)
             }
           });
           
@@ -2071,7 +2071,8 @@ export default function CompaniesManagementPage() {
                                 body: { 
                                   company_id: company.id,
                                   company_name: company.name,
-                                  domain: company.website || company.domain
+                                  domain: company.website || company.domain,
+                                  modes: ['people', 'company'] // 🔥 PESSOAS + ORGANIZAÇÃO
                                 }
                               });
                               if (error) throw error;

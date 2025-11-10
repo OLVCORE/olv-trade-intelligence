@@ -1020,6 +1020,7 @@ export default function ICPQuarantine() {
             body: {
               companyName: company.razao_social,
               linkedinUrl: company.linkedin_url || '',
+              modes: ['people', 'company'], // 🔥 PESSOAS + ORGANIZAÇÃO
             },
           });
           decisors = decisorsData;
