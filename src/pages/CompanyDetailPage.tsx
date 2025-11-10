@@ -396,6 +396,8 @@ export default function CompanyDetailPage() {
   console.log('[CompanyDetail] 📋 Campos Receita:', receitaData ? Object.keys(receitaData).slice(0, 20) : 'nenhum');
   console.log('[CompanyDetail] 📊 Decisores carregados:', decisors.length);
   console.log('[CompanyDetail] 📋 Primeiro decisor:', decisors[0]);
+  console.log('[CompanyDetail] 🏢 QSA (Sócios):', receitaData?.qsa ? `${receitaData.qsa.length} sócios` : 'NULL');
+  console.log('[CompanyDetail] 💼 CNAE Principal:', receitaData?.atividade_principal?.[0]?.text || 'NULL');
   const digitalPresence = (company as any)?.digital_presence;
   const rawData = (company as any)?.raw_data || {};
   const situacaoReceita: string | undefined = receitaData?.situacao;
