@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FloatingNavigation } from '@/components/common/FloatingNavigation';
-import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle, Building2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -59,9 +59,9 @@ export function DecisorsContactsTab({
       if (existingDecisors && existingDecisors.length > 0) {
         console.log('[DECISORES-TAB] ✅ Encontrados', existingDecisors.length, 'decisores já salvos');
         
-        // Formatar decisores para match com estrutura esperada
+        // Formatar decisores para match com estrutura esperada (TODOS CAMPOS APOLLO)
         const formattedDecisors = existingDecisors.map(d => ({
-          name: d.name,
+          name: d.full_name || d.name,
           title: d.position || d.title,
           position: d.position,
           email: d.email,
@@ -75,6 +75,16 @@ export function DecisorsContactsTab({
           state: d.state,
           country: d.country || 'Brazil',
           photo_url: d.photo_url,
+          headline: d.headline,
+          // 🔥 CAMPOS APOLLO EXPANDIDOS (de raw_data)
+          apollo_score: d.raw_data?.apollo_score,
+          organization_name: d.raw_data?.organization_name,
+          organization_employees: d.raw_data?.organization_data?.estimated_num_employees,
+          organization_industry: d.raw_data?.organization_data?.industry,
+          organization_keywords: d.raw_data?.organization_data?.keywords || [],
+          phone_numbers: d.raw_data?.phone_numbers || [],
+          departments: d.raw_data?.departments || [],
+          employment_history: d.raw_data?.employment_history || [],
           enriched_with: 'database'
         }));
         
@@ -578,14 +588,45 @@ export function DecisorsContactsTab({
                               )}
                             </div>
                             <p className="text-sm font-medium text-muted-foreground mb-1">{decisor.title || decisor.position}</p>
+                            {decisor.headline && (
+                              <p className="text-xs text-primary/80 italic mb-1">"{decisor.headline}"</p>
+                            )}
                             {decisor.department && (
                               <p className="text-xs text-muted-foreground">📁 {decisor.department}</p>
+                            )}
+                            {decisor.organization_name && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Building2 className="w-3 h-3" />
+                                {decisor.organization_name}
+                                {decisor.organization_employees && (
+                                  <span className="text-[10px]">• {decisor.organization_employees} funcionários</span>
+                                )}
+                              </p>
+                            )}
+                            {decisor.organization_industry && (
+                              <p className="text-xs text-muted-foreground">
+                                🏢 {decisor.organization_industry}
+                              </p>
                             )}
                             {decisor.city && (
                               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                 <MapPin className="w-3 h-3" />
                                 {decisor.city}, {decisor.state} - {decisor.country}
                               </p>
+                            )}
+                            {decisor.apollo_score && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="outline" className="text-[10px] bg-purple-500/10">
+                                  ⭐ Apollo Score: {decisor.apollo_score}
+                                </Badge>
+                              </div>
+                            )}
+                            {decisor.organization_keywords && decisor.organization_keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {decisor.organization_keywords.slice(0, 3).map((kw: string, i: number) => (
+                                  <Badge key={i} variant="secondary" className="text-[9px]">{kw}</Badge>
+                                ))}
+                              </div>
                             )}
                           </div>
                           <Badge variant="outline" className="text-xs shrink-0">
