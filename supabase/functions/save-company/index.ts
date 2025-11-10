@@ -260,10 +260,14 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[Save Company] Erro:', error);
+    console.error('[Save Company] ❌ Erro completo:', error);
+    console.error('[Save Company] ❌ Stack:', error.stack);
+    console.error('[Save Company] ❌ Message:', error.message);
     return new Response(
       JSON.stringify({ 
-        error: error.message
+        error: error.message,
+        details: error.stack,
+        timestamp: new Date().toISOString()
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
