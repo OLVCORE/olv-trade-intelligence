@@ -68,16 +68,43 @@ export function DecisorsContactsTab({
       console.log('[DECISORES-TAB] 🏢 Apollo Organization:', companyData?.raw_data?.apollo_organization);
       console.log('[DECISORES-TAB] 🏢 Enriched Apollo:', companyData?.raw_data?.enriched_apollo);
       
+      // 🔍 TESTAR TODOS OS CAMINHOS POSSÍVEIS
+      const possiblePaths = [
+        companyData?.raw_data?.apollo_organization,
+        companyData?.raw_data?.enriched_apollo,
+        companyData?.raw_data?.apollo,
+        companyData?.raw_data?.organization,
+        companyData?.raw_data
+      ];
+      
+      console.log('[DECISORES-TAB] 🔍 Testando caminhos possíveis:');
+      possiblePaths.forEach((path, idx) => {
+        if (path) {
+          console.log(`  Caminho ${idx}:`, {
+            name: path?.name,
+            description: path?.short_description || path?.description,
+            employees: path?.estimated_num_employees || path?.num_employees,
+            industry: path?.industry,
+            keywords: path?.keywords,
+            founded_year: path?.founded_year
+          });
+        }
+      });
+      
       // Normalizar dados da empresa (Apollo Organization)
       const companyApolloData = companyData?.raw_data?.apollo_organization || 
                                 companyData?.raw_data?.enriched_apollo || 
+                                companyData?.raw_data?.apollo ||
+                                companyData?.raw_data?.organization ||
                                 {};
       
-      console.log('[DECISORES-TAB] 🏢 Company Apollo Data extraído:', {
+      console.log('[DECISORES-TAB] 🏢 Company Apollo Data FINAL:', {
         name: companyApolloData?.name || companyData?.name,
+        description: companyApolloData?.short_description || companyApolloData?.description,
         employees: companyApolloData?.estimated_num_employees,
         industry: companyApolloData?.industry,
-        keywords: companyApolloData?.keywords
+        keywords: companyApolloData?.keywords,
+        founded_year: companyApolloData?.founded_year
       });
       
       // 2️⃣ Buscar decisores salvos na tabela decision_makers
@@ -90,9 +117,10 @@ export function DecisorsContactsTab({
         console.log('[DECISORES-TAB] ✅ Encontrados', existingDecisors.length, 'decisores já salvos');
         
         // 🎯 CLASSIFICAÇÃO DEFINITIVA: C-Level + Diretor + Gerente + Supervisor = DECISION MAKER
-        const classifyBuyingPower = (title: string, seniority: string) => {
+        const classifyBuyingPower = (title: string, seniority: string, headline: string = '') => {
           const titleLower = (title || '').toLowerCase();
           const seniorityLower = (seniority || '').toLowerCase();
+          const headlineLower = (headline || '').toLowerCase();
           
           // 🔴 DECISION MAKERS: C-Level, Diretor, Gerente, Supervisor
           if (
@@ -117,14 +145,18 @@ export function DecisorsContactsTab({
             titleLower.includes('sócio') ||
             titleLower.includes('fundador') ||
             titleLower.includes('proprietário') ||
-            // DIRETOR (qualquer tipo)
+            // DIRETOR (qualquer tipo) - BUSCAR EM TITLE E HEADLINE!
             titleLower.includes('diretor') ||
             titleLower.includes('director') ||
+            headlineLower.includes('diretor') ||
+            headlineLower.includes('director') ||
             // GERENTE (qualquer tipo)
             titleLower.includes('gerente') || 
             titleLower.includes('manager') ||
+            headlineLower.includes('gerente') ||
             // SUPERVISOR (qualquer tipo)
-            titleLower.includes('supervisor')
+            titleLower.includes('supervisor') ||
+            headlineLower.includes('supervisor')
           ) {
             return 'decision-maker';
           }
@@ -259,7 +291,7 @@ export function DecisorsContactsTab({
             linkedin_url: d.linkedin_url,
             department: d.department,
             seniority_level: d.seniority_level,
-            buying_power: classifyBuyingPower(d.position || '', d.seniority_level || ''),
+            buying_power: classifyBuyingPower(d.position || '', d.seniority_level || '', d.headline || ''),
             city: d.city,
             state: d.state,
             country: d.country || 'Brazil',
