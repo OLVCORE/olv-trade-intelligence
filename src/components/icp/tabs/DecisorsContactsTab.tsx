@@ -129,6 +129,31 @@ export function DecisorsContactsTab({
         .select('*')
         .eq('company_id', companyId);
       
+      console.log('[DECISORES-TAB] 📊 Decisores encontrados:', existingDecisors?.length || 0);
+      
+      // 🏢 SEMPRE SETAR companyApolloOrg (MESMO SEM DECISORES!)
+      const apolloOrg = companyApolloData || {};
+      const baseAnalysisData = {
+        companyApolloOrg: {
+          name: apolloOrg.name || companyData?.name,
+          description: apolloOrg.short_description || apolloOrg.description,
+          employees: apolloOrg.estimated_num_employees,
+          industry: apolloOrg.industry || companyData?.industry,
+          keywords: apolloOrg.keywords || [],
+          founded_year: apolloOrg.founded_year,
+          city: existingDecisors?.[0]?.city,
+          country: existingDecisors?.[0]?.country
+        },
+        companyData: { 
+          source: 'database',
+          followers: 0,
+          employees: 0,
+          recentPosts: []
+        }
+      };
+      
+      console.log('[DECISORES-TAB] 🏢 companyApolloOrg preparado:', baseAnalysisData.companyApolloOrg);
+      
       if (existingDecisors && existingDecisors.length > 0) {
         console.log('[DECISORES-TAB] ✅ Encontrados', existingDecisors.length, 'decisores já salvos');
         
@@ -349,32 +374,26 @@ export function DecisorsContactsTab({
         });
         
         const newAnalysisData = {
+          ...baseAnalysisData, // 🏢 Incluir companyApolloOrg e companyData
           decisors: formattedDecisors,
           decisorsWithEmails: formattedDecisors, // 🔥 SEMPRE mostrar todos (mesmo sem email)
           insights: [`${existingDecisors.length} decisores já identificados por enrichment anterior`],
-          // 🏢 Adicionar TODOS dados da empresa (Apollo Organization)
-          companyApolloOrg: {
-            name: companyApolloData?.name || companyData?.name,
-            description: companyApolloData?.short_description || companyApolloData?.description,
-            employees: companyApolloData?.estimated_num_employees,
-            industry: companyApolloData?.industry || companyData?.industry,
-            keywords: companyApolloData?.keywords || [],
-            founded_year: companyApolloData?.founded_year,
-            city: formattedDecisors[0]?.city,
-            country: formattedDecisors[0]?.country
-          },
-          companyData: { 
-            source: 'database',
-            followers: 0,
-            employees: 0,
-            recentPosts: []
-          }
         };
         
-        console.log('[DECISORES-TAB] 🔥 SETANDO analysisData com companyApolloOrg:', newAnalysisData.companyApolloOrg);
+        console.log('[DECISORES-TAB] 🔥 SETANDO analysisData com decisores:', existingDecisors.length);
+        console.log('[DECISORES-TAB] 🔥 companyApolloOrg:', newAnalysisData.companyApolloOrg);
         setAnalysisData(newAnalysisData);
         
         sonnerToast.success(`✅ ${existingDecisors.length} decisores carregados!`);
+      } else {
+        // 🏢 SEM decisores, mas SEMPRE setar companyApolloOrg
+        console.log('[DECISORES-TAB] ⚠️ Nenhum decisor encontrado, mas carregando companyApolloOrg');
+        setAnalysisData({
+          ...baseAnalysisData,
+          decisors: [],
+          decisorsWithEmails: [],
+          insights: ['Nenhum decisor identificado ainda. Clique em "Extrair Decisores" para começar.']
+        });
       }
     };
     
