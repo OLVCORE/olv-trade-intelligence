@@ -693,10 +693,8 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* 🏢 RESUMO DA EMPRESA (Apollo Organization Data) - TEMA ESCURO */}
-          {(analysisData?.decisorsWithEmails?.[0]?.organization_name || 
-            analysisData?.decisorsWithEmails?.[0]?.organization_industry || 
-            analysisData?.decisorsWithEmails?.[0]?.organization_employees) && (
+          {/* 🏢 RESUMO DA EMPRESA (do 1º Decisor Apollo) - TEMA ESCURO */}
+          {analysisData?.decisorsWithEmails?.length > 0 && (
             <Card className="p-6 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
               <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-full bg-blue-500/20">
