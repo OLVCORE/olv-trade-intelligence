@@ -108,7 +108,7 @@ serve(async (req) => {
     // PASSO 1: Usar apollo_org_id se fornecido, senão buscar pelo nome
     let organizationId: string | null = apollo_org_id || null;
     
-    if (!organizationId && !domain) {
+    if (!organizationId) {
       console.log('[ENRICH-APOLLO-DECISORES] Buscando Organization ID por nome...');
       
       // Apollo funciona melhor com "Primeira + Segunda palavra"
