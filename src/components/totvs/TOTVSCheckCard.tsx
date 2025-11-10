@@ -907,7 +907,6 @@ export default function TOTVSCheckCard({
           toast.info('Exportação PDF em desenvolvimento');
         }}
         onShowHistory={() => setShowHistoryModal(true)}
-        isSaving={isSavingAll}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
