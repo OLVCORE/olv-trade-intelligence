@@ -65,21 +65,33 @@ serve(async (req) => {
       modes: body.modes
     });
     
-    // 🔥 USAR SERVICE_ROLE_KEY para evitar problemas de autenticação
+    // 🔥 CRIAR CLIENTE SUPABASE (aceita tanto user auth quanto service role)
+    const authHeader = req.headers.get('Authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
-    if (!serviceRoleKey || !supabaseUrl) {
-      console.error('[ENRICH-APOLLO] ❌ Variáveis de ambiente faltando!');
+    let supabaseClient;
+    
+    if (authHeader) {
+      // Usuário autenticado via frontend
+      console.log('[ENRICH-APOLLO] 🔐 Usando auth do usuário');
+      supabaseClient = createClient(supabaseUrl, anonKey ?? '', {
+        global: { headers: { Authorization: authHeader } }
+      });
+    } else if (serviceRoleKey) {
+      // Service role (backend/admin)
+      console.log('[ENRICH-APOLLO] 🔑 Usando SERVICE_ROLE_KEY');
+      supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+    } else {
+      console.error('[ENRICH-APOLLO] ❌ Nenhuma credencial disponível!');
       return new Response(
-        JSON.stringify({ error: 'Configuração inválida', details: 'SERVICE_ROLE_KEY ou SUPABASE_URL não configurados' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Unauthorized', details: 'No credentials provided' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
-    console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado com SERVICE_ROLE_KEY');
+    console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado');
     const companyId = body.company_id || body.companyId;
     const companyName = body.company_name || body.companyName;
     const { domain, positions, apollo_org_id } = body;
