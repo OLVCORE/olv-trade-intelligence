@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FloatingNavigation } from '@/components/common/FloatingNavigation';
-import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle, Building2 } from 'lucide-react';
+import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, TrendingUp, MapPin, AlertCircle, CheckCircle2, XCircle, Building2, Filter } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -44,6 +45,12 @@ export function DecisorsContactsTab({
   });
   const [customLinkedInUrl, setCustomLinkedInUrl] = useState(linkedinUrl || '');
   const [customApolloUrl, setCustomApolloUrl] = useState('');
+  
+  // 🔍 FILTROS MÚLTIPLOS
+  const [filterBuyingPower, setFilterBuyingPower] = useState<string[]>([]);
+  const [filterDepartment, setFilterDepartment] = useState<string[]>([]);
+  const [filterLocation, setFilterLocation] = useState<string[]>([]);
+  const [filterSeniority, setFilterSeniority] = useState<string[]>([]);
   
   // 🔥 BUSCAR DECISORES JÁ SALVOS (de enrichment em massa)
   useEffect(() => {
@@ -361,6 +368,21 @@ export function DecisorsContactsTab({
     }
   });
 
+  // Aplicar filtros
+  const filteredDecisors = (analysisData?.decisorsWithEmails || []).filter((d: any) => {
+    if (filterBuyingPower.length > 0 && !filterBuyingPower.includes(d.buying_power)) return false;
+    if (filterDepartment.length > 0 && !filterDepartment.includes(d.department)) return false;
+    if (filterLocation.length > 0 && !filterLocation.includes(d.city || d.state)) return false;
+    if (filterSeniority.length > 0 && !filterSeniority.includes(d.seniority_level)) return false;
+    return true;
+  });
+
+  // Extrair opções únicas para filtros
+  const uniqueBuyingPowers = [...new Set((analysisData?.decisorsWithEmails || []).map((d: any) => d.buying_power).filter(Boolean))];
+  const uniqueDepartments = [...new Set((analysisData?.decisorsWithEmails || []).map((d: any) => d.department).filter(Boolean))];
+  const uniqueLocations = [...new Set((analysisData?.decisorsWithEmails || []).map((d: any) => d.city || d.state).filter(Boolean))];
+  const uniqueSeniorities = [...new Set((analysisData?.decisorsWithEmails || []).map((d: any) => d.seniority_level).filter(Boolean))];
+
   if (!companyName) {
     return (
       <Card className="p-6">
@@ -514,6 +536,118 @@ export function DecisorsContactsTab({
             </Card>
           </div>
 
+          {/* 🔍 FILTROS MÚLTIPLOS */}
+          {(analysisData?.decisorsWithEmails?.length || 0) > 0 && (
+            <Card className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 border-slate-300">
+              <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                <Filter className="w-4 h-4" />
+                Filtros Avançados
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {/* Filtro: Buying Power */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1">Tipo de Decisor</Label>
+                  <Select
+                    value={filterBuyingPower.length === 1 ? filterBuyingPower[0] : ''}
+                    onValueChange={(val) => setFilterBuyingPower(val ? [val] : [])}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos ({analysisData?.decisorsWithEmails?.length || 0})</SelectItem>
+                      {uniqueBuyingPowers.map(bp => (
+                        <SelectItem key={bp} value={bp}>
+                          {bp === 'decision-maker' ? 'Decision Maker' : bp === 'influencer' ? 'Influencer' : 'Usuário'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro: Departamento */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1">Departamento</Label>
+                  <Select
+                    value={filterDepartment.length === 1 ? filterDepartment[0] : ''}
+                    onValueChange={(val) => setFilterDepartment(val ? [val] : [])}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos</SelectItem>
+                      {uniqueDepartments.map(dept => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro: Localização */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1">Localização</Label>
+                  <Select
+                    value={filterLocation.length === 1 ? filterLocation[0] : ''}
+                    onValueChange={(val) => setFilterLocation(val ? [val] : [])}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos</SelectItem>
+                      {uniqueLocations.map(loc => (
+                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro: Seniority */}
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1">Senioridade</Label>
+                  <Select
+                    value={filterSeniority.length === 1 ? filterSeniority[0] : ''}
+                    onValueChange={(val) => setFilterSeniority(val ? [val] : [])}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos</SelectItem>
+                      {uniqueSeniorities.map(sen => (
+                        <SelectItem key={sen} value={sen}>{sen}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Contador + Limpar Filtros */}
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Exibindo <strong>{filteredDecisors.length}</strong> de <strong>{analysisData?.decisorsWithEmails?.length || 0}</strong> decisores
+                </p>
+                {(filterBuyingPower.length > 0 || filterDepartment.length > 0 || filterLocation.length > 0 || filterSeniority.length > 0) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setFilterBuyingPower([]);
+                      setFilterDepartment([]);
+                      setFilterLocation([]);
+                      setFilterSeniority([]);
+                    }}
+                  >
+                    Limpar Filtros
+                  </Button>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Dados da Empresa LinkedIn */}
           {analysisData.companyData && (
             <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
@@ -554,7 +688,7 @@ export function DecisorsContactsTab({
           )}
 
           {/* Lista de Decisores - DESTAQUE COM BALÃO COLORIDO */}
-          {analysisData?.decisorsWithEmails && analysisData.decisorsWithEmails.length > 0 && (
+          {filteredDecisors && filteredDecisors.length > 0 && (
             <Card className="p-6 border-2 border-emerald-500/30 bg-emerald-500/5">
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-3 rounded-full bg-emerald-500/20">
@@ -564,12 +698,12 @@ export function DecisorsContactsTab({
                   Decisores Identificados
                 </h4>
                 <Badge variant="default" className="bg-emerald-600 text-white text-lg px-4 py-2 shadow-lg">
-                  {analysisData.decisorsWithEmails.length} pessoas
+                  {filteredDecisors.length} pessoas
                 </Badge>
               </div>
 
               <div className="space-y-4">
-                {analysisData.decisorsWithEmails.map((decisor: any, idx: number) => {
+                {filteredDecisors.map((decisor: any, idx: number) => {
                   // Gerar iniciais para avatar (com validação)
                   const initials = decisor.name
                     ? decisor.name
