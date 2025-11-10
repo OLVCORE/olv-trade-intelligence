@@ -7,8 +7,9 @@ const corsHeaders = {
 };
 
 interface FinderRequest {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  full_name?: string;
   domain: string;
 }
 
@@ -19,7 +20,15 @@ serve(async (req) => {
 
   try {
     const body: FinderRequest = await req.json();
-    const { firstName, lastName, domain } = body;
+    let { firstName, lastName, full_name, domain } = body;
+    
+    // 🔄 Suporte para full_name (split em firstName e lastName)
+    if (full_name && !firstName && !lastName) {
+      const nameParts = full_name.trim().split(' ');
+      firstName = nameParts[0];
+      lastName = nameParts.slice(1).join(' ') || nameParts[0]; // Fallback se só tiver um nome
+      console.log('[HUNTER-FINDER] 🔄 Split name:', full_name, '→', firstName, lastName);
+    }
 
     console.log('[HUNTER-FINDER] 📧 Buscando email:', firstName, lastName, '@', domain);
 

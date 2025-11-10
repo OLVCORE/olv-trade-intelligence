@@ -1,5 +1,6 @@
 // 👔 ABA DECISORES & CONTATOS - Apollo + Corporate Theme
 import { useState, useEffect } from 'react';
+import { revealCorporateContact, revealPersonalContact, isVIPDecisor } from '@/services/revealContact';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -412,6 +413,99 @@ export function DecisorsContactsTab({
   
   // 🔄 Função para forçar reload manual (SEM sair do relatório!)
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // 💸 REVEAL DE CONTATOS
+  const [revealingContacts, setRevealingContacts] = useState<Set<string>>(new Set());
+  
+  // 💸 REVELAR CONTATO CORPORATIVO (Apollo + Hunter)
+  const handleRevealCorporateContact = async (decisor: any) => {
+    const decisorId = decisor.id;
+    setRevealingContacts(prev => new Set(prev).add(decisorId));
+    
+    try {
+      const { toast } = await import('sonner');
+      toast.info('💸 Revelando contato corporativo...', {
+        description: 'Apollo → Hunter.io (fallback) | Custo: ~1 crédito'
+      });
+      
+      const result = await revealCorporateContact(
+        decisorId,
+        decisor.linkedin_url,
+        decisor.name,
+        analysisData.companyApolloOrg?.primary_domain || analysisData.companyApolloOrg?.website_url
+      );
+      
+      if (result.success) {
+        toast.success(`✅ Contato revelado via ${result.source.toUpperCase()}!`, {
+          description: `Email: ${result.email || 'N/A'} | Tel: ${result.phone || 'N/A'} | Custo: ${result.cost} crédito(s)`
+        });
+        
+        // Recarregar lista de decisores
+        await handleRefreshData();
+      } else {
+        toast.error('❌ Nenhuma fonte disponível', {
+          description: result.error || 'Apollo e Hunter.io falharam'
+        });
+      }
+    } catch (error: any) {
+      console.error('[REVEAL] ❌ Erro:', error);
+      const { toast } = await import('sonner');
+      toast.error('Erro ao revelar contato', {
+        description: error.message
+      });
+    } finally {
+      setRevealingContacts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(decisorId);
+        return newSet;
+      });
+    }
+  };
+  
+  // 💎 REVELAR CONTATO PESSOAL (Lusha - apenas VIP/C-Level)
+  const handleRevealPersonalContact = async (decisor: any) => {
+    const decisorId = decisor.id;
+    setRevealingContacts(prev => new Set(prev).add(decisorId));
+    
+    try {
+      const { toast } = await import('sonner');
+      toast.info('💎 Revelando contato pessoal (VIP)...', {
+        description: 'Lusha (Mobile pessoal) | Custo: ~3 créditos'
+      });
+      
+      const result = await revealPersonalContact(
+        decisorId,
+        decisor.linkedin_url,
+        decisor.name,
+        analysisData.companyApolloOrg?.name
+      );
+      
+      if (result.success) {
+        toast.success(`✅ Contato VIP revelado via Lusha!`, {
+          description: `Mobile: ${result.mobile || 'N/A'} | Email pessoal: ${result.email || 'N/A'} | Custo: ${result.cost} créditos`
+        });
+        
+        // Recarregar lista de decisores
+        await handleRefreshData();
+      } else {
+        toast.error('❌ Lusha não disponível', {
+          description: result.error || 'Falha ao revelar contato pessoal'
+        });
+      }
+    } catch (error: any) {
+      console.error('[REVEAL-VIP] ❌ Erro:', error);
+      const { toast } = await import('sonner');
+      toast.error('Erro ao revelar contato VIP', {
+        description: error.message
+      });
+    } finally {
+      setRevealingContacts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(decisorId);
+        return newSet;
+      });
+    }
+  };
   
   const handleRefreshData = async () => {
     console.log('[DECISORES-TAB] 🔄 REFRESH MANUAL acionado');
@@ -1280,9 +1374,38 @@ export function DecisorsContactsTab({
                             </a>
                           </div>
                         ) : (
-                          <Button size="sm" variant="ghost" className="h-7 text-[10px] text-amber-500 hover:text-amber-400">
-                            🔓 Revelar
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-7 text-[10px] text-amber-500 hover:text-amber-400 disabled:opacity-50"
+                            onClick={() => handleRevealCorporateContact(decisor)}
+                            disabled={revealingContacts.has(decisor.id)}
+                          >
+                            {revealingContacts.has(decisor.id) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              '🔓 Revelar (~1💰)'
+                            )}
                           </Button>
+                        )}
+                        
+                        {/* 💎 BOTÃO VIP LUSHA (apenas C-Level) */}
+                        {isVIPDecisor(decisor.title || decisor.position, decisor.seniority_level) && !decisor.email && (
+                          <div className="mt-1">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-6 text-[9px] text-amber-600 hover:text-amber-500 disabled:opacity-50"
+                              onClick={() => handleRevealPersonalContact(decisor)}
+                              disabled={revealingContacts.has(decisor.id)}
+                            >
+                              {revealingContacts.has(decisor.id) ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                '💎 VIP (~3💰)'
+                              )}
+                            </Button>
+                          </div>
                         )}
                       </td>
 
@@ -1299,8 +1422,18 @@ export function DecisorsContactsTab({
                             </a>
                           </div>
                         ) : decisor.phone_numbers && decisor.phone_numbers.length > 0 ? (
-                          <Button size="sm" variant="ghost" className="h-7 text-[10px] text-blue-400 hover:text-blue-300">
-                            📞 {decisor.phone_numbers.length}x
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-7 text-[10px] text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                            onClick={() => handleRevealCorporateContact(decisor)}
+                            disabled={revealingContacts.has(decisor.id)}
+                          >
+                            {revealingContacts.has(decisor.id) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              `📞 ${decisor.phone_numbers.length}x (~1💰)`
+                            )}
                           </Button>
                         ) : (
                           <span className="text-xs text-slate-600">-</span>

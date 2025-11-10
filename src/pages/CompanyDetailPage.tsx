@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { consultarReceitaFederal } from "@/services/receitaFederal";
+import { revealCorporateContact, revealPersonalContact, isVIPDecisor } from "@/services/revealContact";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -74,6 +75,9 @@ export default function CompanyDetailPage() {
   const [filterSeniority, setFilterSeniority] = useState<string>('ALL');
   const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
   const [filterLocation, setFilterLocation] = useState<string>('ALL');
+  
+  // 💸 REVEAL DE CONTATOS
+  const [revealingContacts, setRevealingContacts] = useState<Set<string>>(new Set());
 
   // ✅ MICROCICLO 2: Ativar Realtime para mudanças na empresa
   useRealtimeCompanyChanges(id);
@@ -254,6 +258,92 @@ export default function CompanyDetailPage() {
       toast.error('Erro na análise 360°', { description: error.message });
     } finally {
       setIsEnriching(false);
+    }
+  };
+
+  // 💸 REVELAR CONTATO CORPORATIVO (Apollo + Hunter)
+  const handleRevealCorporateContact = async (decisor: any) => {
+    const decisorId = decisor.id;
+    setRevealingContacts(prev => new Set(prev).add(decisorId));
+    
+    try {
+      toast.info('💸 Revelando contato corporativo...', {
+        description: 'Apollo → Hunter.io (fallback) | Custo: ~1 crédito'
+      });
+      
+      const result = await revealCorporateContact(
+        decisorId,
+        decisor.linkedin_url,
+        decisor.name,
+        company.domain || company.website
+      );
+      
+      if (result.success) {
+        toast.success(`✅ Contato revelado via ${result.source.toUpperCase()}!`, {
+          description: `Email: ${result.email || 'N/A'} | Tel: ${result.phone || 'N/A'} | Custo: ${result.cost} crédito(s)`
+        });
+        
+        // Recarregar lista de decisores
+        queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
+      } else {
+        toast.error('❌ Nenhuma fonte disponível', {
+          description: result.error || 'Apollo e Hunter.io falharam'
+        });
+      }
+    } catch (error: any) {
+      console.error('[REVEAL] ❌ Erro:', error);
+      toast.error('Erro ao revelar contato', {
+        description: error.message
+      });
+    } finally {
+      setRevealingContacts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(decisorId);
+        return newSet;
+      });
+    }
+  };
+  
+  // 💎 REVELAR CONTATO PESSOAL (Lusha - apenas VIP/C-Level)
+  const handleRevealPersonalContact = async (decisor: any) => {
+    const decisorId = decisor.id;
+    setRevealingContacts(prev => new Set(prev).add(decisorId));
+    
+    try {
+      toast.info('💎 Revelando contato pessoal (VIP)...', {
+        description: 'Lusha (Mobile pessoal) | Custo: ~3 créditos'
+      });
+      
+      const result = await revealPersonalContact(
+        decisorId,
+        decisor.linkedin_url,
+        decisor.name,
+        company.name
+      );
+      
+      if (result.success) {
+        toast.success(`✅ Contato VIP revelado via Lusha!`, {
+          description: `Mobile: ${result.mobile || 'N/A'} | Email pessoal: ${result.email || 'N/A'} | Custo: ${result.cost} créditos`
+        });
+        
+        // Recarregar lista de decisores
+        queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
+      } else {
+        toast.error('❌ Lusha não disponível', {
+          description: result.error || 'Falha ao revelar contato pessoal'
+        });
+      }
+    } catch (error: any) {
+      console.error('[REVEAL-VIP] ❌ Erro:', error);
+      toast.error('Erro ao revelar contato VIP', {
+        description: error.message
+      });
+    } finally {
+      setRevealingContacts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(decisorId);
+        return newSet;
+      });
     }
   };
 
@@ -1306,17 +1396,27 @@ export default function CompanyDetailPage() {
                           <p className="text-xs text-slate-400 flex items-center gap-1.5">
                             <Mail className="h-3 w-3 text-slate-500" />
                             {dec.email ? (
-                              <span className="text-emerald-400">{dec.email}</span>
+                              <a 
+                                href={`mailto:${dec.email}`}
+                                className="text-emerald-400 hover:underline"
+                              >
+                                {dec.email}
+                              </a>
                             ) : (
                               <>
                                 <span>💸 Email bloqueado</span>
                                 <Button 
                                   size="sm" 
                                   variant="ghost" 
-                                  className="h-5 px-2 text-[10px] ml-auto text-blue-400 hover:text-blue-300"
-                                  onClick={() => toast.info('💸 Revelar email consome créditos Apollo')}
+                                  className="h-5 px-2 text-[10px] ml-auto text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                                  onClick={() => handleRevealCorporateContact(dec)}
+                                  disabled={revealingContacts.has(dec.id)}
                                 >
-                                  Revelar
+                                  {revealingContacts.has(dec.id) ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    'Revelar (~1 💰)'
+                                  )}
                                 </Button>
                               </>
                             )}
@@ -1328,22 +1428,54 @@ export default function CompanyDetailPage() {
                           <p className="text-xs text-slate-400 flex items-center gap-1.5">
                             <Phone className="h-3 w-3 text-slate-500" />
                             {dec.phone ? (
-                              <span className="text-blue-400">{dec.phone}</span>
+                              <a 
+                                href={`tel:${dec.phone}`}
+                                className="text-blue-400 hover:underline"
+                              >
+                                {dec.phone}
+                              </a>
                             ) : (
                               <>
                                 <span>💸 Tel bloqueado</span>
                                 <Button 
                                   size="sm" 
                                   variant="ghost" 
-                                  className="h-5 px-2 text-[10px] ml-auto text-blue-400 hover:text-blue-300"
-                                  onClick={() => toast.info('💸 Revelar telefone consome créditos')}
+                                  className="h-5 px-2 text-[10px] ml-auto text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                                  onClick={() => handleRevealCorporateContact(dec)}
+                                  disabled={revealingContacts.has(dec.id)}
                                 >
-                                  Revelar
+                                  {revealingContacts.has(dec.id) ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    'Revelar (~1 💰)'
+                                  )}
                                 </Button>
                               </>
                             )}
                           </p>
                         </div>
+                        
+                        {/* 💎 BOTÃO VIP LUSHA (apenas C-Level) */}
+                        {isVIPDecisor(dec.title || dec.position, dec.seniority_level) && (
+                          <div className="mb-2 p-2 bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded border border-amber-600/50">
+                            <p className="text-xs text-amber-400 flex items-center gap-1.5">
+                              <span className="flex-1">💎 Mobile pessoal (VIP)</span>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-5 px-2 text-[10px] text-amber-400 hover:text-amber-300 disabled:opacity-50"
+                                onClick={() => handleRevealPersonalContact(dec)}
+                                disabled={revealingContacts.has(dec.id)}
+                              >
+                                {revealingContacts.has(dec.id) ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'Revelar (~3 💰)'
+                                )}
+                              </Button>
+                            </p>
+                          </div>
+                        )}
                         
                         {/* LinkedIn */}
                         {dec.linkedin_url && (

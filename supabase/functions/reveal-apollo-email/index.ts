@@ -9,6 +9,8 @@ const corsHeaders = {
 interface RevealEmailRequest {
   decisor_id: string; // ID do decisor no Supabase
   company_domain?: string;
+  linkedin_url?: string;
+  full_name?: string;
 }
 
 serve(async (req) => {
@@ -22,7 +24,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { decisor_id, company_domain } = await req.json();
+    const { decisor_id, company_domain, linkedin_url, full_name } = await req.json();
 
     console.log('[REVEAL-EMAIL] 🔓 Revelando email para decisor:', decisor_id);
 
@@ -81,15 +83,18 @@ serve(async (req) => {
     }
 
     // TENTATIVA 2: HUNTER.IO (Se Apollo falhou)
-    if (!revealedEmail && hunterKey && company_domain && decisor.full_name) {
+    const nameToUse = full_name || decisor.full_name;
+    const domainToUse = company_domain || decisor.company_domain;
+    
+    if (!revealedEmail && hunterKey && domainToUse && nameToUse) {
       console.log('[REVEAL-EMAIL] 🚀 Tentativa 2: Hunter.io');
       
       try {
-        const firstName = decisor.full_name.split(' ')[0];
-        const lastName = decisor.full_name.split(' ').slice(1).join(' ');
+        const firstName = nameToUse.split(' ')[0];
+        const lastName = nameToUse.split(' ').slice(1).join(' ');
 
         const hunterResponse = await fetch(
-          `https://api.hunter.io/v2/email-finder?domain=${company_domain}&first_name=${firstName}&last_name=${lastName}&api_key=${hunterKey}`
+          `https://api.hunter.io/v2/email-finder?domain=${domainToUse}&first_name=${firstName}&last_name=${lastName}&api_key=${hunterKey}`
         );
 
         if (hunterResponse.ok) {
