@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Separator } from '@/components/ui/separator';
 import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, FileText, Maximize2, Minimize2, Download, Loader2, FileDown, Database, Send, History } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Download, Loader2, FileDown, Database, Send, History } from 'lucide-react';
 import { useApproveQuarantineBatch, useRejectQuarantine } from '@/hooks/useICPQuarantine';
 import { useCreateDeal } from '@/hooks/useDeals';
 import { useLatestSTCReport } from '@/hooks/useSTCHistory';
@@ -304,23 +304,6 @@ export function QuarantineReportModal({
                   )}
                 </DialogDescription>
               </div>
-            </div>
-            
-            {/* 🔧 Botão Expandir/Minimizar (recuperado) */}
-            <div className="flex items-center gap-2 shrink-0 ml-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleToggleExpand}
-                title={isExpanded ? 'Minimizar' : 'Expandir Tela Cheia'}
-                className="h-9 w-9"
-              >
-                {isExpanded ? (
-                  <Minimize2 className="w-4 h-4" />
-                ) : (
-                  <Maximize2 className="w-4 h-4" />
-                )}
-              </Button>
             </div>
           </div>
 
