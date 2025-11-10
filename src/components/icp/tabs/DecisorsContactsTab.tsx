@@ -529,13 +529,15 @@ export function DecisorsContactsTab({
 
               <div className="space-y-4">
                 {analysisData.decisorsWithEmails.map((decisor: any, idx: number) => {
-                  // Gerar iniciais para avatar
+                  // Gerar iniciais para avatar (com validação)
                   const initials = decisor.name
-                    .split(' ')
-                    .filter((n: string) => n.length > 0)
-                    .slice(0, 2)
-                    .map((n: string) => n[0].toUpperCase())
-                    .join('');
+                    ? decisor.name
+                        .split(' ')
+                        .filter((n: string) => n.length > 0)
+                        .slice(0, 2)
+                        .map((n: string) => n[0].toUpperCase())
+                        .join('')
+                    : '??';
                   
                   return (
                   <div key={idx} className="border border-slate-600 rounded-lg p-5 bg-gradient-to-br from-slate-800 to-slate-900 hover:border-primary/50 transition-all hover:shadow-lg">
