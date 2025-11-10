@@ -430,10 +430,23 @@ export default function ApprovedLeads() {
                       <Building2 className="h-10 w-10 text-primary" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{lead.razao_social}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-sm text-muted-foreground">
-                            CNPJ: {lead.cnpj} • {lead.segmento || (lead as any).raw_data?.setor_amigavel || (lead as any).raw_data?.atividade_economica || 'Segmento não identificado'}
-                          </p>
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            CNPJ: {lead.cnpj}
+                          </Badge>
+                          
+                          {/* ✅ BADGE STATUS CNPJ (IDÊNTICO QUARENTENA) */}
+                          <QuarantineCNPJStatusBadge 
+                            cnpj={lead.cnpj} 
+                            cnpjStatus={(lead as any).cnpj_status || 'ativa'} 
+                          />
+                          
+                          {/* ✅ BADGE STATUS ANÁLISE (IDÊNTICO QUARENTENA) */}
+                          <QuarantineEnrichmentStatusBadge 
+                            rawAnalysis={(lead as any).raw_data || {}}
+                            showProgress={true}
+                          />
+                          
                           {lead.source_name && (
                             <Badge 
                               variant="secondary" 
@@ -443,6 +456,9 @@ export default function ApprovedLeads() {
                             </Badge>
                           )}
                         </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {lead.segmento || (lead as any).raw_data?.apollo_organization?.industry || (lead as any).raw_data?.receita_federal?.atividade_principal?.[0]?.text || 'Segmento não identificado'}
+                        </p>
                       </div>
                     </div>
 
