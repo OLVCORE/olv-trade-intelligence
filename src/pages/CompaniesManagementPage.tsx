@@ -732,12 +732,13 @@ export default function CompaniesManagementPage() {
             throw new Error('Domínio inválido');
           }
 
-          // 🔥 EDGE FUNCTION PÚBLICA (sem JWT, evita 401)
-          const { error } = await supabase.functions.invoke('enrich-apollo-public', {
+          // 🔥 EDGE FUNCTION Apollo com auth de usuário
+          const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: { 
               company_id: company.id,
               company_name: company.company_name || company.name,
-              domain: domain
+              domain: domain,
+              modes: ['people', 'company']
             }
           });
           
