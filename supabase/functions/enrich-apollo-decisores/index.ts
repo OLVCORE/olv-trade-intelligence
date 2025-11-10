@@ -57,15 +57,29 @@ serve(async (req) => {
   }
 
   try {
+    const body: EnrichApolloRequest = await req.json();
+    
+    console.log('[ENRICH-APOLLO] 📥 Request recebido:', {
+      company_id: body.company_id,
+      company_name: body.company_name,
+      modes: body.modes
+    });
+    
     // 🔥 USAR SERVICE_ROLE_KEY para evitar problemas de autenticação
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    );
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    
+    if (!serviceRoleKey || !supabaseUrl) {
+      console.error('[ENRICH-APOLLO] ❌ Variáveis de ambiente faltando!');
+      return new Response(
+        JSON.stringify({ error: 'Configuração inválida', details: 'SERVICE_ROLE_KEY ou SUPABASE_URL não configurados' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
     console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado com SERVICE_ROLE_KEY');
-
-    const body: EnrichApolloRequest = await req.json();
     const companyId = body.company_id || body.companyId;
     const companyName = body.company_name || body.companyName;
     const { domain, positions, apollo_org_id } = body;
