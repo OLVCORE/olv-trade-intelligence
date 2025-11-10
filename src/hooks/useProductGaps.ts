@@ -16,6 +16,9 @@ interface UseProductGapsParams {
   }>;
   competitors?: any[];
   similarCompanies?: any[];
+  decisorsData?: any;
+  digitalData?: any;
+  analysis360Data?: any;
   enabled?: boolean;
 }
 
@@ -31,15 +34,21 @@ export function useProductGaps({
   detectedEvidences = [],
   competitors = [],
   similarCompanies = [],
+  decisorsData,
+  digitalData,
+  analysis360Data,
   enabled = true
 }: UseProductGapsParams) {
   return useQuery({
     queryKey: ['product-gaps', companyId, companyName, sector, detectedProducts.join(',')],
     queryFn: async () => {
-      console.log('[useProductGaps] 📊 Buscando recomendações para:', companyName);
+      console.log('[useProductGaps] 🧠 ANÁLISE HOLÍSTICA - Buscando recomendações para:', companyName);
       console.log('[useProductGaps] 📦 Setor:', sector, '| CNAE:', cnae, '| Funcionários:', employees);
       console.log('[useProductGaps] 🔍 Produtos detectados:', detectedProducts.length);
       console.log('[useProductGaps] 📋 Evidências:', detectedEvidences.length);
+      console.log('[useProductGaps] 👥 Decisores:', decisorsData?.total || 0);
+      console.log('[useProductGaps] 🌐 Digital Score:', digitalData?.maturityScore || 0);
+      console.log('[useProductGaps] 💰 Saúde:', analysis360Data?.healthScore || 'unknown');
 
       const { data, error } = await supabase.functions.invoke('generate-product-gaps', {
         body: {
@@ -53,7 +62,11 @@ export function useProductGaps({
           detectedProducts,
           detectedEvidences,
           competitors,
-          similarCompanies
+          similarCompanies,
+          // 🧠 CONTEXTO HOLÍSTICO
+          decisorsData,
+          digitalData,
+          analysis360Data
         }
       });
 

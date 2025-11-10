@@ -64,6 +64,57 @@ export function RecommendedProductsTab({
     staleTime: 1000 * 60 * 5 // 5 min
   });
 
+  // 🧠 BUSCAR DADOS CONTEXTUAIS DE OUTRAS ABAS
+  const { data: decisorsContextData } = useQuery({
+    queryKey: ['decisors-context', companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+      const { data } = await supabase
+        .from('decision_makers')
+        .select('position, department')
+        .eq('company_id', companyId);
+      
+      const total = data?.length || 0;
+      const cLevel = data?.filter(d => 
+        d.position?.toLowerCase().includes('ceo') || 
+        d.position?.toLowerCase().includes('cto') ||
+        d.position?.toLowerCase().includes('cfo')
+      ).length || 0;
+      const hasTechDecisors = data?.some(d => 
+        d.department?.toLowerCase().includes('ti') ||
+        d.department?.toLowerCase().includes('tecnologia')
+      ) || false;
+      const hasFinanceDecisors = data?.some(d =>
+        d.department?.toLowerCase().includes('financ') ||
+        d.position?.toLowerCase().includes('cfo')
+      ) || false;
+      
+      return { total, cLevel, hasTechDecisors, hasFinanceDecisors };
+    },
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 5
+  });
+
+  // Extrair dados 360° do raw_data
+  const analysis360Context = companyData?.raw_data?.enriched_360 ? {
+    revenue: companyData.raw_data.enriched_360.revenue || 0,
+    debts: companyData.raw_data.enriched_360.debts || 0,
+    debtsPercentage: companyData.raw_data.enriched_360.debtsPercentage || 0,
+    growthRate: companyData.raw_data.enriched_360.growthRate || 0,
+    hiringTrends: companyData.raw_data.enriched_360.hiringTrends || 0,
+    recentNews: companyData.raw_data.enriched_360.recentNews || 0,
+    healthScore: companyData.raw_data.enriched_360.healthScore || 'unknown'
+  } : undefined;
+
+  // Extrair dados digitais
+  const digitalContext = {
+    maturityScore: companyData?.raw_data?.digital_maturity_score || 0,
+    hasWebsite: !!companyData?.website,
+    hasSocialMedia: !!(companyData?.raw_data?.social_media),
+    technologies: companyData?.raw_data?.technologies || [],
+    websiteTraffic: companyData?.raw_data?.website_traffic
+  };
+
   // 📊 EXTRAIR DADOS (priorizar companyData, fallback props)
   const enrichedSector = companyData?.industry || sector || stcResult?.sector || 'Serviços';
   const enrichedCNAE = companyData?.raw_data?.cnae || cnae;
@@ -108,7 +159,11 @@ export function RecommendedProductsTab({
     detectedProducts: detectedProducts,
     detectedEvidences: detectedEvidences,
     competitors: stcResult?.competitors || [],
-    similarCompanies: similarCompanies || []
+    similarCompanies: similarCompanies || [],
+    // 🧠 DADOS CONTEXTUAIS DE TODAS AS ABAS
+    decisorsData: decisorsContextData,
+    digitalData: digitalContext,
+    analysis360Data: analysis360Context
   });
 
   // 🔗 REGISTRY: Registrar aba para SaveBar global
