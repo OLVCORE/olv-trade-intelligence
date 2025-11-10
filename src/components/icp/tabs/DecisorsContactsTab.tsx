@@ -66,14 +66,14 @@ export function DecisorsContactsTab({
       if (existingDecisors && existingDecisors.length > 0) {
         console.log('[DECISORES-TAB] ✅ Encontrados', existingDecisors.length, 'decisores já salvos');
         
-        // 🎯 CLASSIFICAÇÃO CORRETA: Prioriza SENIORITY do Apollo
+        // 🎯 CLASSIFICAÇÃO DEFINITIVA: C-Level + Diretor + Gerente + Supervisor = DECISION MAKER
         const classifyBuyingPower = (title: string, seniority: string) => {
           const titleLower = (title || '').toLowerCase();
           const seniorityLower = (seniority || '').toLowerCase();
           
-          // 🔴 DECISION MAKERS (C-level, Diretores, VP, Sócios)
+          // 🔴 DECISION MAKERS: C-Level, Diretor, Gerente, Supervisor
           if (
-            // Seniority Apollo (mais confiável)
+            // Seniority Apollo
             seniorityLower.includes('c_suite') || 
             seniorityLower.includes('c-suite') ||
             seniorityLower.includes('vp') || 
@@ -81,49 +81,44 @@ export function DecisorsContactsTab({
             seniorityLower.includes('owner') ||
             seniorityLower.includes('partner') ||
             seniorityLower.includes('director') ||
-            // Cargo exato
+            seniorityLower.includes('manager') ||
+            // C-Level
             titleLower.includes('ceo') || 
             titleLower.includes('cfo') || 
             titleLower.includes('cto') || 
             titleLower.includes('cio') || 
             titleLower.includes('cmo') ||
             titleLower.includes('presidente') ||
-            titleLower.includes('diretor geral') ||
-            titleLower.includes('diretor executivo') ||
-            titleLower.includes('diretor financeiro') ||
-            titleLower.includes('diretor comercial') ||
-            titleLower.includes('diretor de ti') ||
-            titleLower.includes('diretor de tecnologia') ||
             titleLower.includes('vice-presidente') ||
             titleLower.includes('vice presidente') ||
             titleLower.includes('sócio') ||
-            titleLower.includes('partner') ||
             titleLower.includes('fundador') ||
-            titleLower.includes('proprietário')
+            titleLower.includes('proprietário') ||
+            // DIRETOR (qualquer tipo)
+            titleLower.includes('diretor') ||
+            titleLower.includes('director') ||
+            // GERENTE (qualquer tipo)
+            titleLower.includes('gerente') || 
+            titleLower.includes('manager') ||
+            // SUPERVISOR (qualquer tipo)
+            titleLower.includes('supervisor')
           ) {
             return 'decision-maker';
           }
           
-          // 🟡 INFLUENCERS (Gerentes, Coordenadores, Supervisores, Heads)
+          // 🟡 INFLUENCERS: Coordenadores, Líderes, Heads
           if (
-            // Seniority Apollo
-            seniorityLower.includes('manager') ||
-            seniorityLower.includes('senior') ||
-            // Cargo
-            titleLower.includes('gerente') || 
-            titleLower.includes('manager') ||
             titleLower.includes('coordenador') || 
             titleLower.includes('coordinator') ||
-            titleLower.includes('supervisor') || 
             titleLower.includes('head of') ||
             titleLower.includes('líder') ||
-            titleLower.includes('leader')
+            titleLower.includes('leader') ||
+            seniorityLower.includes('senior')
           ) {
             return 'influencer';
           }
           
-          // 🔵 USUÁRIOS (Analistas, Assistentes, Técnicos, Inspetores, Auxiliares)
-          // Tudo que não é Decision Maker nem Influencer
+          // 🔵 USUÁRIOS: Analistas, Assistentes, Técnicos, etc.
           return 'user';
         };
         
@@ -521,56 +516,56 @@ export function DecisorsContactsTab({
       {/* Resultados */}
       {analysisData && (
         <>
-          {/* Estatísticas */}
+          {/* 📊 Estatísticas - TEMA ESCURO PREMIUM */}
           <div className="grid grid-cols-4 gap-4">
-            <Card className="p-4">
+            <Card className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Decisores</span>
+                <Users className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-medium text-slate-300 uppercase">Decisores</span>
               </div>
-              <div className="text-2xl font-bold">{analysisData?.decisors?.length || 0}</div>
-              <Badge variant="outline" className="text-xs mt-1">identificados</Badge>
+              <div className="text-2xl font-bold text-white">{analysisData?.decisors?.length || 0}</div>
+              <Badge variant="outline" className="text-xs mt-1 border-slate-600 text-slate-400">identificados</Badge>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Emails</span>
+                <Mail className="w-4 h-4 text-emerald-400" />
+                <span className="text-xs font-medium text-slate-300 uppercase">Emails</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-white">
                 {analysisData?.decisorsWithEmails?.filter((d: any) => d.email).length || 0}
               </div>
-              <Badge variant="outline" className="text-xs mt-1">encontrados</Badge>
+              <Badge variant="outline" className="text-xs mt-1 border-slate-600 text-slate-400">encontrados</Badge>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Taxa Sucesso</span>
+                <TrendingUp className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-medium text-slate-300 uppercase">Taxa Sucesso</span>
               </div>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-white">
                 {(analysisData?.decisors?.length || 0) > 0
                   ? Math.round(((analysisData?.decisorsWithEmails?.filter((d: any) => d.email).length || 0) / (analysisData?.decisors?.length || 1)) * 100)
                   : 0}%
               </div>
-              <Badge variant="outline" className="text-xs mt-1">emails/decisores</Badge>
+              <Badge variant="outline" className="text-xs mt-1 border-slate-600 text-slate-400">emails/decisores</Badge>
             </Card>
 
-            <Card className="p-4">
+            <Card className="p-4 bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase">Insights</span>
+                <Target className="w-4 h-4 text-orange-400" />
+                <span className="text-xs font-medium text-slate-300 uppercase">Insights</span>
               </div>
-              <div className="text-2xl font-bold">{analysisData?.insights?.length || 0}</div>
-              <Badge variant="outline" className="text-xs mt-1">gerados</Badge>
+              <div className="text-2xl font-bold text-white">{analysisData?.insights?.length || 0}</div>
+              <Badge variant="outline" className="text-xs mt-1 border-slate-600 text-slate-400">gerados</Badge>
             </Card>
           </div>
 
-          {/* 🔍 FILTROS MÚLTIPLOS */}
+          {/* 🔍 FILTROS MÚLTIPLOS - TEMA ESCURO */}
           {(analysisData?.decisorsWithEmails?.length || 0) > 0 && (
-            <Card className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 border-slate-300">
-              <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-                <Filter className="w-4 h-4" />
+            <Card className="p-4 bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700">
+              <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm text-white">
+                <Filter className="w-4 h-4 text-blue-400" />
                 Filtros Avançados
               </h4>
               
@@ -655,15 +650,15 @@ export function DecisorsContactsTab({
               </div>
 
               {/* Contador + Limpar Filtros */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                <p className="text-xs text-muted-foreground">
-                  Exibindo <strong>{filteredDecisors.length}</strong> de <strong>{analysisData?.decisorsWithEmails?.length || 0}</strong> decisores
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700">
+                <p className="text-xs text-slate-300">
+                  Exibindo <strong className="text-white">{filteredDecisors.length}</strong> de <strong className="text-white">{analysisData?.decisorsWithEmails?.length || 0}</strong> decisores
                 </p>
                 {(filterBuyingPower.length > 0 || filterDepartment.length > 0 || filterLocation.length > 0 || filterSeniority.length > 0) && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-xs"
+                    className="h-7 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700"
                     onClick={() => {
                       setFilterBuyingPower([]);
                       setFilterDepartment([]);
@@ -678,26 +673,26 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* Dados da Empresa LinkedIn */}
+          {/* Dados da Empresa LinkedIn - TEMA ESCURO */}
           {analysisData.companyData && (
-            <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
-              <h4 className="font-semibold mb-4 flex items-center gap-2">
-                <Linkedin className="w-5 h-5 text-muted-foreground" />
+            <Card className="p-6 bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700">
+              <h4 className="font-semibold mb-4 flex items-center gap-2 text-white">
+                <Linkedin className="w-5 h-5 text-blue-400" />
                 Presença no LinkedIn
               </h4>
               
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <span className="text-xs text-muted-foreground">Seguidores</span>
-                  <p className="text-xl font-bold">{analysisData?.companyData?.followers?.toLocaleString() || 0}</p>
+                  <span className="text-xs text-slate-400">Seguidores</span>
+                  <p className="text-xl font-bold text-white">{analysisData?.companyData?.followers?.toLocaleString() || 0}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Funcionários</span>
-                  <p className="text-xl font-bold">{analysisData?.companyData?.employees?.toLocaleString() || 0}</p>
+                  <span className="text-xs text-slate-400">Funcionários</span>
+                  <p className="text-xl font-bold text-white">{analysisData?.companyData?.employees?.toLocaleString() || 0}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Posts Recentes</span>
-                  <p className="text-xl font-bold">{analysisData?.companyData?.recentPosts?.length || 0}</p>
+                  <span className="text-xs text-slate-400">Posts Recentes</span>
+                  <p className="text-xl font-bold text-white">{analysisData?.companyData?.recentPosts?.length || 0}</p>
                 </div>
               </div>
 
@@ -717,14 +712,14 @@ export function DecisorsContactsTab({
             </Card>
           )}
 
-          {/* Lista de Decisores - DESTAQUE COM BALÃO COLORIDO */}
+          {/* Lista de Decisores - TEMA ESCURO PREMIUM */}
           {filteredDecisors && filteredDecisors.length > 0 && (
-            <Card className="p-6 border-2 border-emerald-500/30 bg-emerald-500/5">
+            <Card className="p-6 border-2 border-emerald-500/40 bg-gradient-to-br from-slate-800 to-slate-900">
               <div className="flex items-center gap-4 mb-6">
                 <div className="p-3 rounded-full bg-emerald-500/20">
-                  <Users className="w-6 h-6 text-emerald-500" />
+                  <Users className="w-6 h-6 text-emerald-400" />
                 </div>
-                <h4 className="font-bold text-xl text-foreground">
+                <h4 className="font-bold text-xl text-white">
                   Decisores Identificados
                 </h4>
                 <Badge variant="default" className="bg-emerald-600 text-white text-lg px-4 py-2 shadow-lg">
