@@ -404,7 +404,8 @@ export default function CompanyDetailPage() {
   });
   const digitalPresence = (company as any)?.digital_presence;
   const rawData = (company as any)?.raw_data || {};
-  const situacaoReceita: string | undefined = receitaData?.situacao;
+  // ✅ Buscar situação de múltiplos campos possíveis
+  const situacaoReceita: string | undefined = receitaData?.situacao || receitaData?.descricao_situacao_cadastral || receitaData?.status;
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -1192,15 +1193,24 @@ export default function CompanyDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {console.log('[CompanyDetail] 🎯 Renderizando', decisors.length, 'decisores')}
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {decisors.map((dec: any) => (
-                    <div key={dec.id} className="p-3 bg-muted/30 rounded-lg hover-scale">
-                      <p className="font-semibold text-sm mb-1">{dec.name}</p>
-                      <p className="text-xs text-muted-foreground mb-2">{dec.title}</p>
-                      {dec.email && <p className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" />{dec.email}</p>}
-                      {dec.phone && <p className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" />{dec.phone}</p>}
-                    </div>
-                  ))}
+                  {decisors.map((dec: any, idx: number) => {
+                    console.log('[CompanyDetail] 📋 Decisor', idx, ':', dec);
+                    return (
+                      <div key={dec.id || idx} className="p-3 bg-muted/30 rounded-lg hover-scale border border-blue-500/30">
+                        <p className="font-semibold text-sm mb-1 text-white">{dec.full_name || dec.name || 'Sem nome'}</p>
+                        <p className="text-xs text-slate-300 mb-2">{dec.position || dec.title || 'Cargo não informado'}</p>
+                        {dec.email && <p className="text-xs flex items-center gap-1 text-emerald-400"><Mail className="h-3 w-3" />{dec.email}</p>}
+                        {dec.phone && <p className="text-xs flex items-center gap-1 text-blue-400"><Phone className="h-3 w-3" />{dec.phone}</p>}
+                        {dec.linkedin_url && (
+                          <a href={dec.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">
+                            LinkedIn →
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
