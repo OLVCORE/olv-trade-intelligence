@@ -264,6 +264,7 @@ export async function performFullLinkedInAnalysis(
   insights: string[];
 }> {
   console.log('[Apollo+Phantom] 🔥 Extração híbrida:', companyName, '| companyId:', companyId);
+  console.log('[Apollo+Phantom] 🔍 Params recebidos:', { companyName, companyId, linkedinCompanyUrl, companyDomain });
 
   const insights: string[] = [];
   
@@ -271,6 +272,16 @@ export async function performFullLinkedInAnalysis(
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
   const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
   
+  const requestBody = {
+    company_id: companyId,
+    company_name: companyName,
+    companyName, // backward compatibility
+    domain: companyDomain,
+    modes: ['people', 'company'],
+    positions: ['CEO','CFO','CIO','CTO','COO','Diretor','Gerente','VP','Head','Presidente','Sócio','Coordenador']
+  };
+  
+  console.log('[Apollo+Phantom] 📦 Request body:', JSON.stringify(requestBody, null, 2));
   console.log('[Apollo+Phantom] 🚀 Chamando Apollo backend...');
   
   const apolloRes = await fetch(`${SUPABASE_URL}/functions/v1/enrich-apollo-decisores`, {
@@ -280,14 +291,7 @@ export async function performFullLinkedInAnalysis(
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'apikey': SUPABASE_ANON_KEY
     },
-    body: JSON.stringify({
-      company_id: companyId,
-      company_name: companyName, // ✅ CORRIGIR: usar company_name (não companyName)
-      companyName, // ✅ Manter backward compatibility
-      domain: companyDomain,
-      modes: ['people', 'company'],
-      positions: ['CEO','CFO','CIO','CTO','COO','Diretor','Gerente','VP','Head','Presidente','Sócio','Coordenador']
-    })
+    body: JSON.stringify(requestBody)
   });
   
   console.log('[Apollo+Phantom] 📡 Response status:', apolloRes.status, apolloRes.statusText);
