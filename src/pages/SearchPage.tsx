@@ -683,15 +683,15 @@ export default function SearchPage() {
     try {
       setIsSaving(true);
       
-      // 1. Salvar preview no histórico (mesmo que não confirme)
-      await supabase.from('company_previews').insert({
-        query: searchQuery,
-        cnpj: previewData.company.cnpj,
-        name: previewData.company.name,
-        website: previewData.company.website,
-        domain: previewData.company.domain,
-        snapshot: previewData
-      });
+      // 1. Salvar preview no histórico (desabilitado - tabela company_previews não existe)
+      // await supabase.from('company_previews').insert({
+      //   query: searchQuery,
+      //   cnpj: previewData.company.cnpj,
+      //   name: previewData.company.name,
+      //   website: previewData.company.website,
+      //   domain: previewData.company.domain,
+      //   snapshot: previewData
+      // });
       
       // 2. Salvar empresa no funil de vendas
       console.log('[SEARCH] 💾 Salvando empresa:', {
@@ -742,15 +742,15 @@ export default function SearchPage() {
     if (!previewData) return;
     
     try {
-      // Salvar preview no histórico mesmo ao cancelar (para memória de buscas)
-      await supabase.from('company_previews').insert({
-        query: searchQuery,
-        cnpj: previewData.company.cnpj,
-        name: previewData.company.name,
-        website: previewData.company.website,
-        domain: previewData.company.domain,
-        snapshot: previewData
-      });
+      // Salvar preview no histórico (desabilitado - tabela company_previews não existe)
+      // await supabase.from('company_previews').insert({
+      //   query: searchQuery,
+      //   cnpj: previewData.company.cnpj,
+      //   name: previewData.company.name,
+      //   website: previewData.company.website,
+      //   domain: previewData.company.domain,
+      //   snapshot: previewData
+      // });
       
       toast({
         title: "Busca registrada",
