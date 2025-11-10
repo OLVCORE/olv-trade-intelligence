@@ -278,13 +278,37 @@ export default function ICPQuarantine() {
 
       if (!analysis) throw new Error('Empresa não encontrada');
 
-      const rawData = (analysis.raw_data && typeof analysis.raw_data === 'object' && !Array.isArray(analysis.raw_data)) 
-        ? analysis.raw_data as Record<string, any>
-        : {};
+      // 🔍 Buscar company_id (pode estar em analysis ou precisar criar)
+      let targetCompanyId = analysis.company_id;
+      
+      if (!targetCompanyId) {
+        // Se não tem company_id, pode estar em leads_pool
+        const { data: lead } = await supabase
+          .from('leads_pool')
+          .select('company_id')
+          .eq('cnpj', analysis.cnpj)
+          .single();
+        
+        targetCompanyId = lead?.company_id;
+      }
 
-      // ⚠️ APOLLO NÃO FUNCIONA NO FRONTEND (CORS bloqueado)
-      // API Apollo.io não aceita chamadas diretas do browser
-      throw new Error('⚠️ Apollo requer Edge Function devido ao CORS. Deploy necessário!');
+      if (!targetCompanyId) {
+        throw new Error('company_id não encontrado para esta empresa');
+      }
+
+      // 🔥 CHAMADA DIRETA APOLLO (sem Edge Function, evita CORS/401)
+      const { enrichCompanyWithApollo } = await import('@/services/apolloEnrichment');
+      const result = await enrichCompanyWithApollo(
+        targetCompanyId,
+        analysis.company_name || analysis.name || '',
+        analysis.website || analysis.domain || undefined
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Falha ao enriquecer com Apollo');
+      }
+      
+      console.log('[QUARANTINE] ✅ Apollo enrichment concluído:', result.decisores?.length, 'decisores');
     },
     onSuccess: () => {
       toast.success('✅ Apollo atualizado - Website e decisores adicionados');
