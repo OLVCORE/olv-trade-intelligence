@@ -111,13 +111,13 @@ export async function revealCorporateContact(
     success: false,
     source: 'none',
     cost: 0,
-    error: 'Nenhuma fonte disponível (Apollo e Hunter falharam)'
+    error: 'Contato não disponível'
   };
 }
 
 /**
- * 🥉 REVEAL VIP: Lusha (Mobile pessoal + Email pessoal)
- * APENAS para C-Level e Decisores importantes
+ * 🥉 REVEAL PESSOAL: Mobile pessoal + Email pessoal
+ * Disponível para TODOS os decisores
  */
 export async function revealPersonalContact(
   decisorId: string,
@@ -125,7 +125,7 @@ export async function revealPersonalContact(
   fullName?: string,
   companyName?: string
 ): Promise<RevealResult> {
-  console.log('[REVEAL-VIP] 💎 Iniciando reveal VIP (Lusha) para:', fullName);
+  console.log('[REVEAL-PESSOAL] 📱 Iniciando reveal pessoal para:', fullName);
   
   try {
     const { data: lushaData, error: lushaError } = await supabase.functions.invoke('reveal-lusha-contact', {
@@ -138,7 +138,7 @@ export async function revealPersonalContact(
     });
     
     if (!lushaError && (lushaData?.mobile || lushaData?.personal_email)) {
-      console.log('[REVEAL-VIP] ✅ Lusha sucesso!');
+      console.log('[REVEAL-PESSOAL] ✅ Contato pessoal revelado!');
       
       // Salvar no banco
       const updateData: any = {};
@@ -159,14 +159,14 @@ export async function revealPersonalContact(
       };
     }
   } catch (lushaErr) {
-    console.error('[REVEAL-VIP] ❌ Lusha falhou:', lushaErr);
+    console.error('[REVEAL-PESSOAL] ❌ Falha ao revelar:', lushaErr);
   }
   
   return {
     success: false,
     source: 'none',
     cost: 0,
-    error: 'Lusha não disponível ou falhou'
+    error: 'Contato pessoal não disponível'
   };
 }
 

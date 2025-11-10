@@ -425,7 +425,7 @@ export function DecisorsContactsTab({
     try {
       const { toast } = await import('sonner');
       toast.info('💸 Revelando contato corporativo...', {
-        description: 'Apollo → Hunter.io (fallback) | Custo: ~1 crédito'
+        description: 'Custo: ~1 crédito'
       });
       
       const result = await revealCorporateContact(
@@ -436,15 +436,15 @@ export function DecisorsContactsTab({
       );
       
       if (result.success) {
-        toast.success(`✅ Contato revelado via ${result.source.toUpperCase()}!`, {
+        toast.success(`✅ Contato corporativo revelado!`, {
           description: `Email: ${result.email || 'N/A'} | Tel: ${result.phone || 'N/A'} | Custo: ${result.cost} crédito(s)`
         });
         
         // Recarregar lista de decisores
         await handleRefreshData();
       } else {
-        toast.error('❌ Nenhuma fonte disponível', {
-          description: result.error || 'Apollo e Hunter.io falharam'
+        toast.error('❌ Contato não disponível', {
+          description: result.error
         });
       }
     } catch (error: any) {
@@ -462,15 +462,15 @@ export function DecisorsContactsTab({
     }
   };
   
-  // 💎 REVELAR CONTATO PESSOAL (Lusha - apenas VIP/C-Level)
+  // 📱 REVELAR CONTATO PESSOAL
   const handleRevealPersonalContact = async (decisor: any) => {
     const decisorId = decisor.id;
     setRevealingContacts(prev => new Set(prev).add(decisorId));
     
     try {
       const { toast } = await import('sonner');
-      toast.info('💎 Revelando contato pessoal (VIP)...', {
-        description: 'Lusha (Mobile pessoal) | Custo: ~3 créditos'
+      toast.info('📱 Revelando contatos pessoais...', {
+        description: 'Mobile + Email pessoal | Custo: ~3 créditos'
       });
       
       const result = await revealPersonalContact(
@@ -481,21 +481,21 @@ export function DecisorsContactsTab({
       );
       
       if (result.success) {
-        toast.success(`✅ Contato VIP revelado via Lusha!`, {
+        toast.success(`✅ Contatos pessoais revelados!`, {
           description: `Mobile: ${result.mobile || 'N/A'} | Email pessoal: ${result.email || 'N/A'} | Custo: ${result.cost} créditos`
         });
         
         // Recarregar lista de decisores
         await handleRefreshData();
       } else {
-        toast.error('❌ Lusha não disponível', {
-          description: result.error || 'Falha ao revelar contato pessoal'
+        toast.error('❌ Contatos pessoais não disponíveis', {
+          description: result.error
         });
       }
     } catch (error: any) {
-      console.error('[REVEAL-VIP] ❌ Erro:', error);
+      console.error('[REVEAL-PESSOAL] ❌ Erro:', error);
       const { toast } = await import('sonner');
-      toast.error('Erro ao revelar contato VIP', {
+      toast.error('Erro ao revelar contatos pessoais', {
         description: error.message
       });
     } finally {
@@ -1389,7 +1389,7 @@ export function DecisorsContactsTab({
                           </Button>
                         )}
                         
-                        {/* 📱 BOTÃO LUSHA - CONTATOS PESSOAIS (Para TODOS) */}
+                        {/* 📱 BOTÃO CONTATOS PESSOAIS (sem revelar fonte) */}
                         {!decisor.email && (
                           <div className="mt-1">
                             <Button 
@@ -1398,7 +1398,7 @@ export function DecisorsContactsTab({
                               className="h-6 text-[9px] text-purple-500 hover:text-purple-400 disabled:opacity-50"
                               onClick={() => handleRevealPersonalContact(decisor)}
                               disabled={revealingContacts.has(decisor.id)}
-                              title="📱 Revelar contatos PESSOAIS via Lusha: Mobile + Email pessoal"
+                              title="📱 Revelar mobile + email pessoal"
                             >
                               {revealingContacts.has(decisor.id) ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />

@@ -261,14 +261,14 @@ export default function CompanyDetailPage() {
     }
   };
 
-  // 💸 REVELAR CONTATO CORPORATIVO (Apollo + Hunter)
+  // 💸 REVELAR CONTATO CORPORATIVO
   const handleRevealCorporateContact = async (decisor: any) => {
     const decisorId = decisor.id;
     setRevealingContacts(prev => new Set(prev).add(decisorId));
     
     try {
       toast.info('💸 Revelando contato corporativo...', {
-        description: 'Apollo → Hunter.io (fallback) | Custo: ~1 crédito'
+        description: 'Custo: ~1 crédito'
       });
       
       const result = await revealCorporateContact(
@@ -279,15 +279,15 @@ export default function CompanyDetailPage() {
       );
       
       if (result.success) {
-        toast.success(`✅ Contato revelado via ${result.source.toUpperCase()}!`, {
+        toast.success(`✅ Contato corporativo revelado!`, {
           description: `Email: ${result.email || 'N/A'} | Tel: ${result.phone || 'N/A'} | Custo: ${result.cost} crédito(s)`
         });
         
         // Recarregar lista de decisores
         queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
       } else {
-        toast.error('❌ Nenhuma fonte disponível', {
-          description: result.error || 'Apollo e Hunter.io falharam'
+        toast.error('❌ Contato não disponível', {
+          description: result.error
         });
       }
     } catch (error: any) {
@@ -304,14 +304,14 @@ export default function CompanyDetailPage() {
     }
   };
   
-  // 💎 REVELAR CONTATO PESSOAL (Lusha - apenas VIP/C-Level)
+  // 📱 REVELAR CONTATO PESSOAL
   const handleRevealPersonalContact = async (decisor: any) => {
     const decisorId = decisor.id;
     setRevealingContacts(prev => new Set(prev).add(decisorId));
     
     try {
-      toast.info('💎 Revelando contato pessoal (VIP)...', {
-        description: 'Lusha (Mobile pessoal) | Custo: ~3 créditos'
+      toast.info('📱 Revelando contatos pessoais...', {
+        description: 'Mobile + Email pessoal | Custo: ~3 créditos'
       });
       
       const result = await revealPersonalContact(
@@ -322,20 +322,20 @@ export default function CompanyDetailPage() {
       );
       
       if (result.success) {
-        toast.success(`✅ Contato VIP revelado via Lusha!`, {
+        toast.success(`✅ Contatos pessoais revelados!`, {
           description: `Mobile: ${result.mobile || 'N/A'} | Email pessoal: ${result.email || 'N/A'} | Custo: ${result.cost} créditos`
         });
         
         // Recarregar lista de decisores
         queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
       } else {
-        toast.error('❌ Lusha não disponível', {
-          description: result.error || 'Falha ao revelar contato pessoal'
+        toast.error('❌ Contatos pessoais não disponíveis', {
+          description: result.error
         });
       }
     } catch (error: any) {
-      console.error('[REVEAL-VIP] ❌ Erro:', error);
-      toast.error('Erro ao revelar contato VIP', {
+      console.error('[REVEAL-PESSOAL] ❌ Erro:', error);
+      toast.error('Erro ao revelar contatos pessoais', {
         description: error.message
       });
     } finally {
@@ -1455,17 +1455,17 @@ export default function CompanyDetailPage() {
                           </p>
                         </div>
                         
-                        {/* 📱 BOTÃO LUSHA - CONTATOS PESSOAIS (Para TODOS) */}
+                        {/* 📱 BOTÃO CONTATOS PESSOAIS (sem revelar fonte) */}
                         <div className="mb-2 p-2 bg-gradient-to-r from-purple-900/30 to-indigo-900/30 rounded border border-purple-600/50">
                           <p className="text-xs text-purple-400 flex items-center gap-1.5">
-                            <span className="flex-1">📱 Contatos Pessoais (Lusha)</span>
+                            <span className="flex-1">📱 Contatos Pessoais</span>
                             <Button 
                               size="sm" 
                               variant="ghost" 
                               className="h-5 px-2 text-[10px] text-purple-400 hover:text-purple-300 disabled:opacity-50"
                               onClick={() => handleRevealPersonalContact(dec)}
                               disabled={revealingContacts.has(dec.id)}
-                              title="📱 Revelar Mobile + Email PESSOAL via Lusha"
+                              title="📱 Revelar mobile + email pessoal"
                             >
                               {revealingContacts.has(dec.id) ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
