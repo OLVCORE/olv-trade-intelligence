@@ -10,6 +10,7 @@ import { Users, Mail, Phone, Linkedin, Sparkles, Loader2, ExternalLink, Target, 
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { performFullLinkedInAnalysis } from '@/services/phantomBusterEnhanced';
 import { corporateTheme } from '@/lib/theme/corporateTheme';
 import type { LinkedInProfileData } from '@/services/phantomBusterEnhanced';
@@ -43,6 +44,34 @@ export function DecisorsContactsTab({
   });
   const [customLinkedInUrl, setCustomLinkedInUrl] = useState(linkedinUrl || '');
   const [customApolloUrl, setCustomApolloUrl] = useState('');
+  
+  // 🔥 BUSCAR DECISORES JÁ SALVOS (de enrichment em massa)
+  useEffect(() => {
+    const loadExistingDecisors = async () => {
+      if (!companyId) return;
+      
+      // Buscar decisores salvos na tabela decision_makers
+      const { data: existingDecisors } = await supabase
+        .from('decision_makers')
+        .select('*')
+        .eq('company_id', companyId);
+      
+      if (existingDecisors && existingDecisors.length > 0) {
+        console.log('[DECISORES-TAB] ✅ Encontrados', existingDecisors.length, 'decisores já salvos');
+        
+        setAnalysisData({
+          decisors: existingDecisors,
+          decisorsWithEmails: existingDecisors.filter(d => d.email),
+          insights: [`${existingDecisors.length} decisores já identificados por enrichment anterior`],
+          companyData: { source: 'database' }
+        });
+        
+        sonnerToast.success(`✅ ${existingDecisors.length} decisores carregados!`);
+      }
+    };
+    
+    loadExistingDecisors();
+  }, [companyId]);
   
   // 🔗 REGISTRY: Registrar aba para SaveBar global
   useEffect(() => {
