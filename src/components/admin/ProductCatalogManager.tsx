@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -44,7 +45,11 @@ import {
   Weight,
   Clock,
   Shield,
-  Target
+  Target,
+  Search,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -89,6 +94,12 @@ export function ProductCatalogManager() {
   const [importUrl, setImportUrl] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<TenantProduct | null>(null);
+  
+  // PRO FEATURES
+  const [search, setSearch] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // ============================================================================
   // FETCH PRODUCTS
