@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { 
   Search, 
   Info, 
@@ -114,6 +115,8 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
       countries,
       minVolume: minVolume ? parseInt(minVolume) : undefined,
       minVolumeUSD: minVolume,
+      includeKeywords, // Keywords B2B selecionadas
+      excludeKeywords, // Keywords B2C selecionadas
       keywords: ['pilates', 'fitness equipment', 'gym equipment'],
     });
   };
