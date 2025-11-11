@@ -365,8 +365,33 @@ export function ProductCatalogManager() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1 text-xs">
+                          {product.weight_kg && (
+                            <div className="flex items-center gap-1">
+                              <Weight className="h-3 w-3 text-muted-foreground" />
+                              {product.weight_kg} kg
+                            </div>
+                          )}
+                          {product.dimensions_cm && (
+                            <div className="flex items-center gap-1">
+                              <Ruler className="h-3 w-3 text-muted-foreground" />
+                              {product.dimensions_cm}
+                            </div>
+                          )}
+                          {product.moq && (
+                            <div className="flex items-center gap-1">
+                              <Target className="h-3 w-3 text-muted-foreground" />
+                              MOQ: {product.moq}
+                            </div>
+                          )}
+                          {!product.weight_kg && !product.dimensions_cm && !product.moq && (
+                            <span className="text-muted-foreground">Sem especificações</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-xs">
                           {product.price_usd && (
-                            <div>USD {product.price_usd.toLocaleString()}</div>
+                            <div className="font-medium">USD {product.price_usd.toLocaleString()}</div>
                           )}
                           {product.price_brl && (
                             <div className="text-muted-foreground">
@@ -377,13 +402,6 @@ export function ProductCatalogManager() {
                             <span className="text-muted-foreground">-</span>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {product.moq ? (
-                          <span className="text-sm">{product.moq} un</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={product.is_active ? 'default' : 'secondary'}>
