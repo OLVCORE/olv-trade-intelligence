@@ -131,6 +131,46 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </AlertDescription>
           </Alert>
 
+          {/* FILTROS B2B (VISÍVEL NO TOPO!) */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
+            <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              <Package className="h-4 w-4 text-green-600" />
+              Filtros Automáticos B2B (Apollo.io)
+            </h4>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="bg-white dark:bg-slate-900 p-3 rounded">
+                <span className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-1 mb-2">
+                  <Check className="h-3 w-3" /> INCLUIR:
+                </span>
+                <div className="space-y-1 text-muted-foreground">
+                  <div>• Distributor</div>
+                  <div>• Wholesaler</div>
+                  <div>• Dealer</div>
+                  <div>• Importer</div>
+                  <div>• Trading Company</div>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-3 rounded">
+                <span className="font-semibold text-red-700 dark:text-red-400 flex items-center gap-1 mb-2">
+                  <X className="h-3 w-3" /> EXCLUIR:
+                </span>
+                <div className="space-y-1 text-muted-foreground">
+                  <div>• Pilates Studio</div>
+                  <div>• Gym / Fitness Center</div>
+                  <div>• Wellness Center</div>
+                  <div>• Personal Training</div>
+                  <div>• Yoga Studio</div>
+                </div>
+              </div>
+            </div>
+            <div className="pt-3 border-t mt-3 border-green-200 dark:border-green-800">
+              <span className="text-xs font-medium flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                <strong>Decisores Alvo:</strong> Procurement Manager, Purchasing Director, Import Manager, Buyer
+              </span>
+            </div>
+          </div>
+
           {/* HS CODE */}
           <div>
             <Label className="flex items-center gap-2 mb-2">

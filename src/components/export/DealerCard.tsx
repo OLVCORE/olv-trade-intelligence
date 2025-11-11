@@ -22,8 +22,14 @@ import {
   TrendingUp,
   Package,
   Flame,
-  Search
+  Search,
+  Check,
+  Loader2
 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
+import { toast } from 'sonner';
 
 // ============================================================================
 // TYPES
@@ -269,6 +275,75 @@ export function DealerCard({ dealer, onGenerateProposal, onViewDetails }: Dealer
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ============================================================================
+// SAVE DEALER BUTTON (Salvar na Base de Empresas)
+// ============================================================================
+
+function SaveDealerButton({ dealer }: { dealer: Dealer }) {
+  const { currentTenant, currentWorkspace } = useTenant();
+  const [isSaved, setIsSaved] = useState(false);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentTenant || !currentWorkspace) throw new Error('Tenant/Workspace não identificado');
+
+      const { data, error } = await supabase.from('companies').insert({
+        tenant_id: currentTenant.id,
+        workspace_id: currentWorkspace.id,
+        company_name: dealer.name,
+        cnpj: null,
+        website: dealer.website,
+        city: dealer.city,
+        state: null,
+        country: dealer.country,
+        industry: dealer.industry,
+        employee_count: dealer.employees,
+        revenue_usd: dealer.revenue,
+      }).select().single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      setIsSaved(true);
+      toast.success('Dealer salvo na base!', {
+        description: `${dealer.name} adicionado à base de empresas`,
+      });
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao salvar dealer', {
+        description: error.message,
+      });
+    },
+  });
+
+  return (
+    <Button
+      variant={isSaved ? 'default' : 'secondary'}
+      size="sm"
+      onClick={() => saveMutation.mutate()}
+      disabled={saveMutation.isPending || isSaved}
+    >
+      {saveMutation.isPending ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          Salvando...
+        </>
+      ) : isSaved ? (
+        <>
+          <Check className="h-4 w-4 mr-1" />
+          Salvo na Base
+        </>
+      ) : (
+        <>
+          <Building2 className="h-4 w-4 mr-1" />
+          Salvar na Base
+        </>
+      )}
+    </Button>
   );
 }
 
