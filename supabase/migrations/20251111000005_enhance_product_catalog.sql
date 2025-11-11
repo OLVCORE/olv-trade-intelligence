@@ -43,10 +43,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 4. RLS para product-images bucket
+-- 4. RLS para product-images bucket (idempotente)
+DROP POLICY IF EXISTS "Public read access" ON storage.objects;
 CREATE POLICY "Public read access" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
+
+DROP POLICY IF EXISTS "Authenticated users can upload" ON storage.objects;
 CREATE POLICY "Authenticated users can upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Users can update own uploads" ON storage.objects;
 CREATE POLICY "Users can update own uploads" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Users can delete own uploads" ON storage.objects;
 CREATE POLICY "Users can delete own uploads" ON storage.objects FOR DELETE USING (bucket_id = 'product-images' AND auth.role() = 'authenticated');
 
 -- 5. Atualizar produtos existentes com valores padrão

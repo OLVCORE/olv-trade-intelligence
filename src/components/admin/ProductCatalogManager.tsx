@@ -141,7 +141,7 @@ export function ProductCatalogManager() {
       if (error) throw error;
 
       toast.success('✅ Produtos importados com sucesso!', {
-        description: `${data.products_count} produtos adicionados ao catálogo`,
+        description: `${data.products_imported || 0} produtos adicionados ao catálogo`,
         duration: 5000,
       });
 
@@ -152,6 +152,52 @@ export function ProductCatalogManager() {
       console.error('[CATALOG] Erro ao importar:', err);
       toast.error('Erro ao importar catálogo', {
         description: err.message || 'Erro desconhecido. Verifique o console.',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Deep Import (busca equipamentos principais + fotos + specs)
+  const handleDeepImport = async () => {
+    if (!importUrl) {
+      toast.error('URL obrigatória');
+      return;
+    }
+
+    if (!currentTenant?.id) {
+      toast.error('Tenant não identificado');
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      toast.info('🔍 Deep Scraping iniciado...', {
+        description: 'Buscando em categorias e páginas individuais. Isso pode demorar 1-2 minutos.',
+        duration: 5000,
+      });
+
+      const { data, error } = await supabase.functions.invoke('import-product-catalog-deep', {
+        body: {
+          tenant_id: currentTenant.id,
+          website_url: importUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success('✅ Deep Import concluído!', {
+        description: `${data.products_imported || 0} equipamentos principais importados com fotos e especificações!`,
+        duration: 5000,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['tenant-products'] });
+      setImportUrl('');
+    } catch (err: any) {
+      console.error('[CATALOG] Erro no deep import:', err);
+      toast.error('Erro no deep import', {
+        description: err.message,
       });
     } finally {
       setIsImporting(false);
@@ -242,6 +288,7 @@ export function ProductCatalogManager() {
               onClick={handleImportFromWebsite}
               disabled={!importUrl || isImporting}
               className="mt-7"
+              variant="outline"
             >
               {isImporting ? (
                 <>
@@ -251,7 +298,24 @@ export function ProductCatalogManager() {
               ) : (
                 <>
                   <Download className="h-4 w-4 mr-2" />
-                  Importar
+                  Quick Import
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleDeepImport}
+              disabled={!importUrl || isImporting}
+              className="mt-7"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Buscando...
+                </>
+              ) : (
+                <>
+                  <Target className="h-4 w-4 mr-2" />
+                  Deep Import (Equipamentos)
                 </>
               )}
             </Button>
