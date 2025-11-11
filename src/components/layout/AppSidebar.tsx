@@ -41,7 +41,8 @@ import {
   History,
   XCircle,
   Filter,
-  Package
+  Package,
+  FileSignature
 } from "lucide-react";
 import {
   Sidebar,
