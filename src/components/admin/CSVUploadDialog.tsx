@@ -20,10 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { normalizeProductBatch, autoMapCSVColumns } from '@/lib/utils/productDataNormalizer';
 
 interface CSVUploadDialogProps {
   open: boolean;
@@ -82,31 +83,50 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
     }
   };
 
-  // Import to database
+  // Download Template CSV
+  const handleDownloadTemplate = () => {
+    const template = `name,category,hs_code,price_usd,price_brl,moq,weight_kg,dimensions_cm,volume_m3,sku,brand,materials,warranty_months,description,image_url
+Reformer Advanced,Linha Advanced,9506.91.00,3500,19250,1,85,240x60x35,0.504,RF-ADV-001,MetaLife,"Steel frame, wood deck",24,"Professional reformer",https://example.com/image.jpg
+Cadillac Infinity,Linha Infinity,9506.91.00,5200,28600,1,120,280x80x220,4.928,CAD-INF-001,MetaLife,"Steel structure",24,"Complete cadillac system",https://example.com/cadillac.jpg`;
+
+    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'template_produtos_metalife.csv';
+    link.click();
+    
+    toast.success('Template CSV baixado!', {
+      description: 'Preencha o arquivo e faça o upload',
+    });
+  };
+
+  // Import to database com NORMALIZER UNIVERSAL
   const importMutation = useMutation({
     mutationFn: async (products: any[]) => {
       if (!currentTenant?.id) throw new Error('Tenant não identificado');
 
-      // Mapear colunas CSV para campos do banco
-      const productsToInsert = products.map(row => ({
+      // 🔥 USAR O NORMALIZADOR UNIVERSAL
+      const normalizedResults = normalizeProductBatch(products);
+
+      // Filtrar apenas os sucessos
+      const successProducts = normalizedResults.filter(r => r.success);
+      const failedProducts = normalizedResults.filter(r => !r.success);
+
+      if (failedProducts.length > 0) {
+        console.warn('[CSV] Produtos com erro:', failedProducts);
+        toast.warning(`${failedProducts.length} produto(s) ignorado(s) por erro de validação`);
+      }
+
+      if (successProducts.length === 0) {
+        throw new Error('Nenhum produto válido para importar');
+      }
+
+      // Preparar para inserção no Supabase
+      const productsToInsert = successProducts.map(result => ({
         tenant_id: currentTenant.id,
-        name: row.name || row.produto || row.product || row.Nome,
-        description: row.description || row.descricao || row.Descrição,
-        category: row.category || row.categoria || row.Categoria,
-        hs_code: row.hs_code || row.hs || row['HS Code'] || row.ncm,
-        price_usd: parseFloat(row.price_usd || row.preco_usd || row['Preço USD'] || 0) || null,
-        price_brl: parseFloat(row.price_brl || row.preco_brl || row['Preço BRL'] || 0) || null,
-        moq: parseInt(row.moq || row.MOQ || row.minimo || 1) || 1,
-        weight_kg: parseFloat(row.weight_kg || row.peso || row.Peso || 0) || null,
-        dimensions_cm: row.dimensions_cm || row.dimensoes || row.Dimensões,
-        volume_m3: parseFloat(row.volume_m3 || row.volume || row.Volume || 0) || null,
-        sku: row.sku || row.SKU || row.codigo,
-        brand: row.brand || row.marca || row.Marca || 'MetaLife',
-        materials: row.materials || row.materiais || row.Materiais,
-        warranty_months: parseInt(row.warranty_months || row.garantia || 12) || 12,
-        min_order_quantity: parseInt(row.min_order_quantity || row.moq || 1) || 1,
-        origin_country: row.origin_country || row.origem || 'BR',
-        is_active: row.is_active !== 'false' && row.ativo !== 'false',
+        ...result.data,
+        // Campos que podem estar no CSV com nomes alternativos já foram normalizados
+        main_image: result.data?.main_image || result.data?.image_url,
       }));
 
       const { data, error } = await supabase
@@ -115,11 +135,22 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
         .select();
 
       if (error) throw error;
-      return data;
+      return { imported: data, failed: failedProducts.length };
     },
-    onSuccess: (data) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['tenant-products'] });
-      toast.success(`✅ ${data?.length || 0} produto(s) importado(s)!`);
+      
+      const successCount = result.imported?.length || 0;
+      const failedCount = result.failed || 0;
+      
+      if (failedCount > 0) {
+        toast.success(`✅ ${successCount} produto(s) importado(s)!`, {
+          description: `⚠️ ${failedCount} produto(s) ignorado(s) por erro de validação`,
+        });
+      } else {
+        toast.success(`✅ ${successCount} produto(s) importado(s) com sucesso!`);
+      }
+      
       onOpenChange(false);
       setFile(null);
       setParsedData([]);
@@ -143,6 +174,30 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* DOWNLOAD TEMPLATE */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-semibold flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                  Não tem um CSV pronto?
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Baixe nosso template com exemplos e preencha com seus produtos
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                className="shrink-0"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Baixar Template
+              </Button>
+            </div>
+          </div>
+
           {/* FILE INPUT */}
           <div>
             <Label>Selecione o arquivo</Label>
@@ -174,14 +229,24 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
             )}
           </div>
 
-          {/* INSTRUCOES */}
+          {/* INSTRUCOES COM NORMALIZADOR UNIVERSAL */}
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              <strong>Formato esperado (CSV):</strong><br />
-              <code className="text-xs">name,category,hs_code,price_usd,moq,weight_kg,dimensions_cm</code><br />
-              <strong>Exemplo:</strong><br />
-              <code className="text-xs">Reformer Advanced,Linha Advanced,9506.91.00,3500,1,85,240x60x35</code>
+            <AlertDescription className="text-xs space-y-2">
+              <div>
+                <strong>✨ Normalizador Universal Ativado!</strong><br />
+                O sistema detecta automaticamente os campos independente da ordem ou nome das colunas.
+              </div>
+              <div>
+                <strong>Exemplos de nomes aceitos:</strong><br />
+                • <code>name, nome, produto, product</code> → Nome do produto<br />
+                • <code>price_usd, preco_usd, usd, price</code> → Preço USD<br />
+                • <code>peso, weight_kg, weight</code> → Peso<br />
+                • <code>categoria, category, tipo</code> → Categoria
+              </div>
+              <div className="text-xs text-muted-foreground">
+                💡 Não precisa seguir um padrão específico! O sistema entende diversos formatos.
+              </div>
             </AlertDescription>
           </Alert>
 
