@@ -61,9 +61,9 @@ export default function ExportDealersPage() {
       return allDealers;
     },
     onSuccess: (data) => {
-      setDealers(data.dealers || []);
+      setDealers(data || []);
       
-      if (data.dealers?.length === 0) {
+      if (!data || data.length === 0) {
         toast.info('Nenhum dealer encontrado', {
           description: 'Tente ajustar os filtros de busca',
         });

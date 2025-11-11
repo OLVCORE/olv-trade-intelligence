@@ -73,19 +73,41 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!hsCode || !country) {
+    if (!hsCode || countries.length === 0) {
+      toast.error('Preencha HS Code e selecione pelo menos 1 país');
       return;
     }
 
     onSearch({
       hsCode,
-      country,
+      countries,
+      minVolume: minVolume ? parseInt(minVolume) : undefined,
       minVolumeUSD: minVolume,
-      keywords: ['pilates', 'fitness equipment', 'gym equipment'], // Default keywords
+      keywords: ['pilates', 'fitness equipment', 'gym equipment'],
     });
   };
 
-  const canSearch = hsCode && country;
+  const toggleCountry = (countryCode: string) => {
+    setCountries((prev) =>
+      prev.includes(countryCode) ? prev.filter((c) => c !== countryCode) : [...prev, countryCode]
+    );
+  };
+
+  const selectRegion = (region: string) => {
+    const regionCountries = getCountriesByRegion(region as any).map((c) => c.code);
+    setCountries((prev) => {
+      const newCountries = [...prev];
+      regionCountries.forEach((code) => {
+        if (!newCountries.includes(code)) newCountries.push(code);
+      });
+      return newCountries;
+    });
+    toast.success(`${regionCountries.length} países da região ${region} adicionados!`);
+  };
+
+  const clearCountries = () => setCountries([]);
+
+  const canSearch = hsCode && countries.length > 0;
 
   return (
     <Card>
@@ -142,11 +164,11 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </p>
           </div>
 
-          {/* PAÍS-ALVO (Combobox com 195+ países) */}
+          {/* PAÍSES-ALVO (Multi-select + Seleção por Região) */}
           <div>
             <Label className="flex items-center gap-2 mb-2">
               <Globe className="h-4 w-4" />
-              País-Alvo
+              Países-Alvo (Multi-select)
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
@@ -161,6 +183,32 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                 </Tooltip>
               </TooltipProvider>
             </Label>
+
+            {/* Botões Seleção Rápida por Região */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Button type="button" variant="outline" size="sm" onClick={() => selectRegion('Americas')}>
+                Americas ({getCountriesByRegion('Americas').length})
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => selectRegion('Europe')}>
+                Europe ({getCountriesByRegion('Europe').length})
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => selectRegion('Asia')}>
+                Asia ({getCountriesByRegion('Asia').length})
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => selectRegion('Africa')}>
+                Africa ({getCountriesByRegion('Africa').length})
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => selectRegion('Oceania')}>
+                Oceania ({getCountriesByRegion('Oceania').length})
+              </Button>
+              {countries.length > 0 && (
+                <Button type="button" variant="destructive" size="sm" onClick={clearCountries}>
+                  <X className="h-3 w-3 mr-1" />
+                  Limpar ({countries.length})
+                </Button>
+              )}
+            </div>
+
             <Popover open={openCountryCombobox} onOpenChange={setOpenCountryCombobox}>
               <PopoverTrigger asChild>
                 <Button
@@ -169,14 +217,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   aria-expanded={openCountryCombobox}
                   className="w-full justify-between"
                 >
-                  {country ? (
-                    <>
-                      {COUNTRIES.find((c) => c.code === country)?.flag}{' '}
-                      {COUNTRIES.find((c) => c.code === country)?.name}
-                    </>
-                  ) : (
-                    'Selecione o país...'
-                  )}
+                  {countries.length > 0
+                    ? `${countries.length} ${countries.length === 1 ? 'país' : 'países'} selecionado${countries.length > 1 ? 's' : ''}`
+                    : 'Selecione países...'}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -191,15 +234,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
@@ -215,15 +255,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
@@ -238,15 +275,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
@@ -261,15 +295,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
@@ -284,15 +315,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
@@ -307,15 +335,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       <CommandItem
                         key={c.code}
                         value={`${c.name} ${c.nameEn} ${c.code}`}
-                        onSelect={() => {
-                          setCountry(c.code);
-                          setOpenCountryCombobox(false);
-                        }}
+                        onSelect={() => toggleCountry(c.code)}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            country === c.code ? 'opacity-100' : 'opacity-0'
+                            countries.includes(c.code) ? 'opacity-100' : 'opacity-0'
                           )}
                         />
                         <span className="mr-2">{c.flag}</span>
