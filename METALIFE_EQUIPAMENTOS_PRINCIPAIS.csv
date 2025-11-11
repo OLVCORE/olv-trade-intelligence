@@ -1,0 +1,17 @@
+name,category,hs_code,price_usd,price_brl,moq,weight_kg,dimensions_cm,volume_m3,sku,brand,materials,warranty_months,description
+Reformer Advanced MetaLife,Linha Advanced,9506.91.00,3500,19250,1,85,240x60x35,0.504,RF-ADV-001,MetaLife,"Steel frame, wood deck, premium vinyl upholstery",24,"Professional pilates reformer with advanced features and premium materials"
+Reformer Infinity MetaLife,Linha Infinity,9506.91.00,4200,23100,1,90,245x65x40,0.638,RF-INF-001,MetaLife,"Aluminum frame, wood deck, premium upholstery",24,"Top-of-the-line reformer with infinity design and superior quality"
+Reformer W23 MetaLife,Linha W23,9506.91.00,3200,17600,1,80,235x60x35,0.494,RF-W23-001,MetaLife,"Steel frame, wood deck, standard upholstery",24,"Mid-range professional reformer with excellent value"
+Reformer Original MetaLife,Linha Original,9506.91.00,2800,15400,1,75,230x58x33,0.440,RF-ORI-001,MetaLife,"Steel frame, MDF deck, standard vinyl",24,"Entry-level professional reformer ideal for studios"
+Cadillac Infinity MetaLife,Linha Infinity,9506.91.00,5200,28600,1,120,280x80x220,4.928,CAD-INF-001,MetaLife,"Steel structure, wood bars, premium upholstery",24,"Complete cadillac trapeze system with mat and all accessories"
+Cadillac W23 MetaLife,Linha W23,9506.91.00,4500,24750,1,110,275x75x215,4.436,CAD-W23-001,MetaLife,"Steel structure, wood bars, standard upholstery",24,"Professional cadillac system with excellent quality-price ratio"
+Cadillac Original MetaLife,Linha Original,9506.91.00,3800,20900,1,100,270x75x210,4.253,CAD-ORI-001,MetaLife,"Steel structure, MDF bars, standard upholstery",18,"Entry-level cadillac system ideal for expanding studios"
+Chair Combo Infinity MetaLife,Linha Infinity,9506.91.00,1800,9900,1,35,80x50x120,0.480,CHR-INF-001,MetaLife,"Steel frame, wood seat, premium upholstery",24,"Versatile combo chair with split pedal and handles"
+Chair Wunda Infinity MetaLife,Linha Infinity,9506.91.00,1500,8250,1,30,75x45x110,0.371,CHR-WUN-001,MetaLife,"Steel frame, wood seat, standard upholstery",24,"Classic wunda chair for studios and personal training"
+Ladder Barrel Infinity MetaLife,Linha Infinity,9506.91.00,2200,12100,1,45,140x60x100,0.840,LB-INF-001,MetaLife,"Steel structure, wood barrel, premium upholstery",24,"Professional ladder barrel with adjustable rungs"
+Spine Corrector Infinity MetaLife,Linha Infinity,9506.91.00,1200,6600,1,25,80x50x60,0.240,SC-INF-001,MetaLife,"Wood structure, premium upholstery",24,"Spine corrector for postural work and stretching"
+Arc Barrel MetaLife,Linha Infinity,9506.91.00,1400,7700,1,28,95x50x65,0.309,ARC-INF-001,MetaLife,"Wood structure, premium upholstery",24,"Arc barrel for advanced pilates exercises"
+Reformer Tower Advanced MetaLife,Linha Advanced,9506.91.00,4800,26400,1,95,245x65x220,3.507,RFT-ADV-001,MetaLife,"Steel frame, wood deck, tower attachment, premium upholstery",24,"Complete reformer with integrated tower for comprehensive training"
+Mat Conversion Reformer Infinity,Linha Infinity,9506.91.00,3800,20900,1,88,240x62x38,0.565,MCR-INF-001,MetaLife,"Steel frame, wood deck with mat platform, premium upholstery",24,"Reformer with mat conversion for versatile floor work"
+Stability Chair Pro MetaLife,Linha Advanced,9506.91.00,1650,9075,1,32,78x48x115,0.431,STC-ADV-001,MetaLife,"Steel frame, wood seat, premium upholstery, stability handles",24,"Professional stability chair with enhanced safety features"
+
