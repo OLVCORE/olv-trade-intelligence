@@ -59,6 +59,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CSVUploadDialog } from './CSVUploadDialog';
 
 // ============================================================================
 // TYPES
@@ -111,6 +112,7 @@ export function ProductCatalogManagerPro() {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [isImporting, setIsImporting] = useState(false);
   const [importUrl, setImportUrl] = useState('');
+  const [showCSVDialog, setShowCSVDialog] = useState(false);
 
   const itemsPerPage = 20;
 
@@ -440,8 +442,7 @@ export function ProductCatalogManagerPro() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled
-                title="Em desenvolvimento"
+                onClick={() => setShowCSVDialog(true)}
               >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 CSV/Excel
@@ -637,6 +638,9 @@ export function ProductCatalogManagerPro() {
           </div>
         )}
       </CardContent>
+
+      {/* CSV UPLOAD DIALOG */}
+      <CSVUploadDialog open={showCSVDialog} onOpenChange={setShowCSVDialog} />
     </Card>
   );
 }
