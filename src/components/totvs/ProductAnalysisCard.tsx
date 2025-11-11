@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useSimpleTOTVSCheck } from '@/hooks/useSimpleTOTVSCheck';
+import { useSimpleProductCheck } from '@/hooks/useSimpleProductCheck';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEnsureSTCHistory } from '@/hooks/useEnsureSTCHistory';
@@ -326,7 +326,7 @@ export default function TOTVSCheckCard({
   // 🔥 CRITICAL: Desabilitar consulta se já tem relatório salvo (evita consumo de créditos)
   const shouldFetchLive = enabled && !latestReport?.full_report;
 
-  const { data: liveData, isLoading: isLoadingLive, refetch } = useSimpleTOTVSCheck({
+  const { data: liveData, isLoading: isLoadingLive, refetch } = useSimpleProductCheck({
     companyId,
     companyName,
     cnpj,

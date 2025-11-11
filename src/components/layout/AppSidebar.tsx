@@ -40,7 +40,8 @@ import {
   DollarSign,
   History,
   XCircle,
-  Filter
+  Filter,
+  Package
 } from "lucide-react";
 import {
   Sidebar,
@@ -128,6 +129,18 @@ const menuGroups: MenuGroup[] = [
         icon: Building2,
         url: "/companies",
         description: "Gestão completa da base de prospectos e qualificação inicial"
+      },
+      {
+        title: "Catálogo de Produtos",
+        icon: Package,
+        url: "/catalog",
+        description: "Gerenciar produtos do catálogo para propostas comerciais"
+      },
+      {
+        title: "Export Dealers (B2B)",
+        icon: Globe,
+        url: "/export-dealers",
+        description: "Descobrir distribuidores e importadores internacionais"
       },
       {
         title: "Intelligence 360°",

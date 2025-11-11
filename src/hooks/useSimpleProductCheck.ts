@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface SimpleTOTVSCheckParams {
+interface SimpleProductCheckParams {
   companyId?: string;
   companyName?: string;
   cnpj?: string;
@@ -9,15 +9,15 @@ interface SimpleTOTVSCheckParams {
   enabled?: boolean;
 }
 
-export const useSimpleTOTVSCheck = ({
+export const useSimpleProductCheck = ({
   companyId,
   companyName,
   cnpj,
   domain,
   enabled = false,
-}: SimpleTOTVSCheckParams) => {
+}: SimpleProductCheckParams) => {
   return useQuery({
-    queryKey: ['simple-totvs-check', companyId, companyName, cnpj],
+    queryKey: ['simple-product-check', companyId, companyName, cnpj],
     queryFn: async () => {
       console.log('[HOOK] Chamando simple-totvs-check...');
 
@@ -90,7 +90,7 @@ export const useSimpleTOTVSCheck = ({
               .update({ full_report: updatedFullReport })
               .eq('id', existingReport.id);
             
-            console.log('[STC] 💾 TOTVS Check salvo em full_report.detection_report');
+            console.log('[STC] 💾 Product Check salvo em full_report.detection_report');
           }
         } catch (historyError: any) {
           console.warn('[STC] ⚠️ Erro ao salvar histórico (não crítico):', historyError.message);

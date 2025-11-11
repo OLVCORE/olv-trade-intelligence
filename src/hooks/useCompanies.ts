@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Company, Inserts } from '@/lib/db';
+import { useTenant } from '@/contexts/TenantContext';
 
 export const COMPANIES_QUERY_KEY = ['companies'];
 
@@ -12,14 +13,20 @@ export function useCompanies(options?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }) {
+  const { currentWorkspace } = useTenant();
   const { page = 0, pageSize = 50, search = '', sortBy = 'created_at', sortOrder = 'desc' } = options || {};
   
   return useQuery({
-    queryKey: [...COMPANIES_QUERY_KEY, page, pageSize, search, sortBy, sortOrder],
+    queryKey: [...COMPANIES_QUERY_KEY, currentWorkspace?.id, page, pageSize, search, sortBy, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from('companies')
         .select('*', { count: 'exact' });
+
+      // 🔐 FILTRO MULTI-TENANT: Apenas empresas do workspace atual
+      if (currentWorkspace?.id) {
+        query = query.eq('workspace_id', currentWorkspace.id);
+      }
 
       // Filtro de busca
       if (search) {
@@ -64,13 +71,22 @@ export function useCompanies(options?: {
 
 // Hook para buscar todas as empresas (usar com cuidado)
 export function useAllCompanies() {
+  const { currentWorkspace } = useTenant();
+  
   return useQuery({
-    queryKey: ['companies', 'all'],
+    queryKey: ['companies', 'all', currentWorkspace?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('companies')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // 🔐 FILTRO MULTI-TENANT: Apenas empresas do workspace atual
+      if (currentWorkspace?.id) {
+        query = query.eq('workspace_id', currentWorkspace.id);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data as Company[];

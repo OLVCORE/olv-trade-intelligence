@@ -28,7 +28,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Target, Search, Filter, BarChart3, Clock, ExternalLink, Eye, RefreshCw, XCircle, Maximize2, AlertTriangle, CheckCircle2, Flame, Snowflake, Zap, Crosshair, ScanSearch } from 'lucide-react';
-import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
+import ProductAnalysisCard from '@/components/totvs/ProductAnalysisCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function STCHistory() {

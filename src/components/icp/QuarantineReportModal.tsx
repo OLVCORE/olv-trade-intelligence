@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
+import ProductAnalysisCard from '@/components/totvs/ProductAnalysisCard';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, FileText, Maximize2, Minimize2, Download, Loader2, FileDown, Database, Send, History } from 'lucide-react';
 import { useApproveQuarantineBatch, useRejectQuarantine } from '@/hooks/useICPQuarantine';

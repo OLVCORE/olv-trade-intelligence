@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CompanySelectDialog } from "@/components/common/CompanySelectDialog";
 import { IntentSignalsCardV3 } from "@/components/competitive/IntentSignalsCardV3";
-import TOTVSCheckCard from "@/components/totvs/TOTVSCheckCard";
+import ProductAnalysisCard from "@/components/totvs/ProductAnalysisCard";
 import { QualificationRecommendation } from "@/components/competitive/QualificationRecommendation";
 import { useCalculateIntentScore } from "@/hooks/useIntentSignals";
 import { useAutoEnrichCompany } from "@/hooks/useAutoEnrichCompany";

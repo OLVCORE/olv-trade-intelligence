@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DraggableDialog } from '@/components/ui/draggable-dialog';
 import { Button } from '@/components/ui/button';
 import { Maximize2, Minimize2, Printer, UserPlus } from 'lucide-react';
-import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
+import ProductAnalysisCard from '@/components/totvs/ProductAnalysisCard';
 import { toast } from 'sonner';
 
 interface SimpleTOTVSCheckDialogProps {

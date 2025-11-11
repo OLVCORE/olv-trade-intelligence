@@ -10,7 +10,7 @@ import { CompetitorInsightsIntegration } from "@/components/competitive/Competit
 import { useState } from "react";
 import { CompetitorFormDialog } from "@/components/competitive/CompetitorFormDialog";
 import { IntentSignalsCardV3 } from "@/components/competitive/IntentSignalsCardV3";
-import TOTVSCheckCard from "@/components/totvs/TOTVSCheckCard";
+import ProductAnalysisCard from "@/components/totvs/ProductAnalysisCard";
 import { SimilarCompaniesCard } from "@/components/competitive/SimilarCompaniesCard";
 import { QualificationRecommendation } from "@/components/competitive/QualificationRecommendation";
 import { ICPFilters } from "@/components/competitive/ICPFilters";

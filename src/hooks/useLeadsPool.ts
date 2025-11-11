@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useTenant } from '@/contexts/TenantContext';
 
 export const LEADS_POOL_QUERY_KEY = ['leads-pool'];
 
@@ -10,14 +11,20 @@ export function useLeadsPool(options?: {
   search?: string;
   temperatura?: string;
 }) {
+  const { currentWorkspace } = useTenant();
   const { page = 0, pageSize = 50, search = '', temperatura } = options || {};
   
   return useQuery({
-    queryKey: [...LEADS_POOL_QUERY_KEY, page, pageSize, search, temperatura],
+    queryKey: [...LEADS_POOL_QUERY_KEY, currentWorkspace?.id, page, pageSize, search, temperatura],
     queryFn: async () => {
       let query = supabase
         .from('leads_pool')
         .select('*', { count: 'exact' });
+
+      // 🔐 FILTRO MULTI-TENANT: Apenas leads do workspace atual
+      if (currentWorkspace?.id) {
+        query = query.eq('workspace_id', currentWorkspace.id);
+      }
 
       if (search) {
         query = query.or(`razao_social.ilike.%${search}%,cnpj.ilike.%${search}%`);

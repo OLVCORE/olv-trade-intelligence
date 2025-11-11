@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Maximize2, Minimize2, Printer, UserPlus } from "lucide-react";
-import TOTVSCheckCard from "@/components/totvs/TOTVSCheckCard";
+import ProductAnalysisCard from "@/components/totvs/ProductAnalysisCard";
 import { supabase } from "@/integrations/supabase/client";
 import { DraggableDialog } from "@/components/ui/draggable-dialog";
 import { toast } from "sonner";

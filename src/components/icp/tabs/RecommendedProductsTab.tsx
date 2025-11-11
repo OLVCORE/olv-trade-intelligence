@@ -15,6 +15,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { registerTab, unregisterTab } from './tabsRegistry';
+import { useTenant } from '@/contexts/TenantContext';
+import { Link } from 'react-router-dom';
 
 interface RecommendedProductsTabProps {
   companyId?: string;
@@ -49,6 +51,34 @@ export function RecommendedProductsTab({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [enabled, setEnabled] = useState(false); // 🔥 NOVO: Controle manual
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // 🔐 MULTI-TENANT: Buscar tenant context
+  const { currentTenant } = useTenant();
+
+  // 📦 BUSCAR PRODUTOS DO CATÁLOGO DO TENANT (tenant_products)
+  const { data: tenantProducts, isLoading: isLoadingCatalog } = useQuery({
+    queryKey: ['tenant-products-for-analysis', currentTenant?.id],
+    queryFn: async () => {
+      if (!currentTenant?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('tenant_products')
+        .select('*')
+        .eq('tenant_id', currentTenant.id)
+        .eq('is_active', true)
+        .order('category', { ascending: true });
+      
+      if (error) {
+        console.error('[PRODUCTS] Erro ao buscar catálogo:', error);
+        return [];
+      }
+      
+      console.log('[PRODUCTS] 📦 Catálogo carregado:', data?.length || 0, 'produtos');
+      return data || [];
+    },
+    enabled: !!currentTenant?.id,
+    staleTime: 1000 * 60 * 5 // 5 min
+  });
 
   // 🔍 BUSCAR DADOS DA EMPRESA (se companyId fornecido)
   const { data: companyData } = useQuery({
@@ -296,6 +326,110 @@ export function RecommendedProductsTab({
     );
   }
 
+  // 📦 SEÇÃO 1: CATÁLOGO DE PRODUTOS DO TENANT (sempre visível)
+  const renderProductCatalog = () => {
+    if (isLoadingCatalog) {
+      return (
+        <Card className="p-6">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm text-muted-foreground">Carregando catálogo...</span>
+          </div>
+        </Card>
+      );
+    }
+
+    if (!tenantProducts || tenantProducts.length === 0) {
+      return (
+        <Card className="p-8 border-2 border-dashed border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/20">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-4">
+              <Package className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Catálogo de Produtos Vazio</h3>
+            <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+              Configure os produtos do seu catálogo para gerar propostas comerciais personalizadas.
+            </p>
+            <Link to="/catalog">
+              <Button variant="default" className="gap-2">
+                <Package className="h-4 w-4" />
+                Configurar Catálogo
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      );
+    }
+
+    // MOSTRAR PRODUTOS DO CATÁLOGO
+    return (
+      <Card className="p-6">
+        <CardHeader className="px-0 pt-0">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            Catálogo de Produtos ({tenantProducts.length})
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Produtos disponíveis para propostas comerciais
+          </p>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {tenantProducts.map((product: any) => (
+              <Card key={product.id} className="p-4 hover:shadow-md transition-shadow">
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-semibold text-sm">{product.name}</h4>
+                    <Badge variant="outline" className="text-xs">
+                      {product.category || 'N/A'}
+                    </Badge>
+                  </div>
+                  
+                  {product.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    {product.hs_code && (
+                      <span className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        {product.hs_code}
+                      </span>
+                    )}
+                    {product.price_usd && (
+                      <span className="flex items-center gap-1 font-semibold text-primary">
+                        <DollarSign className="h-3 w-3" />
+                        ${product.price_usd.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {product.moq && (
+                    <div className="text-xs text-muted-foreground">
+                      MOQ: {product.moq} unidades
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="mt-4 text-center">
+            <Link to="/catalog">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Package className="h-4 w-4" />
+                Gerenciar Catálogo
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   // 🔒 TELA INICIAL: Botão "Analisar Agora" (igual outras abas)
   if (!enabled && !productGapsData) {
     const allUrls = companyData?.raw_data?.discovered_urls || [];
@@ -437,6 +571,11 @@ export function RecommendedProductsTab({
             hasUnsavedChanges={false}
           />
         )}
+        
+        {/* ========================================
+            📦 SEÇÃO 0: CATÁLOGO DE PRODUTOS DO TENANT
+        ======================================== */}
+        {renderProductCatalog()}
         
         {/* ========================================
             HEADER

@@ -22,7 +22,7 @@ import { useRestoreAllBatchDiscarded } from '@/hooks/useRestoreDiscarded';
 import { QuarantineActionsMenu } from '@/components/icp/QuarantineActionsMenu';
 import { QuarantineRowActions } from '@/components/icp/QuarantineRowActions';
 import { DiscardedCompaniesModal } from '@/components/icp/DiscardedCompaniesModal';
-import TOTVSCheckCard from '@/components/totvs/TOTVSCheckCard';
+import ProductAnalysisCard from '@/components/totvs/ProductAnalysisCard';
 import { STCAgent } from '@/components/intelligence/STCAgent';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
 import { QuarantineCNPJStatusBadge } from '@/components/icp/QuarantineCNPJStatusBadge';

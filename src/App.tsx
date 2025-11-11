@@ -9,7 +9,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TenantProvider } from "./contexts/TenantContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import TOTVSCheckReport from "@/pages/Leads/TOTVSCheckReport";
+import ProductAnalysisReport from "@/pages/Leads/ProductAnalysisReport";
 import { Loader2 } from "lucide-react";
 import { TrevoAssistant } from "./components/trevo/TrevoAssistant";
 import SafeModeBanner from "@/components/dev/SafeModeBanner";
@@ -34,7 +34,9 @@ const Intelligence360Page = lazy(() => import("./pages/Intelligence360Page"));
 const CompaniesManagementPage = lazy(() => import("./pages/CompaniesManagementPage"));
 const MaturityPage = lazy(() => import("./pages/MaturityPage"));
 const TechStackPage = lazy(() => import("./pages/TechStackPage"));
-const FitTOTVSPage = lazy(() => import("./pages/FitTOTVSPage"));
+const ProductFitPage = lazy(() => import("./pages/ProductFitPage"));
+const ProductCatalogPage = lazy(() => import("./pages/ProductCatalogPage"));
+const ExportDealersPage = lazy(() => import("./pages/ExportDealersPage"));
 const GovernancePage = lazy(() => import("./pages/GovernancePage"));
 const AccountStrategyPage = lazy(() => import("./pages/AccountStrategyPage"));
 const StrategyHistoryPage = lazy(() => import("./pages/StrategyHistoryPage"));
@@ -295,11 +297,31 @@ const App = () => (
               }
             />
             <Route
-              path="/fit-totvs"
+              path="/product-fit"
               element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <FitTOTVSPage />
+                    <ProductFitPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/catalog"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ProductCatalogPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/export-dealers"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ExportDealersPage />
                   </AppLayout>
                 </ProtectedRoute>
               }
@@ -781,7 +803,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <TOTVSCheckReport />
+                    <ProductAnalysisReport />
                   </AppLayout>
                 </ProtectedRoute>
               }
@@ -791,7 +813,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AppLayout>
-                    <TOTVSCheckReport />
+                    <ProductAnalysisReport />
                   </AppLayout>
                 </ProtectedRoute>
               }
