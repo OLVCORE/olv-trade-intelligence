@@ -119,29 +119,78 @@ async function generateProposalPDF(
     }
   </div>
 
-  <!-- PRODUCTS -->
+  <!-- PRODUCTS (COM IMAGENS E ESPECIFICAÇÕES TÉCNICAS) -->
   <div class="section">
-    <div class="section-title">PRODUCTS</div>
-    <table>
+    <div class="section-title">PRODUCTS & TECHNICAL SPECIFICATIONS</div>
+    ${request.products.map((p, idx) => `
+      <div class="product-detail" style="margin: 30px 0; padding: 20px; background: #f9fafb; border-radius: 8px; page-break-inside: avoid;">
+        <div style="display: flex; gap: 20px;">
+          ${p.image_url ? `
+            <div style="flex-shrink: 0;">
+              <img src="${p.image_url}" alt="${p.name}" style="width: 180px; height: 180px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;" />
+            </div>
+          ` : ''}
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 10px 0; color: ${tenant.primary_color || '#10B981'}; font-size: 18px;">
+              ${idx + 1}. ${p.name}
+            </h3>
+            <table style="width: 100%; font-size: 13px; margin: 0;">
+              <tr>
+                <td style="padding: 4px 0; border: none;"><strong>HS Code:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.hs_code || 'N/A'}</td>
+                <td style="padding: 4px 0; border: none;"><strong>SKU:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.sku || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; border: none;"><strong>Quantity:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.quantity} units</td>
+                <td style="padding: 4px 0; border: none;"><strong>Unit Price:</strong></td>
+                <td style="padding: 4px 0; border: none;">USD ${p.unit_price_usd.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; border: none;"><strong>Weight:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.weight_kg || 'TBD'} kg</td>
+                <td style="padding: 4px 0; border: none;"><strong>Dimensions:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.dimensions_cm || 'TBD'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; border: none;"><strong>Volume:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.volume_m3 || 'TBD'} m³</td>
+                <td style="padding: 4px 0; border: none;"><strong>Warranty:</strong></td>
+                <td style="padding: 4px 0; border: none;">${p.warranty_months || 12} months</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding: 4px 0; border: none;"><strong>Materials:</strong> ${p.materials || 'High-quality steel and wood'}</td>
+                <td colspan="2" style="padding: 4px 0; border: none; text-align: right;"><strong style="font-size: 16px; color: ${tenant.primary_color || '#10B981'};">USD ${p.total_usd.toLocaleString()}</strong></td>
+              </tr>
+            </table>
+            ${p.description ? `
+              <p style="margin: 12px 0 0 0; font-size: 12px; color: #6b7280; line-height: 1.5;">
+                ${p.description}
+              </p>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    
+    <!-- SUMMARY TABLE -->
+    <table style="margin-top: 20px; background: white;">
       <thead>
-        <tr>
-          <th>Product</th>
-          <th>HS Code</th>
-          <th>Quantity</th>
-          <th>Unit Price</th>
-          <th>Total</th>
+        <tr style="background: ${tenant.primary_color || '#10B981'}; color: white;">
+          <th>Total Quantity</th>
+          <th>Total Weight</th>
+          <th>Total Volume</th>
+          <th>Subtotal</th>
         </tr>
       </thead>
       <tbody>
-        ${request.products.map(p => `
-          <tr>
-            <td>${p.name}</td>
-            <td>${p.hs_code || 'N/A'}</td>
-            <td>${p.quantity} units</td>
-            <td>USD ${p.unit_price_usd.toLocaleString()}</td>
-            <td>USD ${p.total_usd.toLocaleString()}</td>
-          </tr>
-        `).join('')}
+        <tr style="font-weight: bold; font-size: 15px;">
+          <td>${request.products.reduce((sum, p) => sum + p.quantity, 0)} units</td>
+          <td>${request.products.reduce((sum, p) => sum + (p.weight_kg || 0) * p.quantity, 0).toFixed(2)} kg</td>
+          <td>${request.products.reduce((sum, p) => sum + (p.volume_m3 || 0) * p.quantity, 0).toFixed(3)} m³</td>
+          <td>USD ${request.products.reduce((sum, p) => sum + p.total_usd, 0).toLocaleString()}</td>
+        </tr>
       </tbody>
     </table>
   </div>

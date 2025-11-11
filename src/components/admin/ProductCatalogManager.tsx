@@ -308,11 +308,12 @@ export function ProductCatalogManager() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[80px]">Foto</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead>HS Code</TableHead>
+                    <TableHead>Especificações</TableHead>
                     <TableHead>Preços</TableHead>
-                    <TableHead>MOQ</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -321,10 +322,26 @@ export function ProductCatalogManager() {
                   {products.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell>
-                        <div>
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-16 h-16 object-cover rounded border"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[250px]">
                           <p className="font-medium">{product.name}</p>
                           {product.description && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                               {product.description}
                             </p>
                           )}
