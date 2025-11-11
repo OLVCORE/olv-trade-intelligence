@@ -1,4 +1,4 @@
-import { ProductCatalogManagerPro } from '@/components/admin/ProductCatalogManagerPro';
+import { ProductCatalogManager } from '@/components/admin/ProductCatalogManager';
 import { Card } from '@/components/ui/card';
 import { Package } from 'lucide-react';
 
@@ -19,7 +19,7 @@ export default function ProductCatalogPage() {
       </div>
 
       {/* CATALOG MANAGER */}
-      <ProductCatalogManagerPro />
+      <ProductCatalogManager />
     </div>
   );
 }
