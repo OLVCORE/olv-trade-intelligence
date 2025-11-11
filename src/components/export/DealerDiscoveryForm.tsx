@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Search, 
   Info, 
@@ -33,7 +34,8 @@ import {
   Loader2,
   Check,
   X,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Users
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
@@ -50,10 +52,12 @@ interface DealerDiscoveryFormProps {
 
 export interface DealerSearchParams {
   hsCode: string;
-  countries: string[]; // Multi-select de países
+  countries: string[];
   minVolume?: number;
   minVolumeUSD?: string;
   keywords?: string[];
+  includeKeywords?: string[]; // Keywords B2B para incluir
+  excludeKeywords?: string[]; // Keywords B2C para excluir
 }
 
 // ============================================================================
@@ -64,11 +68,38 @@ export interface DealerSearchParams {
 // COMPONENT
 // ============================================================================
 
+// Keywords B2B disponíveis
+const B2B_INCLUDE_KEYWORDS = [
+  'Distributor',
+  'Wholesaler',
+  'Dealer',
+  'Importer',
+  'Trading Company',
+  'Supplier',
+  'Reseller',
+  'Agent',
+];
+
+const B2C_EXCLUDE_KEYWORDS = [
+  'Pilates Studio',
+  'Gym / Fitness Center',
+  'Wellness Center',
+  'Personal Training',
+  'Yoga Studio',
+  'Spa',
+  'Rehabilitation Center',
+  'Physiotherapy',
+];
+
 export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFormProps) {
   const [hsCode, setHsCode] = useState('');
-  const [countries, setCountries] = useState<string[]>([]); // Array de países
+  const [countries, setCountries] = useState<string[]>([]);
   const [minVolume, setMinVolume] = useState('');
   const [openCountryCombobox, setOpenCountryCombobox] = useState(false);
+  
+  // Keywords selecionadas (todas marcadas por padrão)
+  const [includeKeywords, setIncludeKeywords] = useState<string[]>(B2B_INCLUDE_KEYWORDS);
+  const [excludeKeywords, setExcludeKeywords] = useState<string[]>(B2C_EXCLUDE_KEYWORDS);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,43 +162,83 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </AlertDescription>
           </Alert>
 
-          {/* FILTROS B2B (VISÍVEL NO TOPO!) */}
+          {/* FILTROS B2B CLICÁVEIS (VISÍVEL NO TOPO!) */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800">
             <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
               <Package className="h-4 w-4 text-green-600" />
-              Filtros Automáticos B2B (Apollo.io)
+              Filtros B2B Personalizados (Apollo.io)
             </h4>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="bg-white dark:bg-slate-900 p-3 rounded">
-                <span className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-1 mb-2">
-                  <Check className="h-3 w-3" /> INCLUIR:
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* INCLUIR (checkboxes) */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded border">
+                <span className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-1 mb-3 text-sm">
+                  <Check className="h-4 w-4" /> INCLUIR (B2B):
                 </span>
-                <div className="space-y-1 text-muted-foreground">
-                  <div>• Distributor</div>
-                  <div>• Wholesaler</div>
-                  <div>• Dealer</div>
-                  <div>• Importer</div>
-                  <div>• Trading Company</div>
+                <div className="space-y-2">
+                  {B2B_INCLUDE_KEYWORDS.map((keyword) => (
+                    <div key={keyword} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`include-${keyword}`}
+                        checked={includeKeywords.includes(keyword)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setIncludeKeywords([...includeKeywords, keyword]);
+                          } else {
+                            setIncludeKeywords(includeKeywords.filter((k) => k !== keyword));
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`include-${keyword}`}
+                        className="text-xs cursor-pointer font-normal"
+                      >
+                        {keyword}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-3 rounded">
-                <span className="font-semibold text-red-700 dark:text-red-400 flex items-center gap-1 mb-2">
-                  <X className="h-3 w-3" /> EXCLUIR:
+
+              {/* EXCLUIR (checkboxes) */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded border">
+                <span className="font-semibold text-red-700 dark:text-red-400 flex items-center gap-1 mb-3 text-sm">
+                  <X className="h-4 w-4" /> EXCLUIR (B2C):
                 </span>
-                <div className="space-y-1 text-muted-foreground">
-                  <div>• Pilates Studio</div>
-                  <div>• Gym / Fitness Center</div>
-                  <div>• Wellness Center</div>
-                  <div>• Personal Training</div>
-                  <div>• Yoga Studio</div>
+                <div className="space-y-2">
+                  {B2C_EXCLUDE_KEYWORDS.map((keyword) => (
+                    <div key={keyword} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`exclude-${keyword}`}
+                        checked={excludeKeywords.includes(keyword)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setExcludeKeywords([...excludeKeywords, keyword]);
+                          } else {
+                            setExcludeKeywords(excludeKeywords.filter((k) => k !== keyword));
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`exclude-${keyword}`}
+                        className="text-xs cursor-pointer font-normal"
+                      >
+                        {keyword}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+
             <div className="pt-3 border-t mt-3 border-green-200 dark:border-green-800">
               <span className="text-xs font-medium flex items-center gap-1">
                 <Users className="h-3 w-3" />
                 <strong>Decisores Alvo:</strong> Procurement Manager, Purchasing Director, Import Manager, Buyer
               </span>
+              <p className="text-xs text-muted-foreground mt-2">
+                {includeKeywords.length} keywords incluídas | {excludeKeywords.length} keywords excluídas
+              </p>
             </div>
           </div>
 
