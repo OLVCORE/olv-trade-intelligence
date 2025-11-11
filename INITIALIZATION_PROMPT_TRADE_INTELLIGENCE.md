@@ -39,11 +39,16 @@ Criar plataforma **OLV Trade Intelligence** com:
 - Acessórios (Toning Balls, Alças, Bolas)
 - Móveis (Balcões, Aparadores)
 
-**Mercados-Alvo (Export):**
-- 🇺🇸 USA (Pilates Studios, Gyms)
-- 🇩🇪 Germany (Wellness Centers)
-- 🇯🇵 Japan (Fitness Centers)
-- 🇦🇺 Australia (Pilates Studios)
+**Modelo de Negócio:**
+- 🏭 B2B (Venda para DEALERS/DISTRIBUIDORES, NÃO B2C)
+- 📦 Lotes grandes (MOQ: 50-100+ units)
+- 🌍 Export via distribuidores locais
+
+**Mercados-Alvo (Export B2B):**
+- 🇺🇸 USA (Fitness Equipment Dealers, Wholesalers, Distributors)
+- 🇩🇪 Germany (Fitness Equipment Importers, Distributors)
+- 🇯🇵 Japan (Sports Equipment Wholesalers, Distributors)
+- 🇦🇺 Australia (Fitness Equipment Dealers)
 
 **HS Codes Principais:**
 - 9506.91.00 (Pilates Equipment)
@@ -486,33 +491,110 @@ serve(async (req) => {
 
 ### EDGE FUNCTION: `discover-importers`
 ```typescript
-// Descobre importadores por HS Code usando Trade Data APIs
+// 🎯 DESCOBRIR DEALERS/DISTRIBUIDORES B2B (NÃO B2C!)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 serve(async (req) => {
   const { hs_code, country, min_volume } = await req.json();
   
-  // 1️⃣ Buscar em Import Genius / Panjiva
-  const importers = await tradeDataAPI.search({
-    hs_code,
-    import_country: country,
-    min_annual_volume: min_volume
+  // 1️⃣ FILTROS B2B (DEALERS/DISTRIBUIDORES apenas!)
+  const b2bKeywords = [
+    'distributor',
+    'wholesaler',
+    'dealer',
+    'importer',
+    'trading company',
+    'distribution',
+    'wholesale',
+    'b2b supplier'
+  ];
+  
+  // 2️⃣ Buscar em Import Genius / Panjiva (se disponível)
+  let importers = [];
+  
+  if (tradeDataAPIAvailable) {
+    importers = await tradeDataAPI.search({
+      hs_code,
+      import_country: country,
+      min_annual_volume: min_volume,
+      company_type: 'wholesaler' // ✅ B2B apenas!
+    });
+  } else {
+    // FALLBACK: Apollo.io (FASE 1 - sem Trade Data)
+    importers = await apolloSearch({
+      country: country,
+      keywords: b2bKeywords.concat(['fitness equipment', 'pilates']),
+      employee_count_min: 10, // ✅ Dealers têm estrutura
+      revenue_min: 1000000, // ✅ Dealers têm volume
+      exclude_keywords: ['studio', 'gym', 'wellness center'] // ❌ Excluir B2C!
+    });
+  }
+  
+  // 3️⃣ FILTRAR: Apenas B2B (remover B2C)
+  importers = importers.filter(company => {
+    const name = company.name.toLowerCase();
+    const industry = company.industry?.toLowerCase() || '';
+    
+    // ✅ Incluir se tem palavras B2B
+    const isB2B = b2bKeywords.some(kw => name.includes(kw) || industry.includes(kw));
+    
+    // ❌ Excluir se tem palavras B2C
+    const isB2C = ['studio', 'gym', 'wellness center', 'fitness center'].some(kw => 
+      name.includes(kw) || industry.includes(kw)
+    );
+    
+    return isB2B && !isB2C;
   });
   
-  // 2️⃣ Enriquecer com Apollo (decisores)
+  // 4️⃣ Enriquecer com Apollo (decisores PROCUREMENT/BUYING)
   for (const importer of importers) {
-    const apolloData = await enrichWithApollo(importer.name, country);
+    const apolloData = await enrichWithApollo(importer.name, country, {
+      job_titles: ['procurement', 'purchasing', 'buyer', 'sourcing', 'import manager']
+    });
     importer.decision_makers = apolloData.people;
   }
   
-  // 3️⃣ Calcular Export Fit Score
+  // 5️⃣ Calcular Export Fit Score (priorizar dealers grandes)
   for (const importer of importers) {
     importer.export_fit_score = calculateExportScore(importer);
   }
   
-  return { importers };
+  return { 
+    importers,
+    total: importers.length,
+    b2b_only: true
+  };
 });
 ```
+
+---
+
+## 🎯 DECISORES ESPECÍFICOS PARA B2B EXPORT
+
+### CARGOS-ALVO (Decisores em Dealers/Distribuidores):
+
+**Procurement & Buying:**
+- Procurement Manager
+- Purchasing Director
+- Buyer (Fitness Equipment)
+- Sourcing Manager
+- Import Manager
+- Category Manager
+
+**C-Level:**
+- CEO / Managing Director
+- CFO (decisão de budget)
+- COO (operações de importação)
+
+**Sales (vendem para B2C):**
+- Sales Director
+- Business Development Manager
+
+### EXCLUIR (B2C - NÃO são decisores de compra B2B):
+- ❌ Pilates Instructor
+- ❌ Gym Owner (pequeno)
+- ❌ Personal Trainer
+- ❌ Studio Manager (pequeno)
 
 ---
 
