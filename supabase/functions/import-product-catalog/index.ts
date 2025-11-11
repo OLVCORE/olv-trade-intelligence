@@ -42,9 +42,6 @@ serve(async (req) => {
     // PROFESSIONAL PRODUCT SCRAPING
     // ========================================================================
     const products: any[] = [];
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Estratégia 1: WooCommerce Products
     $('.product, .product-item, [class*="product"]').each((_, el) => {
@@ -142,13 +139,14 @@ serve(async (req) => {
 
     console.log(`[IMPORT-CATALOG] ${productsToInsert.length} produtos únicos encontrados`);
 
-    // Salvar no Supabase (com upsert para evitar duplicatas)
+    // Salvar no Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { data, error } = await supabase
       .from('tenant_products')
-      .upsert(productsToInsert, { 
-        onConflict: 'tenant_id,name',
-        ignoreDuplicates: false 
-      })
+      .insert(productsToInsert)
       .select();
 
     if (error) {
