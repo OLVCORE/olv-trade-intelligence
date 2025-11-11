@@ -41,6 +41,14 @@ const ProposalHistoryPage = lazy(() => import("./pages/ProposalHistoryPage"));
 const TenantSettingsPage = lazy(() => import("./pages/TenantSettingsPage"));
 const DealerPortalPage = lazy(() => import("./pages/DealerPortalPage"));
 const ContractsPage = lazy(() => import("./pages/ContractsPage"));
+
+// Sales CRM Pages
+const SalesWorkspacePage = lazy(() => import("./pages/SalesWorkspacePage"));
+const SalesDashboardPage = lazy(() => import("./pages/SalesDashboardPage"));
+const SalesAnalyticsPage = lazy(() => import("./pages/SalesAnalyticsPage"));
+const SalesTasksPage = lazy(() => import("./pages/SalesTasksPage"));
+const SalesSequencesPage = lazy(() => import("./pages/SalesSequencesPage"));
+const SalesInboxPage = lazy(() => import("./pages/SalesInboxPage"));
 const GovernancePage = lazy(() => import("./pages/GovernancePage"));
 const AccountStrategyPage = lazy(() => import("./pages/AccountStrategyPage"));
 const StrategyHistoryPage = lazy(() => import("./pages/StrategyHistoryPage"));
@@ -370,6 +378,15 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            {/* Sales CRM Routes */}
+            <Route path="/sales" element={<ProtectedRoute><AppLayout><SalesWorkspacePage /></AppLayout></ProtectedRoute>} />
+            <Route path="/sales/dashboard" element={<ProtectedRoute><AppLayout><SalesDashboardPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/sales/analytics" element={<ProtectedRoute><AppLayout><SalesAnalyticsPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/sales/tasks" element={<ProtectedRoute><AppLayout><SalesTasksPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/sales/sequences" element={<ProtectedRoute><AppLayout><SalesSequencesPage /></AppLayout></ProtectedRoute>} />
+            <Route path="/sales/inbox" element={<ProtectedRoute><AppLayout><SalesInboxPage /></AppLayout></ProtectedRoute>} />
+
             <Route
               path="/governance"
               element={

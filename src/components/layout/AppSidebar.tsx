@@ -42,7 +42,10 @@ import {
   XCircle,
   Filter,
   Package,
-  FileSignature
+  FileSignature,
+  Workflow,
+  CheckCircle,
+  Mail
 } from "lucide-react";
 import {
   Sidebar,
@@ -166,6 +169,21 @@ const menuGroups: MenuGroup[] = [
         icon: Users,
         url: "/dealer-portal",
         description: "Portal self-service para dealers"
+      },
+      {
+        title: "Sales Workspace",
+        icon: TrendingUp,
+        url: "/sales",
+        highlighted: true,
+        description: "Export/Import Sales CRM & Pipeline Management",
+        submenu: [
+          { title: "Deal Pipeline", icon: Workflow, url: "/sales", description: "Kanban visual de negociações internacionais" },
+          { title: "Dashboard", icon: BarChart3, url: "/sales/dashboard", description: "Métricas e KPIs de vendas" },
+          { title: "Analytics", icon: LineChart, url: "/sales/analytics", description: "Análises avançadas e forecasting" },
+          { title: "Tasks", icon: CheckCircle, url: "/sales/tasks", description: "Smart tasks com sugestões de IA" },
+          { title: "Email Sequences", icon: Mail, url: "/sales/sequences", description: "Automação de follow-ups" },
+          { title: "Inbox", icon: Inbox, url: "/sales/inbox", description: "Central de comunicações" },
+        ]
       },
       {
         title: "Intelligence 360°",

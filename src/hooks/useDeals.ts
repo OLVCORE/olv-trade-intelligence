@@ -2,71 +2,76 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/utils/logger';
 import { toastMessages } from '@/lib/utils/toastMessages';
+import { useTenant } from '@/contexts/TenantContext';
 
 export interface Deal {
   id: string;
-  deal_title: string; // FIX: Usar deal_title (nome real da coluna no banco)
-  title?: string; // Alias para compatibilidade (computado automaticamente)
+  title: string;
   description?: string | null;
   company_id?: string | null;
-  deal_stage: string; // FIX: Usar deal_stage (nome real da coluna no banco)
-  stage?: string; // Alias para compatibilidade (computado automaticamente)
-  deal_value: number; // FIX: Usar deal_value (nome real da coluna no banco)
-  value?: number; // Alias para compatibilidade (computado automaticamente)
+  stage: string;
+  value: number;
+  currency: string;
   probability: number;
   status: 'open' | 'won' | 'lost' | 'abandoned';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   expected_close_date?: string | null;
+  tenant_id: string;
+  workspace_id: string;
   created_at: string;
-  companies?: { name: string };
+  companies?: { company_name: string };
 }
 
-const DEALS_QUERY_KEY = ['sdr_deals'];
+const DEALS_QUERY_KEY = ['sales_deals'];
 
 export function useDeals(filters?: { stage?: string; status?: string }) {
+  const { currentTenant, currentWorkspace } = useTenant();
+  
   return useQuery({
-    queryKey: [...DEALS_QUERY_KEY, filters],
+    queryKey: [...DEALS_QUERY_KEY, currentWorkspace?.id, filters],
     queryFn: async () => {
-      // Construir query base
+      if (!currentTenant || !currentWorkspace) {
+        console.warn('[useDeals] Tenant ou Workspace não definido');
+        return [];
+      }
+
+      // Construir query base com filtro de tenant/workspace
       let query = supabase
-        .from('sdr_deals')
-        .select('*, companies:companies!sdr_deals_company_id_fkey(company_name)')
+        .from('sales_deals')
+        .select('*, companies:company_id(company_name)')
+        .eq('tenant_id', currentTenant.id)
+        .eq('workspace_id', currentWorkspace.id)
         .order('created_at', { ascending: false });
       
-      // Filtro por stage
-      if (filters?.stage) query = query.eq('deal_stage', filters.stage);
-      
-      // 🔥 REMOVIDO: Coluna 'status' não existe na tabela sdr_deals
-      // Se precisar filtrar por status, usar deal_stage (discovery/won/lost/etc)
+      // Filtros opcionais
+      if (filters?.stage) query = query.eq('stage', filters.stage);
+      if (filters?.status) query = query.eq('status', filters.status);
       
       const { data, error } = await query;
       if (error) {
-        console.error('❌ ERRO DETALHADO useDeals:', JSON.stringify(error, null, 2));
+        console.error('[useDeals] Error:', error);
         logger.error('Error fetching deals', error);
-        return []; // Retornar array vazio em vez de quebrar
+        return [];
       }
       
-      console.log('✅ Deals carregados:', data?.length || 0);
-      
-      // 🔥 MAPEAR ALIASES PARA COMPATIBILIDADE COM CÓDIGO LEGADO
-      const dealsWithAliases = (data || []).map(deal => ({
-        ...deal,
-        title: deal.deal_title,      // Alias: title → deal_title
-        stage: deal.deal_stage,      // Alias: stage → deal_stage
-        value: deal.deal_value,      // Alias: value → deal_value
-      }));
-      
-      return dealsWithAliases as Deal[];
+      console.log(`[useDeals] ✅ ${data?.length || 0} deals carregados`);
+      return data as Deal[];
     },
-    // ✅ HABILITADO: Agora temos deals criados com sucesso!
+    enabled: !!currentTenant && !!currentWorkspace,
   });
 }
 
 export function useCreateDeal() {
   const queryClient = useQueryClient();
+  const { currentTenant, currentWorkspace } = useTenant();
+  
   return useMutation({
-    mutationFn: async (deal: { deal_title: string; description?: string; company_id?: string; deal_stage?: string; value?: number; priority?: string }) => {
-      const { data, error} = await supabase.from('sdr_deals').insert([deal]).select().single();
+    mutationFn: async (deal: Partial<Deal>) => {
+      const { data, error} = await supabase.from('sales_deals').insert([{
+        ...deal,
+        tenant_id: currentTenant?.id,
+        workspace_id: currentWorkspace?.id,
+      }]).select().single();
       if (error) throw error;
       return data;
     },
@@ -81,7 +86,7 @@ export function useUpdateDeal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ dealId, updates }: { dealId: string; updates: Record<string, any> }) => {
-      const { data, error } = await supabase.from('sdr_deals').update(updates).eq('id', dealId).select().single();
+      const { data, error } = await supabase.from('sales_deals').update(updates).eq('id', dealId).select().single();
       if (error) throw error;
       return data;
     },
@@ -96,7 +101,7 @@ export function useMoveDeal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ dealId, newStage }: { dealId: string; newStage: string }) => {
-      const { data, error } = await supabase.from('sdr_deals').update({ deal_stage: newStage }).eq('id', dealId).select().single(); // FIX: deal_stage
+      const { data, error } = await supabase.from('sales_deals').update({ stage: newStage }).eq('id', dealId).select().single();
       if (error) throw error;
       return data;
     },
@@ -111,7 +116,7 @@ export function useDeleteDeal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (dealId: string) => {
-      const { error } = await supabase.from('sdr_deals').delete().eq('id', dealId);
+      const { error } = await supabase.from('sales_deals').delete().eq('id', dealId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,7 +131,7 @@ export function useBulkUpdateDeals() {
   return useMutation({
     mutationFn: async ({ dealIds, updates }: { dealIds: string[]; updates: Record<string, any> }) => {
       const promises = dealIds.map(id => 
-        supabase.from('sdr_deals').update(updates).eq('id', id)
+        supabase.from('sales_deals').update(updates).eq('id', id)
       );
       const results = await Promise.all(promises);
       const errors = results.filter(r => r.error);
@@ -151,10 +156,10 @@ export interface DealActivity {
 
 export function useDealActivities(dealId: string) {
   return useQuery({
-    queryKey: ['sdr_deal_activities', dealId],
+    queryKey: ['sales_deal_activities', dealId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sdr_deal_activities')
+        .from('sales_deal_activities')
         .select('*')
         .eq('deal_id', dealId)
         .order('created_at', { ascending: false });
