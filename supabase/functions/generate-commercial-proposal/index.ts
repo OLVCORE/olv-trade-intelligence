@@ -46,11 +46,20 @@ interface ProposalRequest {
 }
 
 // ============================================================================
-// GENERATE PDF (jsPDF ou HTML-to-PDF)
+// GENERATE PDF (HTML com Logo e Branding do Tenant)
 // ============================================================================
 
-async function generateProposalPDF(request: ProposalRequest, proposalNumber: string): Promise<string> {
+async function generateProposalPDF(
+  request: ProposalRequest, 
+  proposalNumber: string,
+  tenant: any
+): Promise<string> {
   console.log('[PDF] 📄 Gerando PDF para proposta:', proposalNumber);
+  console.log('[PDF] 🎨 Tenant branding:', {
+    logo: tenant.logo_url || 'sem logo',
+    primaryColor: tenant.primary_color,
+    name: tenant.name
+  });
 
   // OPÇÃO 1: Usar API externa de HTML-to-PDF (Recomendado)
   // Por exemplo: https://pdfshift.io/ ou https://pdflayer.com/
@@ -65,9 +74,16 @@ async function generateProposalPDF(request: ProposalRequest, proposalNumber: str
   <meta charset="UTF-8">
   <title>Commercial Proposal ${proposalNumber}</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; }
-    .header { border-bottom: 3px solid #10B981; padding-bottom: 20px; margin-bottom: 30px; }
-    .company-name { font-size: 24px; font-weight: bold; color: #10B981; }
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; background: white; }
+    .header { 
+      background: ${tenant.primary_color || '#10B981'}; 
+      color: white; 
+      padding: 30px;
+      border-radius: 8px 8px 0 0;
+      margin: -40px -40px 30px -40px;
+    }
+    .logo { height: 50px; margin-bottom: 15px; }
+    .company-name { font-size: 28px; font-weight: bold; color: white; margin-bottom: 10px; }
     .section { margin: 30px 0; }
     .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
@@ -78,11 +94,12 @@ async function generateProposalPDF(request: ProposalRequest, proposalNumber: str
   </style>
 </head>
 <body>
-  <!-- HEADER -->
+  <!-- HEADER COM LOGO E BRANDING -->}
   <div class="header">
-    <div class="company-name">MetaLife Pilates</div>
-    <div>CNPJ: 06.334.616/0001-85</div>
-    <div>Taubaté, São Paulo, Brazil</div>
+    ${tenant.logo_url ? `<img src="${tenant.logo_url}" class="logo" alt="${tenant.name}" />` : ''}
+    <div class="company-name">${tenant.name}</div>
+    <div>${tenant.cnpj ? `CNPJ: ${tenant.cnpj}` : ''}</div>
+    <div>${tenant.city || ''}, ${tenant.state || ''}, ${tenant.country || 'Brazil'}</div>
     <div style="margin-top: 15px;">
       <strong>COMMERCIAL PROPOSAL</strong><br />
       Proposal #: ${proposalNumber}<br />
@@ -175,13 +192,14 @@ async function generateProposalPDF(request: ProposalRequest, proposalNumber: str
   </div>
   ` : ''}
 
-  <!-- FOOTER -->
+  <!-- FOOTER COM DADOS DO TENANT -->
   <div class="footer">
-    <p><strong>Contact:</strong> export@metalifepilates.com.br</p>
-    <p><strong>Phone:</strong> +55 12 0800-056-2467</p>
-    <p><strong>Website:</strong> https://metalifepilates.com.br/</p>
+    <p><strong>Contact:</strong> ${tenant.contact_email || 'N/A'}</p>
+    <p><strong>Phone:</strong> ${tenant.contact_phone || 'N/A'}</p>
+    <p><strong>Website:</strong> ${tenant.website || 'N/A'}</p>
+    ${tenant.address ? `<p><strong>Address:</strong> ${tenant.address}, ${tenant.city}, ${tenant.state}</p>` : ''}
     <p style="margin-top: 20px;">We look forward to your partnership!</p>
-    <p><strong>Best regards,</strong><br />MetaLife Export Team</p>
+    <p><strong>Best regards,</strong><br />${tenant.name} Export Team</p>
   </div>
 </body>
 </html>
@@ -199,7 +217,8 @@ async function generateProposalPDF(request: ProposalRequest, proposalNumber: str
 async function sendProposalEmail(
   dealer: any,
   proposalNumber: string,
-  pdfUrl: string
+  pdfUrl: string,
+  tenant: any
 ): Promise<boolean> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   
@@ -210,18 +229,77 @@ async function sendProposalEmail(
 
   const toEmail = dealer.decision_makers?.[0]?.email || 'noreply@example.com';
 
-  const emailBody = `
+  // Email HTML com logo e branding do tenant
+  const emailHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background: white; }
+    .header { 
+      background-color: ${tenant.primary_color || '#10B981'}; 
+      padding: 30px; 
+      text-align: center; 
+    }
+    .logo { max-height: 60px; margin-bottom: 10px; }
+    .content { padding: 30px; line-height: 1.6; }
+    .footer { 
+      background-color: #f5f5f5; 
+      padding: 20px; 
+      text-align: center; 
+      font-size: 12px; 
+      color: #666; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header com logo -->
+    <div class="header">
+      ${tenant.logo_url ? `<img src="${tenant.logo_url}" class="logo" alt="${tenant.name}" />` : ''}
+      <h1 style="color: white; margin: 0;">${tenant.name}</h1>
+    </div>
+    
+    <!-- Conteúdo -->
+    <div class="content">
+      <p>Dear ${dealer.decision_makers?.[0]?.name || 'Sir/Madam'},</p>
+      
+      <p>Thank you for your interest in ${tenant.name} products.</p>
+      
+      <p>Please find attached our commercial proposal <strong>${proposalNumber}</strong> for your review.</p>
+      
+      <p>Should you have any questions, please don't hesitate to contact us.</p>
+      
+      <p>Best regards,<br />
+      <strong>${tenant.name} Export Team</strong><br />
+      ${tenant.contact_email || ''}<br />
+      ${tenant.contact_phone || ''}</p>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <p>${tenant.name} | ${tenant.cnpj ? `CNPJ: ${tenant.cnpj}` : ''}</p>
+      ${tenant.address ? `<p>${tenant.address}, ${tenant.city}, ${tenant.state}</p>` : ''}
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const emailText = `
 Dear ${dealer.decision_makers?.[0]?.name || 'Sir/Madam'},
 
-Thank you for your interest in MetaLife Pilates products.
+Thank you for your interest in ${tenant.name} products.
 
 Please find attached our commercial proposal ${proposalNumber} for your review.
 
 Should you have any questions, please don't hesitate to contact us.
 
 Best regards,
-MetaLife Export Team
-export@metalifepilates.com.br
+${tenant.name} Export Team
+${tenant.contact_email || ''}
+${tenant.contact_phone || ''}
   `;
 
   try {
@@ -232,10 +310,11 @@ export@metalifepilates.com.br
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'MetaLife Export <export@metalifepilates.com.br>',
+        from: `${tenant.name} Export <${tenant.contact_email || 'noreply@olv.trade'}>`,
         to: toEmail,
-        subject: `Commercial Proposal - MetaLife Pilates Equipment`,
-        text: emailBody,
+        subject: `Commercial Proposal ${proposalNumber} - ${tenant.name}`,
+        html: emailHTML,
+        text: emailText,
         attachments: [
           {
             filename: `${proposalNumber}.pdf`,
@@ -287,8 +366,26 @@ serve(async (req) => {
 
     console.log('[PROPOSAL] 🔢 Número gerado:', proposalNumber);
 
-    // 2️⃣ Gerar PDF
-    const htmlContent = await generateProposalPDF(request, proposalNumber);
+    // 1.5️⃣ Buscar dados completos do tenant (para branding)
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenants')
+      .select('*')
+      .eq('id', request.tenant_id)
+      .single();
+
+    if (tenantError) {
+      console.error('[PROPOSAL] ❌ Erro ao buscar tenant:', tenantError);
+      throw tenantError;
+    }
+
+    console.log('[PROPOSAL] 🎨 Tenant branding carregado:', {
+      name: tenantData.name,
+      logo: tenantData.logo_url || 'sem logo',
+      primaryColor: tenantData.primary_color
+    });
+
+    // 2️⃣ Gerar PDF (com branding do tenant!)
+    const htmlContent = await generateProposalPDF(request, proposalNumber, tenantData);
 
     // Salvar HTML em Storage (por enquanto - PDF real virá com API)
     const filename = `${request.tenant_id}/${proposalNumber}.html`;
@@ -354,8 +451,8 @@ serve(async (req) => {
 
     console.log('[PROPOSAL] ✅ Proposta salva no banco:', proposalData.id);
 
-    // 4️⃣ Enviar email (opcional - se configurado)
-    const emailSent = await sendProposalEmail(request.dealer, proposalNumber, pdfUrl);
+    // 4️⃣ Enviar email (opcional - se configurado) - COM BRANDING DO TENANT
+    const emailSent = await sendProposalEmail(request.dealer, proposalNumber, pdfUrl, tenantData);
 
     if (emailSent) {
       // Atualizar status para 'sent'

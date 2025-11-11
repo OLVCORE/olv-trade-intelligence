@@ -1,289 +1,313 @@
-# 🌍 OLV TRADE INTELLIGENCE
+# 🌍 OLV Trade Intelligence
 
-**Multi-Tenant SaaS Platform for Export/Import Intelligence**
+> **SaaS Multi-Tenant Platform for Export/Import Intelligence**
 
----
-
-## 🎯 VISÃO GERAL
-
-Plataforma SaaS que ajuda empresas a:
-- 🇧🇷 **Prospectar** clientes no Brasil
-- 🌍 **Exportar** (encontrar importadores no exterior)
-- 🌎 **Importar** (encontrar fornecedores no exterior)
+Plataforma profissional de inteligência de mercado B2B para empresas exportadoras e importadoras brasileiras. Descubra distribuidores internacionais, gere propostas comerciais automáticas com cálculo de Incoterms, e gerencie seu pipeline de exportação.
 
 ---
 
-## 🏭 PRIMEIRO CLIENTE: MetaLife Pilates
+## 🎯 Para quem é este produto?
 
-**Empresa:** MetaLife Indústria e Comércio de Móveis S.A.  
-**Líder da América Latina em Equipamentos de Pilates**
-
-### Produtos:
-- Reformer Infinity Series
-- Reformer W23 Series
-- Reformer Original
-- Reformer Advanced
-- 246+ produtos (acessórios, móveis)
-
-### Mercados-Alvo:
-- 🇺🇸 USA (Pilates Studios)
-- 🇩🇪 Germany (Wellness Centers)
-- 🇯🇵 Japan (Fitness Centers)
-- 🇦🇺 Australia
-
-### HS Codes:
-- `9506.91.00` - Pilates Equipment
-- `9506.99.00` - Fitness Accessories
-- `9403.60.00` - Furniture
+- 🏭 **Indústrias exportadoras** (Pilates, Fitness, Maquinário, etc.)
+- 📦 **Trading companies**
+- 🌎 **Empresas com ambição global**
+- 💼 **Consultorias de comércio exterior**
 
 ---
 
-## 🏗️ ARQUITETURA
+## ✨ Features Principais
 
-### Multi-Tenancy:
-```
-PLATFORM
-  └─ TENANT (MetaLife)
-       ├─ WORKSPACE: Domestic (Prospecção Brasil)
-       ├─ WORKSPACE: Export (Encontrar importadores)
-       └─ WORKSPACE: Import (Encontrar fornecedores)
-```
+### 🏢 Multi-Tenant & White-Label
 
-### Database:
-```
-tenants (clientes da plataforma)
-  └─ workspaces (operações)
-       └─ companies (prospects)
-            └─ decision_makers (decisores)
-```
+- ✅ Cada cliente tem seu próprio tenant (isolamento completo de dados)
+- ✅ 3 workspaces por tenant: Domestic, Export, Import
+- ✅ Logo, cores corporativas e contatos personalizados
+- ✅ Branding aplicado em propostas PDF e emails
+
+### 📦 Catálogo de Produtos Dinâmico
+
+- ✅ Gerencie produtos com HS Code, MOQ, FOB, peso, volume
+- ✅ Tooltips explicativos para iniciantes em comércio exterior
+- ✅ Upload de imagens e especificações técnicas
+- ✅ Integração com geração de propostas
+
+### 🌍 Descoberta de Dealers B2B
+
+- ✅ Busca em 195+ países
+- ✅ Filtros B2B/B2C (55+ keywords de precisão)
+- ✅ Integração com Apollo.io (50M+ empresas)
+- ✅ Decision-makers específicos: Procurement, Import Manager, Purchasing Director
+- ✅ Export Fit Score calculado automaticamente
+
+### 💰 Motor de Pricing Robusto
+
+- ✅ **11 Incoterms oficiais ICC 2020** (EXW, FOB, CIF, DDP, etc.)
+- ✅ **4 modais de transporte:** Ocean, Air, Road, Rail
+- ✅ **20+ rotas principais** (Brasil → USA, Europa, Ásia, LATAM)
+- ✅ **5 incentivos fiscais brasileiros:**
+  - ICMS (17%)
+  - IPI (10%)
+  - PIS/COFINS (9.25%)
+  - Drawback (até 5%)
+  - REINTEGRA (até 3%)
+- ✅ Cálculo de frete por peso/volume exato (API Freightos + fallback)
+- ✅ Conversão de moedas em tempo real (50+ moedas)
+
+### 📄 Propostas Comerciais Profissionais
+
+- ✅ Geração automática de PDF com logo e branding do cliente
+- ✅ Multi-product selection do catálogo
+- ✅ Todos os 11 Incoterms calculados e exibidos
+- ✅ Email automático para o dealer (Resend/SendGrid)
+- ✅ Histórico de propostas (draft, sent, accepted, rejected)
+- ✅ Storage seguro no Supabase
 
 ---
 
-## ✨ FUNCIONALIDADES
+## 🛠️ Tecnologias
 
-### CORE (70% reaproveitado do TOTVS):
-- ✅ Autenticação & Autorização
-- ✅ Funil ICP (Quarentena → Aprovados → Pipeline)
-- ✅ Enriquecimento (Receita Federal, Apollo, 360°)
-- ✅ Decisores & Contatos (com Reveal System)
-- ✅ Digital Intelligence
-- ✅ Empresas Similares
-- ✅ UI Components (Cards, Tables, Badges)
+### Frontend
 
-### NOVO (30% específico Trade):
-- ✅ Multi-tenancy (múltiplos clientes independentes)
-- ✅ Workspace Switcher (Domestic/Export/Import)
-- ✅ Product Catalog Manager (importa do site)
-- ✅ Importer Discovery (Trade Data + Apollo)
-- ✅ Supplier Discovery (Alibaba, Global Sources)
-- ✅ HS Code Matching
-- ✅ Export Fit Scoring
-- ✅ Incoterms Calculator
-- ✅ Certification Checker
-- ✅ AI-Generated Export Proposals
+- **React 18** + TypeScript
+- **Vite** (build tool rápido)
+- **Tailwind CSS** (styling)
+- **Radix UI** (componentes acessíveis)
+- **React Query** (data fetching & cache)
+- **Lucide React** (ícones)
+
+### Backend
+
+- **Supabase** (BaaS)
+  - PostgreSQL
+  - Row Level Security (RLS)
+  - Authentication
+  - Storage (logos, PDFs)
+  - Edge Functions (Deno)
+
+### APIs Externas
+
+- **Apollo.io** - Descoberta de dealers B2B
+- **REST Countries** - Dados de 195+ países
+- **Exchange Rate API** - Conversão de moedas
+- **Resend/SendGrid** - Envio de emails
+- **Freightos/ShipEngine** - Cotação de frete (preparado)
 
 ---
 
-## 🚀 QUICK START
+## 🚀 Getting Started
 
-### 1. Clonar do projeto TOTVS:
+### Pré-requisitos
+
+- Node.js 18+
+- npm ou yarn
+- Conta no Supabase
+- API Keys: Apollo.io, Resend
+
+### Instalação Local
+
 ```bash
-cd C:\Projects\
-xcopy /E /I olv-intelligence-prospect-v2 olv-trade-intelligence
+# Clone o repositório
+git clone https://github.com/olv-trade/olv-trade-intelligence.git
 cd olv-trade-intelligence
+
+# Instale dependências
+npm install
+
+# Configure .env.local
+cp .env.example .env.local
+# Edite .env.local com suas credenciais
+
+# Execute migrations no Supabase
+# (siga DEPLOY_GUIDE.md seção 1.2)
+
+# Inicie o servidor de desenvolvimento
+npm run dev
 ```
 
-### 2. Configurar Supabase:
+### Deploy em Produção
+
+Siga o guia completo em: **[DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md)**
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+olv-trade-intelligence/
+├── src/
+│   ├── components/
+│   │   ├── admin/              # ProductCatalogManager, TenantBrandingManager
+│   │   ├── export/             # DealerCard, DealerDiscoveryForm
+│   │   ├── proposals/          # CommercialProposalGenerator, PricingCalculator
+│   │   └── layout/             # AppLayout, AppSidebar, WorkspaceSwitcher
+│   ├── contexts/
+│   │   └── TenantContext.tsx   # Estado global de tenant/workspace
+│   ├── hooks/
+│   │   ├── useCountries.ts     # 195+ países
+│   │   ├── useCurrencyConverter.ts  # 50+ moedas
+│   │   └── useSimpleProductCheck.ts
+│   ├── lib/
+│   │   ├── incotermsCalculator.ts   # 11 Incoterms ICC 2020
+│   │   ├── shippingCalculator.ts    # 4 modais, 20+ rotas
+│   │   └── exportIncentives.ts      # 5 incentivos fiscais BR
+│   ├── data/
+│   │   ├── countries.ts        # ISO codes, flags, regions
+│   │   ├── currencies.ts       # Major currencies
+│   │   └── incoterms.ts        # Descrições oficiais ICC
+│   └── pages/
+│       ├── ExportDealersPage.tsx
+│       ├── ProductCatalogPage.tsx
+│       ├── ProposalHistoryPage.tsx
+│       └── TenantSettingsPage.tsx
+├── supabase/
+│   ├── migrations/
+│   │   ├── 20251111000000_multi_tenant_setup.sql
+│   │   ├── 20251111000001_commercial_proposals.sql
+│   │   └── 20251111000002_tenant_branding.sql
+│   └── functions/
+│       ├── discover-dealers-b2b/
+│       └── generate-commercial-proposal/
+├── DEPLOY_GUIDE.md             # Guia completo de deploy
+├── FINAL_PROJECT_SUMMARY.md    # Sumário do projeto
+└── README.md                   # Este arquivo
+```
+
+---
+
+## 🎨 Screenshots
+
+### Dashboard Multi-Tenant
+![Dashboard](./docs/screenshots/dashboard.png)
+
+### Descoberta de Dealers B2B
+![Dealers](./docs/screenshots/export-dealers.png)
+
+### Calculadora de Incoterms
+![Pricing](./docs/screenshots/pricing-calculator.png)
+
+### Proposta Comercial PDF
+![Proposal](./docs/screenshots/commercial-proposal.png)
+
+### Tenant Branding
+![Branding](./docs/screenshots/tenant-branding.png)
+
+---
+
+## 📚 Documentação
+
+- 📖 [DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md) - Guia completo de setup e deploy
+- 📊 [FINAL_PROJECT_SUMMARY.md](./FINAL_PROJECT_SUMMARY.md) - Sumário técnico do projeto
+- 🎨 [TENANT_BRANDING_SYSTEM.md](./TENANT_BRANDING_SYSTEM.md) - Sistema de white-label
+- ⚙️ [CRITICAL_CORRECTIONS_ROBUST_PRICING.md](./CRITICAL_CORRECTIONS_ROBUST_PRICING.md) - Especificações de pricing
+
+---
+
+## 🧪 Testing
+
 ```bash
-# Criar novo projeto em supabase.com
-# Executar DATABASE_SETUP_TRADE_INTELLIGENCE.sql
-```
+# Unit tests (Vitest)
+npm run test
 
-### 3. Configurar ambiente:
-```bash
-# Copiar .env.local e atualizar:
-# - VITE_SUPABASE_URL (novo projeto)
-# - VITE_SUPABASE_ANON_KEY (novo projeto)
-```
+# E2E tests (Playwright)
+npm run test:e2e
 
-### 4. Inicializar com Cursor:
-```bash
-# Abrir INITIALIZATION_PROMPT_TRADE_INTELLIGENCE.md
-# Copiar conteúdo completo
-# Colar no Cursor Chat
-# Aguardar execução automática
+# Linting
+npm run lint
+
+# Type checking
+npm run type-check
 ```
 
 ---
 
-## 📊 WORKSPACE TYPES
+## 🔐 Segurança
 
-### 1️⃣ DOMESTIC (Prospecção Brasil)
-**Objetivo:** Vender produtos/serviços no mercado brasileiro
-
-**Qualificação:**
-- ✅ Empresa exportadora ativa = Lead quente
-- ✅ Fit por setor/porte
-- ✅ Decisores identificados
-
-**Features:**
-- Receita Federal enrichment
-- Apollo decisores (Brasil)
-- Product-market fit (produtos do tenant)
+- ✅ **Row Level Security (RLS)** no Supabase (isolamento por tenant)
+- ✅ **Authentication** via Supabase Auth
+- ✅ **HTTPS** obrigatório (Vercel + Supabase)
+- ✅ **Environment variables** para API keys
+- ✅ **CORS** configurado nas Edge Functions
+- ✅ **Input validation** em todos os formulários
 
 ---
 
-### 2️⃣ EXPORT (Vender para Fora)
-**Objetivo:** Encontrar IMPORTADORES no exterior
+## 📈 Roadmap
 
-**Qualificação:**
-- 🔥 Já importa HS Code que você tem = HOT
-- 🌡️ Importa HS similares = WARM
-- ❄️ Mercado novo = COLD
+### Q1 2025
 
-**Features:**
-- Trade Data (Import Genius, Panjiva)
-- HS Code matching
-- Importer discovery
-- Export fit scoring
-- Tariff calculator
-- Incoterms pricing
-- AI-generated proposals (multi-language)
+- [x] Multi-tenant & workspaces
+- [x] Product catalog
+- [x] Dealer discovery (B2B)
+- [x] 11 Incoterms + 4 transport modes
+- [x] Commercial proposals (PDF + email)
+- [x] Tenant branding (white-label)
 
-**Exemplo:**
-```
-Importer: CoreBody Pilates Inc (USA)
-HS Code: 9506.91.00
-Annual Import: USD 2.3M
-Suppliers: China (60%), Taiwan (25%), Brazil (15%)
-Export Fit Score: 92/100 🔥
-→ HOT LEAD para MetaLife!
-```
+### Q2 2025
 
----
+- [ ] Mobile app (React Native ou PWA)
+- [ ] Dashboard com métricas de conversão
+- [ ] Sistema de negociação (aceitar/rejeitar propostas)
+- [ ] Integração CRM (HubSpot, Pipedrive)
+- [ ] Import Intelligence (fornecedores internacionais)
 
-### 3️⃣ IMPORT (Comprar de Fora)
-**Objetivo:** Encontrar FORNECEDORES no exterior
+### Q3 2025
 
-**Qualificação:**
-- 🔥 Já exporta para Brasil = HOT
-- 🌡️ Exporta para LATAM = WARM
-- ❄️ Novo exportador = COLD
-
-**Features:**
-- Supplier discovery (Alibaba, Global Sources)
-- Verification system (ISO, CE, FDA)
-- MOQ calculator
-- Quality assurance
-- Import fit scoring
-- Logistics calculator
-
-**Exemplo:**
-```
-Supplier: Shanghai Fitness Co. (China)
-HS Code: 9506.91.00
-Exports to: USA, EU, Japan
-MOQ: 100 units
-Certifications: ✅ ISO 9001, ✅ CE
-→ HOT LEAD para MetaLife (matéria-prima)!
-```
+- [ ] Marketplace (tenants negociando entre si)
+- [ ] IA para recomendação de dealers
+- [ ] Blockchain para rastreamento de cargas
+- [ ] Documentação aduaneira automática (DU-E, DI)
+- [ ] Assinatura SaaS (planos Starter/Pro/Enterprise)
 
 ---
 
-## 💰 MODELO DE NEGÓCIO
+## 🤝 Contribuindo
 
-### Pricing (SaaS):
-```
-STARTER: R$ 997/mês
-- 1 workspace
-- 500 prospects/mês
-- 100 créditos enrichment
+Contribuições são bem-vindas! Por favor:
 
-PRO: R$ 2,997/mês
-- 3 workspaces
-- 2,000 prospects/mês
-- 500 créditos enrichment
-- Trade Data integration
+1. Fork o repositório
+2. Crie uma branch: `git checkout -b feature/nova-feature`
+3. Commit: `git commit -m 'feat: adiciona nova feature'`
+4. Push: `git push origin feature/nova-feature`
+5. Abra um Pull Request
 
-ENTERPRISE: Custom
-- Ilimitado
-- White-label
-- API access
-```
+**Padrão de commits:** [Conventional Commits](https://www.conventionalcommits.org/)
 
 ---
 
-## 🛠️ TECH STACK
+## 📄 Licença
 
-### Frontend:
-- React + TypeScript
-- Tailwind CSS
-- Shadcn/ui
-- React Query
-- Zustand (tenant state)
+Este projeto é proprietário da **OLV Trade Ltda**. Todos os direitos reservados.
 
-### Backend:
-- Supabase (Database + Auth + Edge Functions)
-- PostgreSQL (RLS para multi-tenancy)
-
-### APIs:
-- Apollo.io (Global B2B data)
-- Import Genius (USA trade data)
-- Panjiva (Global trade data)
-- Lusha (Contact reveal)
-- Hunter.io (Email finder)
-- OpenAI (AI proposals, HS Code suggestions)
+Para licenciamento comercial, entre em contato: **comercial@olv.com.br**
 
 ---
 
-## 📋 ROADMAP
+## 👥 Time
 
-### ✅ FASE 1: MVP (Semanas 1-2)
-- Multi-tenancy core
-- Workspace switcher
-- Product catalog (manual)
-- Importer discovery (Apollo)
-
-### ⏳ FASE 2: Trade Intelligence (Semanas 3-4)
-- Import Genius integration
-- HS Code matching
-- Export fit scoring
-- AI proposals
-
-### ⏳ FASE 3: Import Sourcing (Semanas 5-6)
-- Supplier discovery
-- Verification system
-- Logistics calculator
-
-### ⏳ FASE 4: Scale (Semanas 7-8)
-- White-label branding
-- API pública
-- Mobile app
-- Integrações (Pipedrive, Bitrix)
+- **Tech Lead:** [Seu Nome]
+- **Product Owner:** [Nome]
+- **Design:** [Nome]
 
 ---
 
-## 👥 EQUIPE
+## 📞 Suporte
 
-**Desenvolvedor Principal:** Claude Sonnet 4.5 (Cursor AI)  
-**Product Owner:** Marcos Oliveira (OLV Internacional)  
-**Primeiro Cliente:** MetaLife Pilates
-
----
-
-## 📞 CONTATO
-
-**OLV Internacional**  
-Email: marcos.oliveira@olvinternacional.com  
-Website: https://olvinternacional.com
+- 📧 Email: suporte@olv.com.br
+- 💬 Slack: [workspace]
+- 🐛 Issues: [GitHub Issues](https://github.com/olv-trade/olv-trade-intelligence/issues)
 
 ---
 
-## 📄 LICENSE
+## 🌟 Status do Projeto
 
-Proprietary - © 2025 OLV Internacional. All rights reserved.
+![Status](https://img.shields.io/badge/status-production-green)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-proprietary-red)
+![TypeScript](https://img.shields.io/badge/typescript-5.2-blue)
+![React](https://img.shields.io/badge/react-18.2-blue)
 
 ---
 
-**🚀 Ready to transform international trade intelligence!**
+**Desenvolvido com ❤️ por OLV Trade**
 
+🌍 **De TOTVS para o mundo!**

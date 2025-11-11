@@ -137,6 +137,12 @@ const menuGroups: MenuGroup[] = [
         description: "Gerenciar produtos do catálogo para propostas comerciais"
       },
       {
+        title: "Configurações",
+        icon: Settings,
+        url: "/tenant-settings",
+        description: "Branding, workspaces, usuários e API keys"
+      },
+      {
         title: "Export Dealers (B2B)",
         icon: Globe,
         url: "/export-dealers",

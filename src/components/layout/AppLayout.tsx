@@ -9,6 +9,7 @@ import { Breadcrumb } from "@/components/common/Breadcrumb";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { useNavigate } from "react-router-dom";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { useTenant } from "@/contexts/TenantContext";
 
 import { Button } from "@/components/ui/button";
 import { Sparkles, Home } from "lucide-react";
@@ -20,6 +21,7 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const navigate = useNavigate();
+  const { currentTenant } = useTenant();
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -37,6 +39,24 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <Home className="h-5 w-5" />
             </Button>
+            
+            {/* TENANT LOGO (se existir) */}
+            {currentTenant?.logo_url ? (
+              <img
+                src={currentTenant.logo_url}
+                alt={currentTenant.name}
+                className="h-8 w-auto hidden sm:block"
+              />
+            ) : currentTenant ? (
+              <div
+                className="h-8 w-8 rounded flex items-center justify-center text-white text-xs font-bold hidden sm:flex"
+                style={{ backgroundColor: currentTenant.primary_color }}
+                title={currentTenant.name}
+              >
+                {currentTenant.name.substring(0, 2).toUpperCase()}
+              </div>
+            ) : null}
+            
             <h2 className="font-semibold text-sm md:text-lg hidden sm:block">STRATEVO Intelligence</h2>
             
             {/* 🌍 WORKSPACE SWITCHER - Multi-tenant */}
