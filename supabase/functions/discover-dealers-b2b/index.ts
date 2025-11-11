@@ -127,6 +127,8 @@ async function searchDealersViaApollo(params: {
   country: string;
   min_volume_usd?: number;
   keywords: string[];
+  includeKeywords?: string[];
+  excludeKeywords?: string[];
 }) {
   const apolloKey = Deno.env.get('APOLLO_API_KEY');
   
@@ -134,9 +136,15 @@ async function searchDealersViaApollo(params: {
     throw new Error('APOLLO_API_KEY não configurado');
   }
 
+  // Usar keywords personalizadas ou padrões
+  const includeKw = params.includeKeywords || B2B_INCLUDE_KEYWORDS;
+  const excludeKw = params.excludeKeywords || B2C_EXCLUDE_KEYWORDS;
+
   console.log('[DEALERS] 🔍 Buscando via Apollo.io:', {
     country: params.country,
     keywords: params.keywords,
+    includeKeywords: includeKw.length,
+    excludeKeywords: excludeKw.length,
     minVolume: params.min_volume_usd
   });
 
@@ -148,9 +156,9 @@ async function searchDealersViaApollo(params: {
     // Filtros geográficos
     organization_locations: [params.country],
     
-    // Filtros de indústria/keywords B2B
+    // Filtros de indústria/keywords B2B (PERSONALIZÁVEIS!)
     q_organization_keyword_tags: [
-      ...B2B_INCLUDE_KEYWORDS,
+      ...includeKw.map(kw => kw.toLowerCase()), // Keywords selecionadas pelo usuário
       ...params.keywords,
       'fitness equipment',
       'sports equipment',
@@ -316,13 +324,22 @@ serve(async (req) => {
   }
 
   try {
-    const { hs_code, country, min_volume_usd, keywords = [] } = await req.json();
+    const { 
+      hs_code, 
+      country, 
+      min_volume_usd, 
+      keywords = [],
+      includeKeywords = B2B_INCLUDE_KEYWORDS, // Usar keywords personalizadas do usuário
+      excludeKeywords = B2C_EXCLUDE_KEYWORDS  // Ou usar padrões se não fornecidas
+    } = await req.json();
 
     console.log('[DEALERS] 📦 Descobrindo dealers B2B:', {
       hs_code,
       country,
       min_volume_usd,
-      keywords
+      keywords,
+      includeKeywords: includeKeywords.length,
+      excludeKeywords: excludeKeywords.length
     });
 
     // Validação
@@ -338,7 +355,9 @@ serve(async (req) => {
       hs_code,
       country,
       min_volume_usd,
-      keywords
+      keywords,
+      includeKeywords, // Keywords personalizadas!
+      excludeKeywords  // Keywords personalizadas!
     });
 
     // 2️⃣ Calcular Export Fit Score
