@@ -32,6 +32,7 @@ import {
   AlertCircle,
   Loader2,
   Check,
+  X,
   ChevronsUpDown
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';

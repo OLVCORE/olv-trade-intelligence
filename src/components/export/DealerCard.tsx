@@ -21,7 +21,8 @@ import {
   Globe,
   TrendingUp,
   Package,
-  Flame
+  Flame,
+  Search
 } from 'lucide-react';
 
 // ============================================================================
