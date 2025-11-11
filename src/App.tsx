@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from "./components/layout/AppLayout";
 import { AuthProvider } from "./contexts/AuthContext";
+import { TenantProvider } from "./contexts/TenantContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import TOTVSCheckReport from "@/pages/Leads/TOTVSCheckReport";
 import { Loader2 } from "lucide-react";
@@ -189,6 +190,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
           <AuthProvider>
+          <TenantProvider>
           <AuthTokenGuard />
           <Suspense fallback={<PageLoader />}>
           <Routes>
@@ -890,6 +892,7 @@ const App = () => (
             {/* TREVO Assistant - disponível em todas as páginas protegidas */}
             <TrevoAssistantWrapper />
           </Suspense>
+          </TenantProvider>
           </AuthProvider>
         </BrowserRouter>
         

@@ -8,6 +8,7 @@ import { InsightsDock } from "@/components/insights/InsightsDock";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { useNavigate } from "react-router-dom";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 import { Button } from "@/components/ui/button";
 import { Sparkles, Home } from "lucide-react";
@@ -37,6 +38,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Home className="h-5 w-5" />
             </Button>
             <h2 className="font-semibold text-sm md:text-lg hidden sm:block">STRATEVO Intelligence</h2>
+            
+            {/* 🌍 WORKSPACE SWITCHER - Multi-tenant */}
+            <div className="hidden lg:flex ml-4">
+              <WorkspaceSwitcher />
+            </div>
           </div>
           <div className="flex items-center gap-2 md:gap-3 flex-1 max-w-2xl mx-2 md:mx-4">
             <GlobalSearch />

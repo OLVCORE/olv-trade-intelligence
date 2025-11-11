@@ -713,7 +713,16 @@ function ProductMarketFitTab({ companyId, workspaceType }) {
 - [ ] Implementar lógica dinâmica por workspace type
 - [ ] Remover Edge Functions TOTVS-específicas
 
-### FASE 6: UI Refinements (Semana 4)
+### FASE 6: Sistema de Propostas Comerciais (Semana 4)
+- [ ] Criar `CommercialProposalGenerator` component
+- [ ] Seleção de produtos do catálogo (multi-select)
+- [ ] Calculadora de quantidades e preços (FOB, CIF, DDP)
+- [ ] Geração de PDF profissional (logo MetaLife, produtos, preços, Incoterms)
+- [ ] Envio automático por email para dealer
+- [ ] Histórico de propostas enviadas
+- [ ] Tracking de propostas (visualizada, aceita, negociando)
+
+### FASE 7: UI Refinements (Semana 4)
 - [ ] Sidebar dinâmica por workspace type
 - [ ] Dashboard específico por workspace
 - [ ] Branding por tenant (logo, cores)
