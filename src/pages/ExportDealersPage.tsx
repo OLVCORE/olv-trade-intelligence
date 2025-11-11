@@ -166,7 +166,7 @@ export default function ExportDealersPage() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Busca: HS {searchParams?.hsCode} em {searchParams?.country}
+                Busca: HS {searchParams?.hsCode} em {searchParams?.countries?.length || 0} {searchParams?.countries?.length === 1 ? 'país' : 'países'}
               </div>
             </div>
           </CardContent>
