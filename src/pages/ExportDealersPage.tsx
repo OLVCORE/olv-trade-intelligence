@@ -34,14 +34,30 @@ export default function ExportDealersPage() {
     mutationFn: async (params: DealerSearchParams) => {
       console.log('[EXPORT] 🔍 Buscando dealers B2B...', params);
 
-      const { data, error } = await supabase.functions.invoke('discover-dealers-b2b', {
-        body: {
-          hs_code: params.hsCode,
-          country: params.country,
-          min_volume_usd: params.minVolumeUSD ? parseFloat(params.minVolumeUSD) : null,
-          keywords: params.keywords || [],
-        },
-      });
+      // Buscar dealers para CADA país selecionado
+      const allDealers: Dealer[] = [];
+      
+      for (const country of params.countries) {
+        const { data, error } = await supabase.functions.invoke('discover-dealers-b2b', {
+          body: {
+            hs_code: params.hsCode,
+            country: country,
+            min_volume_usd: params.minVolume || null,
+            keywords: params.keywords || [],
+          },
+        });
+
+        if (error) {
+          console.error('[EXPORT] ❌ Erro ao buscar dealers em', country, error);
+          continue; // Continua com próximo país
+        }
+
+        if (data?.dealers) {
+          allDealers.push(...data.dealers);
+        }
+      }
+
+      console.log('[EXPORT] ✅ Total de dealers encontrados:', allDealers.length);
 
       if (error) {
         console.error('[EXPORT] ❌ Erro:', error);

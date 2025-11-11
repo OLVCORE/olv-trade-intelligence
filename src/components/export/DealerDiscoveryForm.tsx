@@ -325,11 +325,25 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                 </Command>
               </PopoverContent>
             </Popover>
-            {country && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Selecionado: {COUNTRIES.find(c => c.code === country)?.flag}{' '}
-                {COUNTRIES.find(c => c.code === country)?.name}
-              </p>
+
+            {/* Países Selecionados (Badges) */}
+            {countries.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {countries.map((code) => {
+                  const country = COUNTRIES.find((c) => c.code === code);
+                  return (
+                    <Badge key={code} variant="secondary" className="gap-1">
+                      {country?.flag} {country?.name}
+                      <button
+                        onClick={() => toggleCountry(code)}
+                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
             )}
           </div>
 
