@@ -345,71 +345,18 @@ export const SHIPPING_ROUTES: RouteData[] = [
 ];
 
 // ============================================================================
-// MAIN CALCULATOR
+// calculateShippingEstimate function - for internal use
 // ============================================================================
 
-export async function calculateShippingCost(params: ShippingParams): Promise<ShippingResult> {
+function calculateShippingEstimate(params: ShippingParams): ShippingResult {
   const { weight, volume, originPort, destinationPort, transportMode } = params;
-
-  console.log('[SHIPPING] 📦 Calculando frete:', {
-    weight: `${weight}kg`,
-    volume: `${volume}m³`,
-    route: `${originPort} → ${destinationPort}`,
-    mode: transportMode,
-  });
-
-  // 1️⃣ TENTAR FREIGHTOS API (preferencial)
-  try {
-    const freightosKey = import.meta.env.VITE_FREIGHTOS_API_KEY;
-
-    if (freightosKey) {
-      console.log('[SHIPPING] 🔄 Tentando Freightos API...');
-
-      const response = await fetch('https://api.freightos.com/v1/quote', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${freightosKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          origin: originPort,
-          destination: destinationPort,
-          weight_kg: weight,
-          volume_m3: volume,
-          mode: transportMode,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[SHIPPING] ✅ Freightos API - Cotação REAL obtida!');
-
-        return {
-          baseFreight: data.base_rate || 0,
-          fuelSurcharge: data.fuel_surcharge || 0,
-          handling: data.terminal_charges || 0,
-          documentation: data.documentation_fees || 50,
-          total: data.total_cost || 0,
-          estimatedDays: data.transit_days || 0,
-          source: 'freightos_api',
-          carrier: data.carrier_name,
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('[SHIPPING] ⚠️ Freightos API não disponível:', err);
-  }
-
-  // 2️⃣ FALLBACK: TABELA MANUAL (Rotas conhecidas)
-  console.log('[SHIPPING] ℹ️ Usando tabela manual de rotas...');
 
   const route = SHIPPING_ROUTES.find(
     r => r.originPort === originPort && r.destinationPort === destinationPort
   );
 
   if (!route) {
-    console.warn('[SHIPPING] ⚠️ Rota não cadastrada:', `${originPort} → ${destinationPort}`);
-    // Fallback genérico por região
+    console.warn('[SHIPPING] Rota não cadastrada:', `${originPort} → ${destinationPort}`);
     return estimateShippingByRegion(params);
   }
 
@@ -418,53 +365,17 @@ export async function calculateShippingCost(params: ShippingParams): Promise<Shi
     throw new Error(`Modal inválido: ${transportMode}`);
   }
 
-  // Calcular peso taxável (maior entre real e volumétrico)
   const volumetricWeight = volume * mode.volumetricFactor;
   const chargeableWeight = Math.max(weight, volumetricWeight);
 
-  console.log('[SHIPPING] ⚙️ Peso taxável:', {
-    real: `${weight}kg`,
-    volumetric: `${volumetricWeight.toFixed(1)}kg`,
-    chargeable: `${chargeableWeight.toFixed(1)}kg`,
-  });
-
-  // Custo base (peso EXATO, sem faixas!)
   const costPerKg = route.baseCostPerKg[transportMode] || 0;
   const baseFreight = chargeableWeight * costPerKg;
-
-  // BAF (Bunker Adjustment Factor) - varia por modal
   const fuelSurcharge =
-    transportMode === 'ocean'
-      ? baseFreight * 0.15 // 15% para marítimo
-      : transportMode === 'air'
-      ? baseFreight * 0.25 // 25% para aéreo
-      : baseFreight * 0.10; // 10% para road/rail
-
-  // THC (Terminal Handling Charge)
+    transportMode === 'ocean' ? baseFreight * 0.15 : transportMode === 'air' ? baseFreight * 0.25 : baseFreight * 0.10;
   const handling =
-    transportMode === 'ocean'
-      ? Math.max(150, chargeableWeight * 0.5) // Mínimo USD 150 ou USD 0.5/kg
-      : transportMode === 'air'
-      ? Math.max(75, chargeableWeight * 0.3) // Mínimo USD 75 ou USD 0.3/kg
-      : Math.max(50, chargeableWeight * 0.2); // Road/rail
-
-  // Documentação
-  const documentation =
-    transportMode === 'ocean'
-      ? 75 // BL (Bill of Lading)
-      : transportMode === 'air'
-      ? 50 // AWB (Air Waybill)
-      : 30; // CMR/CIM
-
+    transportMode === 'ocean' ? Math.max(150, chargeableWeight * 0.5) : transportMode === 'air' ? Math.max(75, chargeableWeight * 0.3) : Math.max(50, chargeableWeight * 0.2);
+  const documentation = transportMode === 'ocean' ? 75 : transportMode === 'air' ? 50 : 30;
   const total = baseFreight + fuelSurcharge + handling + documentation;
-
-  console.log('[SHIPPING] ✅ Frete calculado (estimativa):', {
-    base: `USD ${baseFreight.toFixed(2)}`,
-    fuel: `USD ${fuelSurcharge.toFixed(2)}`,
-    handling: `USD ${handling.toFixed(2)}`,
-    docs: `USD ${documentation.toFixed(2)}`,
-    total: `USD ${total.toFixed(2)}`,
-  });
 
   return {
     baseFreight,

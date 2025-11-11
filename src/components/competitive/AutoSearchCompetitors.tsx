@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useCompetitorSearch, DetectedCompetitor } from "@/hooks/useCompetitorSearch";
 import { Search, ExternalLink, TrendingUp, Globe, Plus } from "lucide-react";
 import { useState } from "react";
-import { TOTVS_PRODUCTS_MODULES, getModulesByProduct } from "@/lib/data/totvsProductsModules";
+// DEPRECATED: TOTVS modules removed in Phase 2
+// import { TOTVS_PRODUCTS_MODULES, getModulesByProduct } from "@/lib/data/totvsProductsModules";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface AutoSearchCompetitorsProps {
@@ -34,12 +35,15 @@ export function AutoSearchCompetitors({
   const [customProduct, setCustomProduct] = useState('');
   const [customModule, setCustomModule] = useState('');
   
-  // Módulos disponíveis baseado no produto selecionado
-  const availableModules = selectedProductId ? getModulesByProduct(selectedProductId) : [];
+  // DEPRECATED: TOTVS modules removed in Phase 2
+  // const availableModules = selectedProductId ? getModulesByProduct(selectedProductId) : [];
+  const availableModules: any[] = [];
   
   // Nomes legíveis para busca
-  const selectedProductName = TOTVS_PRODUCTS_MODULES.find(p => p.id === selectedProductId)?.name || '';
-  const selectedModuleName = availableModules.find(m => m.id === selectedModuleId)?.name || '';
+  // const selectedProductName = TOTVS_PRODUCTS_MODULES.find(p => p.id === selectedProductId)?.name || '';
+  const selectedProductName = '';
+  // const selectedModuleName = availableModules.find(m => m.id === selectedModuleId)?.name || '';
+  const selectedModuleName = '';
 
   const handleSearch = async () => {
     // Determinar qual produto e módulo usar (dropdown ou customizado)
@@ -92,7 +96,8 @@ export function AutoSearchCompetitors({
                 <SelectValue placeholder="Selecione o produto..." />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {TOTVS_PRODUCTS_MODULES.map((product) => (
+                {/* DEPRECATED: TOTVS modules removed */}
+                {[].map((product: any) => (
                   <SelectItem key={product.id} value={product.id}>
                     {product.name}
                   </SelectItem>
