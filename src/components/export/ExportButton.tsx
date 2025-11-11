@@ -39,7 +39,7 @@ export function ExportButton({ data, filename, type = 'general', variant = 'outl
       URL.revokeObjectURL(url);
 
       toast({
-        title: "✅ Export concluído",
+        title: "Export concluído",
         description: "Arquivo JSON baixado com sucesso",
       });
     } catch (error) {
@@ -100,7 +100,7 @@ export function ExportButton({ data, filename, type = 'general', variant = 'outl
       URL.revokeObjectURL(url);
 
       toast({
-        title: "✅ Export concluído",
+        title: "Export concluído",
         description: "Arquivo CSV baixado com sucesso",
       });
     } catch (error) {
@@ -151,7 +151,7 @@ export function ExportButton({ data, filename, type = 'general', variant = 'outl
       URL.revokeObjectURL(url);
 
       toast({
-        title: "✅ Export concluído",
+        title: "Export concluído",
         description: "Arquivo TXT baixado com sucesso",
       });
     } catch (error) {

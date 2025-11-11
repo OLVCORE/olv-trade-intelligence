@@ -173,11 +173,11 @@ export function CommercialProposalGenerator({
 
       if (error) throw error;
 
-      console.log('[PROPOSAL] ✅ Proposta gerada:', data);
+      console.log('[PROPOSAL] Proposta gerada:', data);
       return data;
     },
     onSuccess: (data) => {
-      toast.success('✅ Proposta gerada e enviada!', {
+      toast.success('Proposta gerada e enviada!', {
         description: `PDF enviado para ${dealer.name}. Proposta #${data.proposal_number}`,
         duration: 5000,
       });
@@ -203,7 +203,7 @@ export function CommercialProposalGenerator({
       setNotes('');
     },
     onError: (error: any) => {
-      console.error('[PROPOSAL] ❌ Erro:', error);
+      console.error('[PROPOSAL] Erro:', error);
       toast.error('Erro ao gerar proposta', {
         description: error.message || 'Verifique o console',
       });

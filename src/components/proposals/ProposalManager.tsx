@@ -37,7 +37,7 @@ export function ProposalManager({ companyId, accountStrategyId, quoteId, scenari
         savedAt: new Date().toISOString(),
       }));
       toast({
-        title: "✅ Propostas salvas",
+        title: "Propostas salvas",
         description: "Seus dados foram salvos com sucesso.",
       });
     } catch (error: any) {

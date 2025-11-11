@@ -261,7 +261,7 @@ export function DealerCard({ dealer, onGenerateProposal, onViewDetails }: Dealer
           <CommercialProposalGenerator
             dealer={dealer}
             onProposalGenerated={(proposalId) => {
-              console.log('[DEALER] ✅ Proposta gerada:', proposalId);
+              console.log('[DEALER] Proposta gerada:', proposalId);
               onGenerateProposal?.(dealer);
             }}
           />

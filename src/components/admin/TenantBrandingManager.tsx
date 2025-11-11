@@ -67,7 +67,7 @@ export function TenantBrandingManager() {
 
       if (uploadError) throw uploadError;
 
-      console.log('[BRANDING] ✅ Logo enviado para Storage:', fileName);
+      console.log('[BRANDING] Logo enviado para Storage:', fileName);
 
       // 2. Obter URL pública
       const { data: urlData } = supabase.storage.from('tenant-logos').getPublicUrl(fileName);
@@ -87,11 +87,11 @@ export function TenantBrandingManager() {
       setLogoPreview(publicUrl);
       await refreshTenantData(); // Atualizar contexto
 
-      toast.success('✅ Logo atualizado com sucesso!', {
+      toast.success('Logo atualizado com sucesso!', {
         description: 'O logo será exibido no header e nas propostas',
       });
     } catch (error: any) {
-      console.error('[BRANDING] ❌ Erro ao fazer upload:', error);
+      console.error('[BRANDING] Erro ao fazer upload:', error);
       toast.error('Erro ao fazer upload do logo', {
         description: error.message,
       });
@@ -155,7 +155,7 @@ export function TenantBrandingManager() {
     },
     onSuccess: async () => {
       await refreshTenantData();
-      toast.success('✅ Dados atualizados!', {
+      toast.success('Dados atualizados!', {
         description: 'Branding salvo com sucesso',
       });
     },

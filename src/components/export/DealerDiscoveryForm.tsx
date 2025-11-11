@@ -119,7 +119,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
-                      💡 Código NCM/HS do produto que você exporta.<br />
+                      Código NCM/HS do produto que você exporta.<br />
                       <strong>Exemplos:</strong><br />
                       • 9506.91.00 (Pilates Equipment)<br />
                       • 9506.99.00 (Sports Accessories)<br />
@@ -136,7 +136,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              💡 Informe o HS Code principal do produto que deseja exportar
+              Informe o HS Code principal do produto que deseja exportar
             </p>
           </div>
 
@@ -152,7 +152,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
-                      💡 Selecione o país onde deseja encontrar importadores e distribuidores.<br />
+                      Selecione o país onde deseja encontrar importadores e distribuidores.<br />
                       <strong>195+ países disponíveis</strong> agrupados por região.
                     </p>
                   </TooltipContent>
@@ -184,7 +184,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   <CommandEmpty>Nenhum país encontrado.</CommandEmpty>
                   
                   {/* TOP MARKETS (Pré-selecionados) */}
-                  <CommandGroup heading="⭐ Principais Mercados">
+                  <CommandGroup heading="Principais Mercados">
                     {COUNTRIES.filter(c => TOP_EXPORT_MARKETS.includes(c.code)).map((c) => (
                       <CommandItem
                         key={c.code}
@@ -231,7 +231,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </CommandGroup>
 
                   {/* EUROPE */}
-                  <CommandGroup heading="🌍 Europe">
+                  <CommandGroup heading="Europe">
                     {getCountriesByRegion('Europe').map((c) => (
                       <CommandItem
                         key={c.code}
@@ -300,7 +300,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </CommandGroup>
 
                   {/* AFRICA */}
-                  <CommandGroup heading="🌍 Africa">
+                  <CommandGroup heading="Africa">
                     {getCountriesByRegion('Africa').map((c) => (
                       <CommandItem
                         key={c.code}
@@ -326,7 +326,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </Popover>
             {country && (
               <p className="text-xs text-muted-foreground mt-1">
-                ✅ Selecionado: {COUNTRIES.find(c => c.code === country)?.flag}{' '}
+                Selecionado: {COUNTRIES.find(c => c.code === country)?.flag}{' '}
                 {COUNTRIES.find(c => c.code === country)?.name}
               </p>
             )}
@@ -344,7 +344,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
-                      💡 <strong>Opcional:</strong> Filtrar dealers por volume mínimo de importação anual.<br />
+                      <strong>Opcional:</strong> Filtrar dealers por volume mínimo de importação anual.<br />
                       Deixe vazio para ver todos os dealers.
                     </p>
                   </TooltipContent>
@@ -359,7 +359,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
               placeholder="Ex: 100000 (USD 100K+) - Opcional"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              💡 Campo opcional - deixe vazio para ver todos os dealers
+              Campo opcional - deixe vazio para ver todos os dealers
             </p>
           </div>
 
@@ -371,7 +371,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </h4>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="font-medium text-green-600">✅ INCLUIR:</span>
+                <span className="font-medium text-green-600 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> INCLUIR:
+                </span>
                 <div className="mt-1 space-y-1 text-muted-foreground">
                   <div>• Distributor</div>
                   <div>• Wholesaler</div>
@@ -381,7 +383,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                 </div>
               </div>
               <div>
-                <span className="font-medium text-red-600">❌ EXCLUIR:</span>
+                <span className="font-medium text-red-600 flex items-center gap-1">
+                  <X className="h-3 w-3" /> EXCLUIR:
+                </span>
                 <div className="mt-1 space-y-1 text-muted-foreground">
                   <div>• Pilates Studio</div>
                   <div>• Gym / Fitness Center</div>

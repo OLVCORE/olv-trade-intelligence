@@ -121,14 +121,14 @@ export function PricingCalculator({
 
       setResults(incotermResults);
 
-      toast.success('✅ Preços calculados!', {
+      toast.success('Preços calculados!', {
         description: `11 Incoterms disponíveis (EXW → DDP)`,
         duration: 5000,
       });
 
-      console.log('[PRICING] ✅ Incoterms calculados:', incotermResults);
+      console.log('[PRICING] Incoterms calculados:', incotermResults);
     } catch (error: any) {
-      console.error('[PRICING] ❌ Erro ao calcular:', error);
+      console.error('[PRICING] Erro ao calcular:', error);
       toast.error('Erro ao calcular preços', {
         description: error.message || 'Verifique os dados informados',
       });
@@ -190,7 +190,7 @@ export function PricingCalculator({
                         <Info className="h-3 w-3 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        💡 Peso TOTAL da carga (soma de todos os produtos).<br />
+                        Peso TOTAL da carga (soma de todos os produtos).<br />
                         <strong>Exemplo:</strong> 50 Reformers × 85kg = 4,250kg
                       </TooltipContent>
                     </Tooltip>
@@ -216,7 +216,7 @@ export function PricingCalculator({
                         <Info className="h-3 w-3 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        💡 Volume TOTAL ocupado pela carga.<br />
+                        Volume TOTAL ocupado pela carga.<br />
                         <strong>Cálculo:</strong> Comprimento × Largura × Altura (em metros)
                       </TooltipContent>
                     </Tooltip>
@@ -258,7 +258,7 @@ export function PricingCalculator({
                       <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      💡 Principal porto do país de destino.<br />
+                      Principal porto do país de destino.<br />
                       <strong>Exemplos:</strong> USLAX (Los Angeles), DEHAM (Hamburg)
                     </TooltipContent>
                   </Tooltip>
@@ -270,7 +270,7 @@ export function PricingCalculator({
                 onChange={(e) => setSelectedPort(e.target.value)}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                💡 Código UN/LOCODE do porto (5 caracteres)
+                Código UN/LOCODE do porto (5 caracteres)
               </p>
             </div>
           </div>
@@ -283,7 +283,7 @@ export function PricingCalculator({
             </h4>
             <div className="bg-green-50/50 dark:bg-green-950/20 p-4 rounded-lg space-y-3">
               <p className="text-xs text-muted-foreground">
-                ✅ <strong>Sempre aplicáveis:</strong> ICMS 0% (18%), IPI Suspenso (10%), PIS/COFINS 0% (9.65%)
+                <strong>Sempre aplicáveis:</strong> ICMS 0% (18%), IPI Suspenso (10%), PIS/COFINS 0% (9.65%)
               </p>
 
               <div className="flex items-center gap-2">
@@ -327,7 +327,7 @@ export function PricingCalculator({
               </div>
 
               <div className="pt-2 border-t text-xs text-green-700 dark:text-green-300">
-                💰 <strong>Economia estimada:</strong>{' '}
+                <strong>Economia estimada:</strong>{' '}
                 {hasDrawback && hasReintegra
                   ? '64.65%'
                   : hasDrawback
@@ -392,7 +392,7 @@ export function PricingCalculator({
               <div className="space-y-2">
                 {renderIncotermOption('FCA', results.FCA)}
                 {renderIncotermOption('FAS', results.FAS)}
-                {renderIncotermOption('FOB', results.FOB, true)} {/* ⭐ Mais usado */}
+                {renderIncotermOption('FOB', results.FOB, true)} {/* Mais usado */}
               </div>
             </div>
 
@@ -403,7 +403,7 @@ export function PricingCalculator({
               </h4>
               <div className="space-y-2">
                 {renderIncotermOption('CFR', results.CFR)}
-                {renderIncotermOption('CIF', results.CIF, true)} {/* ⭐ 2º mais usado */}
+                {renderIncotermOption('CIF', results.CIF, true)} {/* 2º mais usado */}
                 {renderIncotermOption('CPT', results.CPT)}
                 {renderIncotermOption('CIP', results.CIP)}
               </div>
@@ -483,7 +483,7 @@ export function PricingCalculator({
             <div className="flex items-center gap-2 mb-1">
               <h4 className="font-bold">{code}</h4>
               <span className="text-sm text-muted-foreground">- {incoterm.namePt}</span>
-              {isTopUsed && <Badge variant="secondary" className="text-xs">⭐ Popular</Badge>}
+              {isTopUsed && <Badge variant="secondary" className="text-xs flex items-center gap-1"><Star className="h-3 w-3" /> Popular</Badge>}
               {isSelected && <CheckCircle className="h-4 w-4 text-primary" />}
             </div>
             <p className="text-xs text-muted-foreground mb-2">{incoterm.description}</p>
