@@ -8,6 +8,12 @@
 // ============================================================================
 
 // ============================================================================
+// IMPORTS
+// ============================================================================
+
+import { getPortByCode } from '@/data/ports';
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -28,6 +34,33 @@ export interface ShippingResult {
   estimatedDays: number; // Dias estimados
   source: 'freightos_api' | 'shipengine_api' | 'estimate'; // Fonte do cálculo
   carrier?: string; // Transportadora sugerida
+  priceRange?: { min: number; max: number }; // Faixa de preço (se API)
+}
+
+// Freightos API Types
+interface FreightosRequest {
+  load: Array<{
+    quantity: number;
+    unitType: 'boxes' | 'pallets' | 'container20' | 'container40' | 'container40HC' | 'container45HC';
+    unitWeightKg: number;
+    unitVolumeCBM: number;
+  }>;
+  legs: Array<{
+    origin: { unLocationCode: string };
+    destination: { unLocationCode: string };
+    mode: 'LCL' | 'FCL';
+  }>;
+}
+
+interface FreightosResponse {
+  OCEAN?: {
+    priceEstimates: { min: number; max: number };
+    transitTime: { min: number; max: number };
+  };
+  AIR?: {
+    priceEstimates: { min: number; max: number };
+    transitTime: { min: number; max: number };
+  };
 }
 
 // ============================================================================
@@ -500,6 +533,124 @@ function estimateShippingByRegion(params: ShippingParams): ShippingResult {
     estimatedDays: transportMode === 'ocean' ? 25 : 5,
     source: 'estimate',
   };
+}
+
+// ============================================================================
+// MAIN FUNCTION: Calculate Shipping Cost (com Freightos API)
+// ============================================================================
+
+export async function calculateShippingCost(params: ShippingParams): Promise<ShippingResult> {
+  const { weight, volume, originPort, destinationPort, transportMode } = params;
+
+  // Validar portos
+  const origin = getPortByCode(originPort);
+  const destination = getPortByCode(destinationPort);
+
+  if (!origin || !destination) {
+    console.error('[SHIPPING] Porto inválido:', { originPort, destinationPort });
+    throw new Error(`Porto inválido: ${originPort} ou ${destinationPort}`);
+  }
+
+  // 1️⃣ TENTAR FREIGHTOS API PRIMEIRO (cotação REAL)
+  const freightosKey = import.meta.env.VITE_FREIGHTOS_API_KEY;
+
+  if (freightosKey) {
+    try {
+      console.log('[SHIPPING] Freightos API - Cotação REAL iniciada');
+      console.log('[SHIPPING] Origem:', origin.name, origin.code, '→ Destino:', destination.name, destination.code);
+      console.log('[SHIPPING] Peso:', weight, 'kg | Volume:', volume, 'm³');
+
+      // Determinar unitType baseado em volume total
+      let unitType: FreightosRequest['load'][0]['unitType'];
+      if (volume < 1) unitType = 'boxes';
+      else if (volume < 10) unitType = 'pallets';
+      else if (volume < 25) unitType = 'container20';
+      else if (volume < 50) unitType = 'container40';
+      else unitType = 'container40HC';
+
+      // Determinar mode (LCL vs FCL)
+      const mode: 'LCL' | 'FCL' = volume >= 25 ? 'FCL' : 'LCL';
+
+      const requestBody: FreightosRequest = {
+        load: [
+          {
+            quantity: 1,
+            unitType,
+            unitWeightKg: weight,
+            unitVolumeCBM: volume,
+          },
+        ],
+        legs: [
+          {
+            origin: { unLocationCode: originPort },
+            destination: { unLocationCode: destinationPort },
+            mode,
+          },
+        ],
+      };
+
+      console.log('[SHIPPING] Request:', JSON.stringify(requestBody, null, 2));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch('https://api.freightos.com/api/v1/freightEstimates', {
+        method: 'POST',
+        headers: {
+          'x-apikey': freightosKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data: FreightosResponse = await response.json();
+        const modeData = transportMode === 'air' ? data.AIR : data.OCEAN;
+
+        if (modeData?.priceEstimates) {
+          console.log('[SHIPPING] Freightos API SUCESSO!');
+          console.log('[SHIPPING] Preço:', modeData.priceEstimates.min, '-', modeData.priceEstimates.max, 'USD');
+          console.log('[SHIPPING] Prazo:', modeData.transitTime.min, '-', modeData.transitTime.max, 'dias');
+
+          // Usar média entre min e max
+          const avgPrice = (modeData.priceEstimates.min + modeData.priceEstimates.max) / 2;
+          const avgDays = Math.round((modeData.transitTime.min + modeData.transitTime.max) / 2);
+
+          return {
+            baseFreight: avgPrice * 0.7, // 70% é frete base
+            fuelSurcharge: avgPrice * 0.15, // 15% BAF
+            handling: avgPrice * 0.1, // 10% THC
+            documentation: avgPrice * 0.05, // 5% docs
+            total: avgPrice,
+            estimatedDays: avgDays,
+            source: 'freightos_api',
+            priceRange: {
+              min: modeData.priceEstimates.min,
+              max: modeData.priceEstimates.max,
+            },
+          };
+        }
+      } else {
+        const errorText = await response.text();
+        console.warn('[SHIPPING] Freightos API erro:', response.status, errorText);
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.warn('[SHIPPING] Freightos API timeout (>10s)');
+      } else {
+        console.warn('[SHIPPING] Freightos API erro:', err.message);
+      }
+    }
+  } else {
+    console.log('[SHIPPING] VITE_FREIGHTOS_API_KEY não configurada');
+  }
+
+  // 2️⃣ FALLBACK: Estimativa manual (tabela SHIPPING_ROUTES)
+  console.log('[SHIPPING] Usando estimativa manual (tabela SHIPPING_ROUTES)');
+  return calculateShippingEstimate(params);
 }
 
 // ============================================================================
