@@ -516,3 +516,4 @@ Cursor vai criar:
 
 **Tudo dentro da plataforma! Nenhum trabalho manual!** 🚀
 
+

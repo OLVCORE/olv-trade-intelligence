@@ -513,3 +513,4 @@ export function TenantSettingsPage() {
 
 **Multi-tenant com branding independente!** 🎨
 
+
