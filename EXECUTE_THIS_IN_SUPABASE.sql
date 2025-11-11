@@ -119,10 +119,19 @@ ALTER TABLE public.tenant_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "tenant_isolation_tenants" ON public.tenants;
 CREATE POLICY "tenant_isolation_tenants" ON public.tenants FOR ALL USING (id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_workspaces" ON public.workspaces;
 CREATE POLICY "tenant_isolation_workspaces" ON public.workspaces FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_products" ON public.tenant_products;
 CREATE POLICY "tenant_isolation_products" ON public.tenant_products FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "users_view_own" ON public.users;
 CREATE POLICY "users_view_own" ON public.users FOR SELECT USING (id = auth.uid());
+
+DROP POLICY IF EXISTS "tenant_isolation_companies" ON public.companies;
 CREATE POLICY "tenant_isolation_companies" ON public.companies FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
 
 -- Trigger auto-create user
@@ -181,6 +190,7 @@ CREATE TABLE IF NOT EXISTS public.commercial_proposals (
 );
 
 ALTER TABLE public.commercial_proposals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tenant_isolation_proposals" ON public.commercial_proposals;
 CREATE POLICY "tenant_isolation_proposals" ON public.commercial_proposals FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
 
 -- ============================================================================
@@ -262,10 +272,19 @@ ALTER TABLE public.dealer_performance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.marketing_materials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dealer_incentives ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "tenant_isolation_contracts" ON public.dealer_contracts;
 CREATE POLICY "tenant_isolation_contracts" ON public.dealer_contracts FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_orders" ON public.dealer_orders;
 CREATE POLICY "tenant_isolation_orders" ON public.dealer_orders FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_performance" ON public.dealer_performance;
 CREATE POLICY "tenant_isolation_performance" ON public.dealer_performance FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_materials" ON public.marketing_materials;
 CREATE POLICY "tenant_isolation_materials" ON public.marketing_materials FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_incentives" ON public.dealer_incentives;
 CREATE POLICY "tenant_isolation_incentives" ON public.dealer_incentives FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
 
 -- ============================================================================
@@ -402,12 +421,25 @@ ALTER TABLE public.email_sequence_steps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.smart_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales_automations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "tenant_isolation_sales_deals" ON public.sales_deals;
 CREATE POLICY "tenant_isolation_sales_deals" ON public.sales_deals FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_sales_stages" ON public.sales_pipeline_stages;
 CREATE POLICY "tenant_isolation_sales_stages" ON public.sales_pipeline_stages FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "users_can_read_activities" ON public.sales_deal_activities;
 CREATE POLICY "users_can_read_activities" ON public.sales_deal_activities FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "tenant_isolation_sequences" ON public.email_sequences;
 CREATE POLICY "tenant_isolation_sequences" ON public.email_sequences FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "users_can_manage_steps" ON public.email_sequence_steps;
 CREATE POLICY "users_can_manage_steps" ON public.email_sequence_steps FOR ALL USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "tenant_isolation_tasks" ON public.smart_tasks;
 CREATE POLICY "tenant_isolation_tasks" ON public.smart_tasks FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
+
+DROP POLICY IF EXISTS "tenant_isolation_automations" ON public.sales_automations;
 CREATE POLICY "tenant_isolation_automations" ON public.sales_automations FOR ALL USING (tenant_id = (SELECT tenant_id FROM public.users WHERE id = auth.uid()));
 
 -- Inserir stages padrão
