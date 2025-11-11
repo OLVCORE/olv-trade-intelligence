@@ -50,8 +50,9 @@ interface DealerDiscoveryFormProps {
 
 export interface DealerSearchParams {
   hsCode: string;
-  country: string;
-  minVolumeUSD: string;
+  countries: string[]; // Multi-select de países
+  minVolume?: number;
+  minVolumeUSD?: string;
   keywords?: string[];
 }
 
@@ -65,7 +66,7 @@ export interface DealerSearchParams {
 
 export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFormProps) {
   const [hsCode, setHsCode] = useState('');
-  const [country, setCountry] = useState('');
+  const [countries, setCountries] = useState<string[]>([]); // Array de países
   const [minVolume, setMinVolume] = useState('');
   const [openCountryCombobox, setOpenCountryCombobox] = useState(false);
 

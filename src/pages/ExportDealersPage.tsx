@@ -58,14 +58,7 @@ export default function ExportDealersPage() {
       }
 
       console.log('[EXPORT] ✅ Total de dealers encontrados:', allDealers.length);
-
-      if (error) {
-        console.error('[EXPORT] ❌ Erro:', error);
-        throw error;
-      }
-
-      console.log('[EXPORT] ✅ Dealers encontrados:', data?.dealers?.length || 0);
-      return data;
+      return allDealers;
     },
     onSuccess: (data) => {
       setDealers(data.dealers || []);
