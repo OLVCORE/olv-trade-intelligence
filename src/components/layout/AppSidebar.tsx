@@ -143,6 +143,12 @@ const menuGroups: MenuGroup[] = [
         description: "Descobrir distribuidores e importadores internacionais"
       },
       {
+        title: "Propostas Comerciais",
+        icon: FileText,
+        url: "/proposals",
+        description: "Histórico de propostas enviadas e tracking"
+      },
+      {
         title: "Intelligence 360°",
         icon: Brain,
         url: "/intelligence-360",

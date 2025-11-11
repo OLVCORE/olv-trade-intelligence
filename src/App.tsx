@@ -37,6 +37,7 @@ const TechStackPage = lazy(() => import("./pages/TechStackPage"));
 const ProductFitPage = lazy(() => import("./pages/ProductFitPage"));
 const ProductCatalogPage = lazy(() => import("./pages/ProductCatalogPage"));
 const ExportDealersPage = lazy(() => import("./pages/ExportDealersPage"));
+const ProposalHistoryPage = lazy(() => import("./pages/ProposalHistoryPage"));
 const GovernancePage = lazy(() => import("./pages/GovernancePage"));
 const AccountStrategyPage = lazy(() => import("./pages/AccountStrategyPage"));
 const StrategyHistoryPage = lazy(() => import("./pages/StrategyHistoryPage"));
@@ -322,6 +323,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <ExportDealersPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/proposals"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ProposalHistoryPage />
                   </AppLayout>
                 </ProtectedRoute>
               }

@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { CommercialProposalGenerator } from '@/components/proposals/CommercialProposalGenerator';
 import {
   Building2,
   MapPin,
@@ -257,15 +258,13 @@ export function DealerCard({ dealer, onGenerateProposal, onViewDetails }: Dealer
             Ver Detalhes
           </Button>
           
-          <Button
-            variant="default"
-            size="sm"
-            className="flex-1 gap-2"
-            onClick={() => onGenerateProposal?.(dealer)}
-          >
-            <FileText className="h-4 w-4" />
-            Gerar Proposta
-          </Button>
+          <CommercialProposalGenerator
+            dealer={dealer}
+            onProposalGenerated={(proposalId) => {
+              console.log('[DEALER] ✅ Proposta gerada:', proposalId);
+              onGenerateProposal?.(dealer);
+            }}
+          />
         </div>
       </CardContent>
     </Card>
