@@ -155,6 +155,18 @@ const menuGroups: MenuGroup[] = [
         description: "Histórico de propostas enviadas e tracking"
       },
       {
+        title: "Contratos",
+        icon: FileSignature,
+        url: "/contracts",
+        description: "Gestão de contratos de longo prazo (1-5 anos)"
+      },
+      {
+        title: "Dealer Portal",
+        icon: Users,
+        url: "/dealer-portal",
+        description: "Portal self-service para dealers"
+      },
+      {
         title: "Intelligence 360°",
         icon: Brain,
         url: "/intelligence-360",

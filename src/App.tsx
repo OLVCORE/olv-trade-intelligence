@@ -39,6 +39,8 @@ const ProductCatalogPage = lazy(() => import("./pages/ProductCatalogPage"));
 const ExportDealersPage = lazy(() => import("./pages/ExportDealersPage"));
 const ProposalHistoryPage = lazy(() => import("./pages/ProposalHistoryPage"));
 const TenantSettingsPage = lazy(() => import("./pages/TenantSettingsPage"));
+const DealerPortalPage = lazy(() => import("./pages/DealerPortalPage"));
+const ContractsPage = lazy(() => import("./pages/ContractsPage"));
 const GovernancePage = lazy(() => import("./pages/GovernancePage"));
 const AccountStrategyPage = lazy(() => import("./pages/AccountStrategyPage"));
 const StrategyHistoryPage = lazy(() => import("./pages/StrategyHistoryPage"));
@@ -344,6 +346,26 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <TenantSettingsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dealer-portal"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <DealerPortalPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contracts"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ContractsPage />
                   </AppLayout>
                 </ProtectedRoute>
               }
