@@ -87,7 +87,7 @@ export default function ExportDealersPage() {
         }
       }
 
-      console.log('[EXPORT] ✅ Total: ${allDealers.length} dealers qualificados`);
+      console.log(`[EXPORT] ✅ Total: ${allDealers.length} dealers qualificados`);
       return allDealers;
     },
     onSuccess: (data) => {
