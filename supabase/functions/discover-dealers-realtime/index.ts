@@ -451,13 +451,21 @@ serve(async (req) => {
       })
     );
 
-    // FILTRAR APENAS FIT > 60 (2+ keywords Pilates)
+    // FILTRAR FIT > 60 (Pilates) OU FIT > 0 (Web scraping funcionou)
+    // Se web scraping falhar completamente, retornar TODOS (até 15) para não perder dados
     const qualified = validated.filter(c => c.fitScore >= 60);
+    
+    // FALLBACK: Se 0 qualificados, retornar TOP 15 (ordenar por fonte mais confiável)
+    const finalResults = qualified.length > 0 
+      ? qualified 
+      : validated
+          .slice(0, 15)
+          .map(c => ({ ...c, fitScore: c.fitScore || 30, fit_estimated: true }));
 
-    stats.fit_60_plus = qualified.length;
+    stats.fit_60_plus = finalResults.length;
 
     // Estatísticas por portal
-    qualified.forEach(c => {
+    finalResults.forEach(c => {
       const portal = c.source_portal || c.source || 'Unknown';
       stats.portais[portal] = (stats.portais[portal] || 0) + 1;
     });
@@ -466,21 +474,23 @@ serve(async (req) => {
     console.log(`[RESULTADO FINAL]`);
     console.log(`  📊 Total bruto: ${stats.total_bruto}`);
     console.log(`  📊 Total único: ${stats.total_unico}`);
-    console.log(`  ✅ Qualificados (Fit 60+): ${stats.fit_60_plus}`);
+    console.log(`  ✅ Retornados: ${stats.fit_60_plus}`);
     console.log(`  📊 Taxa qualificação: ${((stats.fit_60_plus / stats.total_unico) * 100).toFixed(0)}%`);
     console.log(`  📊 Por fonte:`);
     console.log(`     - Apollo: ${stats.apollo}`);
     console.log(`     - Serper: ${stats.serper}`);
     console.log(`     - Google API: ${stats.google_api}`);
     console.log(`  📊 Por portal:`, stats.portais);
+    console.log(`  ⚠️ FALLBACK: ${qualified.length === 0 ? 'ATIVADO (web scraping falhou)' : 'NÃO'}`);
     console.log(`==============================================`);
 
     return new Response(
       JSON.stringify({
-        total: qualified.length,
-        dealers: qualified.sort((a, b) => b.fitScore - a.fitScore),
+        total: finalResults.length,
+        dealers: finalResults.sort((a, b) => b.fitScore - a.fitScore),
         stats: stats,
         keywords_used: PILATES_KEYWORDS.slice(0, 8),
+        fallback_activated: qualified.length === 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
