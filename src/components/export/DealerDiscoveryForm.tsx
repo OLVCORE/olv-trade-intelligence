@@ -42,6 +42,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { HSCodeAutocomplete } from './HSCodeAutocomplete';
 
 // ============================================================================
 // TYPES
@@ -338,29 +339,12 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </Label>
             
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={hsCodeInput}
-                  onChange={(e) => setHsCodeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab' || e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddHSCode(hsCodeInput);
-                    }
-                  }}
-                  placeholder="Digite HS Code e aperte TAB (ex: 9506.91, 9403.60, 6403.99)..."
-                  className="font-mono"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleAddHSCode(hsCodeInput)}
-                  disabled={!hsCodeInput.trim()}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* AUTOCOMPLETE EM TEMPO REAL - WCO DATABASE */}
+              <HSCodeAutocomplete
+                value={hsCodeInput}
+                onSelect={(code) => handleAddHSCode(code)} // Adiciona automaticamente ao clicar
+                placeholder="🔍 Digite código (ex: 9506) ou produto (ex: pilates, furniture, footwear)..."
+              />
               
               {/* HS Codes adicionados */}
               {hsCodes.length > 0 && (
@@ -382,7 +366,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </div>
             
             <p className="text-xs text-muted-foreground mt-1">
-              💡 Adicione múltiplos HS Codes para buscar vários produtos ao mesmo tempo!
+              💡 <strong>Clique no código</strong> no dropdown para adicionar. Adicione múltiplos HS Codes para buscar vários produtos ao mesmo tempo!
             </p>
           </div>
 

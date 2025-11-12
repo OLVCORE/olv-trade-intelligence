@@ -16,10 +16,11 @@ interface HSCode {
 
 interface HSCodeAutocompleteProps {
   value: string;
-  onChange: (code: string) => void;
+  onSelect: (code: string) => void; // Chamado quando seleciona um código
+  placeholder?: string;
 }
 
-export function HSCodeAutocomplete({ value, onChange }: HSCodeAutocompleteProps) {
+export function HSCodeAutocomplete({ value, onSelect, placeholder }: HSCodeAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [codes, setCodes] = useState<HSCode[]>([]);
@@ -105,7 +106,7 @@ export function HSCodeAutocomplete({ value, onChange }: HSCodeAutocompleteProps)
             </span>
           ) : (
             <span className="text-muted-foreground font-normal">
-              Digite HS Code ou nome do produto...
+              {placeholder || 'Digite HS Code ou nome do produto...'}
             </span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -149,7 +150,8 @@ export function HSCodeAutocomplete({ value, onChange }: HSCodeAutocompleteProps)
                   key={code.code}
                   value={code.code}
                   onSelect={() => {
-                    onChange(code.code);
+                    onSelect(code.code); // ✅ Adiciona código à lista
+                    setSearch(''); // Limpa busca
                     setOpen(false);
                   }}
                   className="flex items-start gap-3 py-3"
