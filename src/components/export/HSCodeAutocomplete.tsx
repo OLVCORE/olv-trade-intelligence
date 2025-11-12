@@ -27,15 +27,26 @@ export function HSCodeAutocomplete({ value, onChange }: HSCodeAutocompleteProps)
   // Buscar HS Codes da UN Comtrade
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
+      console.log(`[HS-AUTOCOMPLETE] 🔍 Buscando: "${query}"`);
+      
       const { data, error } = await supabase.functions.invoke('get-hs-codes', {
         body: { query },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[HS-AUTOCOMPLETE] ❌ Erro:', error);
+        throw error;
+      }
+
+      console.log(`[HS-AUTOCOMPLETE] ✅ Recebido:`, data);
       return data;
     },
     onSuccess: (data) => {
-      setCodes(data.codes || []);
+      console.log(`[HS-AUTOCOMPLETE] ✅ ${data?.codes?.length || 0} códigos carregados`);
+      setCodes(data?.codes || []);
+    },
+    onError: (error) => {
+      console.error('[HS-AUTOCOMPLETE] ❌ Mutation error:', error);
     },
   });
 

@@ -17,33 +17,53 @@ serve(async (req) => {
   try {
     const { query = '' } = await req.json();
 
-    console.log(`[HS-CODES] 🔍 Buscando HS Codes: "${query}"`);
+    console.log(`[HS-CODES] 🔍 Query: "${query}"`);
 
-    // UN COMTRADE API (oficial, grátis, 5.000+ códigos)
-    const response = await fetch(
-      'https://comtrade.un.org/Data/cache/classificationHS.json'
-    );
+    let allCodes: any[] = [];
 
-    if (!response.ok) {
-      throw new Error(`UN Comtrade error: ${response.status}`);
+    // TENTAR UN COMTRADE API PRIMEIRO
+    try {
+      console.log('[HS-CODES] Buscando UN Comtrade...');
+      const response = await fetch(
+        'https://comtrade.un.org/Data/cache/classificationHS.json',
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        allCodes = data.results || [];
+        console.log(`[HS-CODES] ✅ UN Comtrade: ${allCodes.length} códigos`);
+      } else {
+        console.log(`[HS-CODES] ⚠️ UN Comtrade HTTP ${response.status}`);
+      }
+    } catch (apiError) {
+      console.error('[HS-CODES] ⚠️ UN Comtrade falhou, usando fallback:', apiError);
     }
 
-    const data = await response.json();
-    const allCodes = data.results || [];
+    // FALLBACK: Se UN Comtrade falhar, retornar vazio mas com mensagem clara
+    if (allCodes.length === 0) {
+      return new Response(
+        JSON.stringify({
+          total: 0,
+          showing: 0,
+          codes: [],
+          error: 'UN Comtrade API temporariamente indisponível. Digite o código HS manualmente.',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log(`[HS-CODES] ✅ Total database: ${allCodes.length} códigos`);
-
-    // FILTRAR por query (se fornecida)
+    // FILTRAR por query
     const filtered = query
       ? allCodes.filter((code: any) => {
           const text = `${code.id} ${code.text}`.toLowerCase();
           return text.includes(query.toLowerCase());
         })
-      : allCodes;
+      : allCodes.slice(0, 100); // Primeiros 100 se sem query
 
-    console.log(`[HS-CODES] ✅ Filtrados: ${filtered.length} códigos`);
+    console.log(`[HS-CODES] ✅ Filtrados: ${filtered.length}`);
 
-    // Limitar a 50 resultados (performance)
+    // Limitar a 50 resultados
     const limited = filtered.slice(0, 50);
 
     return new Response(
