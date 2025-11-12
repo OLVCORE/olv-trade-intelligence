@@ -24,29 +24,47 @@ export function HSCodeAutocomplete({ value, onChange }: HSCodeAutocompleteProps)
   const [search, setSearch] = useState('');
   const [codes, setCodes] = useState<HSCode[]>([]);
 
-  // Buscar HS Codes da UN Comtrade
+  // Buscar HS Codes do cache local (SUPER RÁPIDO!)
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
       console.log(`[HS-AUTOCOMPLETE] 🔍 Buscando: "${query}"`);
       
-      const { data, error } = await supabase.functions.invoke('get-hs-codes', {
-        body: { query },
-      });
-
-      if (error) {
-        console.error('[HS-AUTOCOMPLETE] ❌ Erro:', error);
-        throw error;
+      // Buscar do arquivo público (cached da UN Comtrade)
+      const response = await fetch('/hs-codes.json');
+      
+      if (!response.ok) {
+        throw new Error('Cache HS Codes não encontrado');
       }
 
-      console.log(`[HS-AUTOCOMPLETE] ✅ Recebido:`, data);
-      return data;
+      const data = await response.json();
+      const allCodes = data.results || [];
+
+      console.log(`[HS-AUTOCOMPLETE] ✅ Cache carregado: ${allCodes.length} códigos`);
+
+      // Filtrar por query
+      const filtered = query
+        ? allCodes.filter((code: any) => {
+            const text = `${code.id} ${code.text}`.toLowerCase();
+            return text.includes(query.toLowerCase());
+          })
+        : allCodes.slice(0, 100);
+
+      console.log(`[HS-AUTOCOMPLETE] ✅ Filtrados: ${filtered.length}`);
+
+      return {
+        total: filtered.length,
+        codes: filtered.slice(0, 50).map((c: any) => ({
+          code: c.id,
+          description: c.text,
+        })),
+      };
     },
     onSuccess: (data) => {
-      console.log(`[HS-AUTOCOMPLETE] ✅ ${data?.codes?.length || 0} códigos carregados`);
+      console.log(`[HS-AUTOCOMPLETE] ✅ ${data?.codes?.length || 0} códigos no dropdown`);
       setCodes(data?.codes || []);
     },
     onError: (error) => {
-      console.error('[HS-AUTOCOMPLETE] ❌ Mutation error:', error);
+      console.error('[HS-AUTOCOMPLETE] ❌:', error);
     },
   });
 
