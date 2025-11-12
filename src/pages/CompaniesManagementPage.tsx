@@ -101,11 +101,22 @@ export default function CompaniesManagementPage() {
   
   // 🔍 APLICAR FILTROS LOCALMENTE
   const companies = useMemo(() => {
+    console.log('🔍 [CompaniesManagement] Aplicando filtros locais...');
+    console.log('🔍 [CompaniesManagement] allCompanies.length:', allCompanies.length);
+    console.log('🔍 [CompaniesManagement] filterOrigin:', filterOrigin);
+    console.log('🔍 [CompaniesManagement] filterStatus:', filterStatus);
+    console.log('🔍 [CompaniesManagement] filterSector:', filterSector);
+    console.log('🔍 [CompaniesManagement] filterRegion:', filterRegion);
+    console.log('🔍 [CompaniesManagement] filterAnalysisStatus:', filterAnalysisStatus);
+    console.log('🔍 [CompaniesManagement] filterEnrichment:', filterEnrichment);
+    
     let filtered = [...allCompanies];
+    console.log('🔍 [CompaniesManagement] Filtered inicial:', filtered.length);
     
     // Filtro por Origem
     if (filterOrigin.length > 0) {
       filtered = filtered.filter(c => filterOrigin.includes((c as any).data_source || ''));
+      console.log('🔍 [CompaniesManagement] Após filtro Origem:', filtered.length);
     }
     
     // Filtro por Status CNPJ
@@ -135,6 +146,7 @@ export default function CompaniesManagementPage() {
         
         return filterStatus.includes(status);
       });
+      console.log('🔍 [CompaniesManagement] Após filtro Status CNPJ:', filtered.length);
     }
     
     // Filtro por Setor
@@ -143,6 +155,7 @@ export default function CompaniesManagementPage() {
         const sector = c.industry || (c as any).raw_data?.setor_amigavel || (c as any).raw_data?.atividade_economica || 'N/A';
         return filterSector.includes(sector);
       });
+      console.log('🔍 [CompaniesManagement] Após filtro Setor:', filtered.length);
     }
     
     // Filtro por UF (apenas estado, sem cidade)
@@ -151,6 +164,7 @@ export default function CompaniesManagementPage() {
         const uf = (c as any).raw_data?.uf || '';
         return filterRegion.includes(uf);
       });
+      console.log('🔍 [CompaniesManagement] Após filtro Região:', filtered.length);
     }
     
     // Filtro por Status Análise (percentual de completude)
@@ -173,6 +187,7 @@ export default function CompaniesManagementPage() {
         
         return filterAnalysisStatus.includes(statusLabel);
       });
+      console.log('🔍 [CompaniesManagement] Após filtro Status Análise:', filtered.length);
     }
     
     // ✅ NOVO: Filtro por tipo de enriquecimento
@@ -194,8 +209,10 @@ export default function CompaniesManagementPage() {
         
         return filterEnrichment.some(e => enrichments[e]);
       });
+      console.log('🔍 [CompaniesManagement] Após filtro Enriquecimento:', filtered.length);
     }
     
+    console.log('🔍 [CompaniesManagement] FINAL filtered.length:', filtered.length);
     return filtered;
   }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterAnalysisStatus, filterEnrichment]);
   
