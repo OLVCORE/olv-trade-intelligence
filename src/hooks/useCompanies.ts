@@ -19,27 +19,18 @@ export function useCompanies(options?: {
   return useQuery({
     queryKey: [...COMPANIES_QUERY_KEY, currentWorkspace?.id, page, pageSize, search, sortBy, sortOrder],
     queryFn: async () => {
-      console.log('🔍 [useCompanies] INICIANDO BUSCA...');
-      console.log('🔍 [useCompanies] currentWorkspace:', currentWorkspace);
-      console.log('🔍 [useCompanies] workspace_id:', currentWorkspace?.id);
-      console.log('🔍 [useCompanies] Params:', { page, pageSize, search, sortBy, sortOrder });
-      
       let query = supabase
         .from('companies')
         .select('*', { count: 'exact' });
 
       // 🔐 FILTRO MULTI-TENANT: Apenas empresas do workspace atual
       if (currentWorkspace?.id) {
-        console.log('🔍 [useCompanies] Aplicando filtro workspace_id:', currentWorkspace.id);
         query = query.eq('workspace_id', currentWorkspace.id);
-      } else {
-        console.warn('⚠️ [useCompanies] SEM WORKSPACE_ID! Buscando TODAS as empresas!');
       }
 
       // Filtro de busca
       if (search) {
-        console.log('🔍 [useCompanies] Aplicando filtro de busca:', search);
-        query = query.or(`company_name.ilike.%${search}%,cnpj.ilike.%${search}%`); // FIX: company_name não name
+        query = query.or(`company_name.ilike.%${search}%,cnpj.ilike.%${search}%,website.ilike.%${search}%`);
       }
 
       // Ordenação
@@ -50,21 +41,10 @@ export function useCompanies(options?: {
       const to = from + pageSize - 1;
       query = query.range(from, to);
 
-      console.log('🔍 [useCompanies] Executando query...');
       const { data, error, count } = await query;
-      
-      console.log('🔍 [useCompanies] RESULTADO:');
-      console.log('   - Empresas encontradas:', count);
-      console.log('   - Data length:', data?.length);
-      console.log('   - Error:', error);
-      if (data && data.length > 0) {
-        console.log('   - Primeira empresa:', data[0]);
-      }
       
       if (error) {
         console.error('[useCompanies] ❌ Query error:', error);
-        console.error('[useCompanies] 📝 Query details:', { search, sortBy, sortOrder, page, pageSize });
-        // Retornar vazio em vez de quebrar
         return { 
           data: [] as Company[], 
           count: 0,
@@ -81,9 +61,9 @@ export function useCompanies(options?: {
         totalPages: Math.ceil((count || 0) / pageSize)
       };
     },
-    staleTime: 5 * 1000, // ✅ 5 segundos (atualiza mais rápido)
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: true, // ✅ Revalida ao focar janela
+    staleTime: 5 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }
 
