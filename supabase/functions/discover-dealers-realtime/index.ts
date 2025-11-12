@@ -136,52 +136,34 @@ async function searchSerper(keyword: string, country: string) {
 
   console.log(`[SERPER] 🔍 Buscando em 30 portais B2B...`);
 
-  // 30 QUERIES ULTRA-ROBUSTAS
+  // QUERIES FOCADAS NO PAÍS SELECIONADO
   const queries = [
-    // TRADE DATA (Importação REAL) - PRIORIDADE MÁXIMA
+    // TRADE DATA (Importação NO país selecionado)
     `site:importkey.com "${keyword}" import ${country}`,
     `site:eximpedia.app "${keyword}" import ${country}`,
-    `site:volza.com "${keyword}" import data ${country}`,
+    `site:volza.com "${keyword}" import ${country}`,
     `site:importgenius.com "${keyword}" ${country}`,
     `site:panjiva.com "${keyword}" importer ${country}`,
     
-    // FABRICANTES CHINA (Made-in-China ecosystem)
-    `site:made-in-china.com "${keyword}" manufacturer`,
-    `site:alibaba.com "${keyword}" supplier`,
-    `site:globalsources.com "${keyword}" supplier`,
-    `site:china-fitness.com pilates equipment`,
-    `site:tradease.goldsupplier.com fitness equipment`,
+    // B2B DIRECTORIES (COM país no filtro)
+    `site:kompass.com "${keyword}" ${country}`,
+    `site:europages.com "${keyword}" ${country}`,
+    `site:thomasnet.com "${keyword}" ${country}`,
+    `site:tradekey.com "${keyword}" ${country}`,
     
-    // B2B DIRECTORIES GLOBAIS
-    `site:kompass.com "${keyword}" distributor ${country}`,
-    `site:europages.com "${keyword}" distributor ${country}`,
-    `site:thomasnet.com "${keyword}" distributor`,
-    `site:tradekey.com "${keyword}" importer ${country}`,
-    `site:exporthub.com "${keyword}" exporter`,
+    // YELLOW PAGES LOCAIS (do país selecionado)
+    `"${keyword}" ${country} yellow pages`,
+    `"${keyword}" distributor ${country}`,
+    `"${keyword}" wholesaler ${country}`,
+    `"pilates equipment" importer ${country}`,
     
-    // YELLOW PAGES GLOBAIS
-    `site:yellowpages.com "${keyword}" distributor ${country}`,
-    `site:yell.com "${keyword}" distributor`, // UK
-    `site:gelbeseiten.de "${keyword}" distributor`, // Germany
-    `site:uksmallbusinessdirectory.co.uk fitness equipment`,
+    // LINKEDIN (EMPRESAS do país)
+    `site:linkedin.com/company "${keyword}" ${country}`,
     
-    // PORTAIS ESPECIALIZADOS FITNESS
-    `site:pilates.com directory`,
-    `site:bodysolid.com dealers`,
-    `site:gofitstrength.com distributor`,
-    `site:raetin.com distributor`,
-    `site:healthclubmanagement.co.uk suppliers`,
-    
-    // ASSOCIAÇÕES COMERCIAIS
-    `"${keyword} distributors association" ${country}`,
-    `"sporting goods trade association" ${country} members directory`,
-    
-    // LINKEDIN COMPANIES
-    `site:linkedin.com/company "${keyword}" distributor`,
-    `site:linkedin.com/company pilates equipment`,
-    
-    // GOOGLE GENÉRICO (Backup)
-    `"${keyword}" ${country} -blog -news -studio -instructor -tiktok -ebay`,
+    // GOOGLE DIRETO (COM país obrigatório)
+    `"${keyword}" distributor ${country} -studio -instructor -blog`,
+    `"pilates equipment" wholesale ${country} -studio -gym`,
+    `"fitness equipment" distributor ${country} b2b`,
   ];
 
   const allResults: any[] = [];
@@ -227,18 +209,38 @@ async function searchSerper(keyword: string, country: string) {
     }
   }
 
-  console.log(`[SERPER] ✅ ${allResults.length} resultados de ${queries.length} queries`);
+  // FILTRAR RESULTADOS: APENAS do país selecionado
+  const filtered = allResults.filter(r => {
+    const snippet = (r.description || '').toLowerCase();
+    const title = (r.name || '').toLowerCase();
+    const text = snippet + ' ' + title;
+    
+    // REJEITAR se mencionar China/India/Taiwan e NÃO for o país selecionado
+    const forbiddenCountries = ['china', 'chinese', 'india', 'indian', 'taiwan', 'vietnam', 'bangladesh'];
+    const target = country.toLowerCase();
+    
+    for (const forbidden of forbiddenCountries) {
+      if (text.includes(forbidden) && !target.includes(forbidden)) {
+        console.log(`[SERPER] ❌ Rejeitado: ${r.name} (menciona ${forbidden}, busca ${country})`);
+        return false; // REJEITAR (Alibaba China quando busca Argentina)
+      }
+    }
+    
+    return true; // ACEITAR
+  });
 
-  // Estatísticas por portal
-  const byPortal = allResults.reduce((acc: any, r: any) => {
+  console.log(`[SERPER] ✅ ${filtered.length} resultados (de ${allResults.length} - filtrados por país: ${country})`);
+
+  // Estatísticas por portal (dos resultados filtrados)
+  const byPortal = filtered.reduce((acc: any, r: any) => {
     const portal = r.source_portal || 'Other';
     acc[portal] = (acc[portal] || 0) + 1;
     return acc;
   }, {});
 
-  console.log(`[SERPER] 📊 Por portal:`, byPortal);
+  console.log(`[SERPER] 📊 Por portal (após filtro):`, byPortal);
 
-  return allResults;
+  return filtered; // ✅ RETORNAR APENAS FILTRADOS
 }
 
 function extractPortal(url: string): string {
@@ -277,9 +279,9 @@ async function searchGoogleAPI(keyword: string, country: string) {
   console.log(`[GOOGLE-API] 🔍 Fallback: Google Custom Search`);
 
   const queries = [
-    `"${keyword}" distributor ${country}`,
-    `"${keyword}" importer ${country}`,
-    `"pilates equipment" distributor ${country}`,
+    `"${keyword}" distributor ${country} -china -india`,
+    `"${keyword}" importer ${country} -china -taiwan`,
+    `"pilates equipment" wholesale ${country} -alibaba -made-in-china`,
   ];
 
   const allResults: any[] = [];
@@ -291,13 +293,27 @@ async function searchGoogleAPI(keyword: string, country: string) {
 
       if (response.ok) {
         const data = await response.json();
-        const items = (data.items || []).map((item: any) => ({
-          name: item.title,
-          website: item.link,
-          description: item.snippet,
-          source: 'google_api',
-          source_portal: 'Google',
-        }));
+        const items = (data.items || [])
+          .filter((item: any) => {
+            const text = (item.title + ' ' + item.snippet).toLowerCase();
+            const forbiddenCountries = ['china', 'chinese', 'india', 'taiwan', 'alibaba', 'made-in-china'];
+            const target = country.toLowerCase();
+            
+            // REJEITAR se mencionar países proibidos
+            for (const forbidden of forbiddenCountries) {
+              if (text.includes(forbidden) && !target.includes(forbidden)) {
+                return false;
+              }
+            }
+            return true;
+          })
+          .map((item: any) => ({
+            name: item.title,
+            website: item.link,
+            description: item.snippet,
+            source: 'google_api',
+            source_portal: 'Google',
+          }));
         allResults.push(...items);
       }
     } catch (err) {
