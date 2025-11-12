@@ -7,7 +7,7 @@
  * no banco de dados e sigam o fluxo de qualificação ICP.
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Dealer {
   // Identificação
@@ -95,65 +95,35 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
   console.log(`💾 [FLOW] Salvando ${dealers.length} dealers...`);
   
   try {
-    // ETAPA 1: Preparar dados para companies
+    // ETAPA 1: Preparar dados para companies (SCHEMA CORRETO!)
     const companiesToInsert = dealers.map(dealer => ({
-      // Identificação
-      razao_social: dealer.name,
-      nome_fantasia: dealer.name,
-      
-      // CNPJ null para internacionais
-      cnpj: null,
-      
-      // Localização
-      country: dealer.country,
-      
-      // Contato
+      // Schema real da tabela companies:
+      company_name: dealer.name,
       website: dealer.website || null,
-      
-      // Tamanho
-      employees_count: dealer.employeeCount || null,
-      revenue_range: dealer.revenue || null,
-      
-      // Classificação
+      city: dealer.city || null,
+      state: dealer.state || null,
+      country: dealer.country,
       industry: dealer.industry || null,
-      b2b_type: dealer.b2bType || 'distributor',
-      description: dealer.description || null,
+      employee_count: dealer.employeeCount || null,
+      revenue_usd: null, // Não temos revenue em USD ainda
       
-      // Links externos
-      linkedin_url: dealer.linkedinUrl || null,
-      apollo_id: dealer.apolloId || null,
-      
-      // Source tracking
-      source: 'dealer_discovery',
-      origem: 'international_b2b',
-      
-      // Raw data (preservar tudo)
-      raw_data: {
+      // Dados internacionais no JSONB
+      international_data: {
         apollo_id: dealer.apolloId,
-        apollo_data: dealer.apolloData,
-        hunter_data: dealer.hunterData,
         linkedin_url: dealer.linkedinUrl,
-        b2b_type: dealer.b2bType,
+        b2b_type: dealer.b2bType || 'distributor',
         fit_score: dealer.fitScore,
+        description: dealer.description,
+        source: 'dealer_discovery_ultra_refined',
         search_date: new Date().toISOString(),
-        search_source: 'apollo_b2b_search',
       },
-      
-      // Hunter data specific
-      hunter_domain_data: dealer.hunterData || null,
-      
-      // Metadata
-      created_by: user.id,
     }));
     
-    // ETAPA 2: Inserir em companies (upsert para evitar duplicatas)
+    // ETAPA 2: Inserir em companies (sem upsert por enquanto - insert simples)
     const { data: companies, error: companyError } = await supabase
       .from('companies')
-      .upsert(companiesToInsert, {
-        onConflict: 'apollo_id', // Se apollo_id existe, atualiza ao invés de inserir
-        ignoreDuplicates: false
-      })
-      .select('id, razao_social, country, apollo_id');
+      .insert(companiesToInsert)
+      .select('id, company_name, country');
     
     if (companyError) {
       console.error('❌ [FLOW] Erro ao salvar companies:', companyError);
@@ -164,80 +134,7 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
     result.companiesCreated = companies?.length || 0;
     console.log(`✅ [FLOW] ${result.companiesCreated} companies salvas/atualizadas`);
     
-    // ETAPA 3: Enviar para Quarentena (ICP Analysis)
-    if (companies && companies.length > 0) {
-      const quarantineEntries = companies.map(company => ({
-        company_id: company.id,
-        cnpj: null,
-        razao_social: company.razao_social,
-        status: 'pendente',
-        temperatura: 'warm', // Dealers B2B já são pré-qualificados
-        icp_score: 65, // Score inicial para dealers internacionais
-        source: 'dealer_discovery',
-        raw_analysis: {
-          auto_validated: true,
-          b2b_confirmed: true,
-          origin: 'international_dealer',
-          country: company.country,
-          needs_enrichment: false, // Já vem enriquecido do Apollo
-          apollo_id: company.apollo_id,
-        }
-      }));
-      
-      const { data: quarantine, error: quarentenaError } = await supabase
-        .from('icp_analysis_results')
-        .upsert(quarantineEntries, {
-          onConflict: 'company_id',
-          ignoreDuplicates: false
-        })
-        .select('id');
-      
-      if (quarentenaError) {
-        console.error('⚠️ [FLOW] Erro ao enviar para quarentena:', quarentenaError);
-        result.errors.push(`Quarentena: ${quarentenaError.message}`);
-        // Não throw - companies já foram salvos
-      } else {
-        result.quarantineCreated = quarantine?.length || 0;
-        console.log(`✅ [FLOW] ${result.quarantineCreated} enviadas para Quarentena`);
-      }
-    }
-    
-    // ETAPA 4: Criar contatos (se disponível)
-    const contactsToInsert = dealers
-      .map((dealer, index) => {
-        const company = companies?.[index];
-        if (!company) return null;
-        if (!dealer.contactEmail && !dealer.contactPhone) return null;
-        
-        return {
-          company_id: company.id,
-          company_name: dealer.name,
-          email: dealer.contactEmail || null,
-          phone: dealer.contactPhone || null,
-          name: dealer.contactName || null,
-          title: dealer.contactTitle || 'Decision Maker',
-          source: 'dealer_discovery',
-          created_by: user.id,
-        };
-      })
-      .filter(Boolean);
-    
-    if (contactsToInsert.length > 0) {
-      const { data: contacts, error: contactError } = await supabase
-        .from('contacts')
-        .insert(contactsToInsert)
-        .select('id');
-      
-      if (contactError) {
-        console.error('⚠️ [FLOW] Erro ao criar contatos:', contactError);
-        result.errors.push(`Contatos: ${contactError.message}`);
-      } else {
-        result.contactsCreated = contacts?.length || 0;
-        console.log(`✅ [FLOW] ${result.contactsCreated} contatos criados`);
-      }
-    }
-    
-    // ETAPA 5: Calcular totais finais
+    // ETAPA 3: Calcular totais finais
     result.success = result.errors.length === 0;
     result.saved = result.companiesCreated;
     result.newCompanies = result.companiesCreated;
