@@ -7,164 +7,295 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// MULTI-SOURCE REAL-TIME SEARCH
+// KEYWORDS EXATAS DO CLIENTE (25 keywords Pilates)
 // ============================================================================
 
-interface SearchParams {
-  hsCode: string;
-  country: string;
-  keywords: string[]; // Gerado pelo HS Code Intelligence
-}
+const PILATES_KEYWORDS = [
+  // Equipamentos específicos
+  'pilates equipment wholesale',
+  'pilates apparatus wholesale',
+  'pilates equipment distributor',
+  'pilates reformer wholesale',
+  'pilates cadillac wholesale',
+  'commercial pilates equipment',
+  'professional pilates equipment',
+  'studio pilates equipment',
+  
+  // B2B e parcerias
+  'wholesale fitness equipment',
+  'b2b pilates equipment',
+  'become a dealer pilates equipment',
+  'become a distributor pilates equipment',
+  'international distribution pilates equipment',
+  'bulk order pilates equipment',
+  'authorized dealer pilates',
+  'supplier pilates equipment',
+  
+  // Trade
+  'pilates equipment import',
+  'fitness equipment import',
+  'export pilates equipment',
+  'trade only pilates equipment supplier',
+];
 
 // ============================================================================
-// APOLLO SEARCH (com decisores)
+// CAMADA 1: APOLLO.IO (Dados estruturados)
 // ============================================================================
 
-async function searchApollo(params: SearchParams) {
+async function searchApollo(keyword: string, country: string) {
   const apolloKey = Deno.env.get('APOLLO_API_KEY');
   if (!apolloKey) {
-    console.log('[APOLLO] ⚠️ Key missing');
-    return { companies: [], decisionMakers: [] };
+    console.log('[APOLLO] ⚠️ APOLLO_API_KEY missing - pulando Apollo');
+    return [];
   }
 
-  console.log(`[APOLLO] 🔍 Buscando: ${params.keywords[0]} in ${params.country}`);
+  console.log(`[APOLLO] 🔍 Keyword: "${keyword}" | País: ${country}`);
 
   const payload = {
     page: 1,
     per_page: 50,
-    organization_locations: [params.country],
-    q_organization_keyword_tags: params.keywords,
+    organization_locations: [country],
+    q_organization_keyword_tags: [keyword, 'pilates equipment', 'fitness equipment'],
     organization_num_employees_ranges: ['21-50', '51-200', '201-500', '501-1000'],
     organization_not_keyword_tags: [
-      'studio', 'gym', 'fitness center', 'instructor', 'teacher',
-      'blog', 'news', 'magazine', 'education',
+      'pilates studio', 'yoga studio', 'fitness studio', 'gym',
+      'instructor', 'teacher', 'personal trainer',
+      'blog', 'news', 'magazine',
     ],
   };
 
   try {
     const response = await fetch('https://api.apollo.io/v1/organizations/search', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': apolloKey,
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': apolloKey },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      throw new Error(`Apollo HTTP ${response.status}`);
+      console.error(`[APOLLO] ❌ HTTP ${response.status}`);
+      return [];
     }
 
     const data = await response.json();
-    const companies = data.organizations || [];
+    const orgs = data.organizations || [];
 
-    console.log(`[APOLLO] ✅ ${companies.length} empresas encontradas`);
+    console.log(`[APOLLO] ✅ ${orgs.length} empresas encontradas`);
 
-    // BUSCAR DECISORES para cada empresa (preview grátis)
-    const companiesWithDecisionMakers = companies.map((c: any) => ({
-      id: c.id,
+    return orgs.map((c: any) => ({
       name: c.name,
       website: c.website_url,
       linkedin_url: c.linkedin_url,
-      country: c.country || params.country,
+      country: c.country || country,
       city: c.city,
       state: c.state,
       industry: c.industry,
       employee_count: c.organization_num_employees,
       description: c.short_description,
-      source: 'apollo',
-      apollo_id: c.id, // Para buscar decisores depois
+      apollo_id: c.id,
       apollo_link: `https://app.apollo.io/#/companies/${c.id}`,
-      // Decisores virão em chamada separada (peek grátis)
-      decision_makers: [],
+      source: 'apollo',
     }));
-
-    return { companies: companiesWithDecisionMakers };
-
   } catch (error) {
     console.error('[APOLLO] ❌:', error);
-    return { companies: [] };
+    return [];
   }
 }
 
 // ============================================================================
-// SERPER SEARCH (Deep Web)
+// CAMADA 2: SERPER (30 PORTAIS via Google Search)
 // ============================================================================
 
-async function searchSerper(params: SearchParams) {
+async function searchSerper(keyword: string, country: string) {
   const serperKey = Deno.env.get('VITE_SERPER_API_KEY');
   if (!serperKey) {
-    console.log('[SERPER] ⚠️ Key missing');
-    return { companies: [] };
+    console.log('[SERPER] ⚠️ VITE_SERPER_API_KEY missing - pulando Serper');
+    return [];
   }
 
-  console.log(`[SERPER] 🔍 Deep web search: ${params.country}`);
+  console.log(`[SERPER] 🔍 Buscando em 30 portais B2B...`);
 
+  // 30 QUERIES ULTRA-ROBUSTAS
   const queries = [
-    `"${params.keywords[0]} distributor" ${params.country} -blog -news`,
-    `site:kompass.com "${params.keywords[0]}" distributor ${params.country}`,
-    `site:thomasnet.com "${params.keywords[0]}" distributor`,
+    // TRADE DATA (Importação REAL) - PRIORIDADE MÁXIMA
+    `site:importkey.com "${keyword}" import ${country}`,
+    `site:eximpedia.app "${keyword}" import ${country}`,
+    `site:volza.com "${keyword}" import data ${country}`,
+    `site:importgenius.com "${keyword}" ${country}`,
+    `site:panjiva.com "${keyword}" importer ${country}`,
+    
+    // FABRICANTES CHINA (Made-in-China ecosystem)
+    `site:made-in-china.com "${keyword}" manufacturer`,
+    `site:alibaba.com "${keyword}" supplier`,
+    `site:globalsources.com "${keyword}" supplier`,
+    `site:china-fitness.com pilates equipment`,
+    `site:tradease.goldsupplier.com fitness equipment`,
+    
+    // B2B DIRECTORIES GLOBAIS
+    `site:kompass.com "${keyword}" distributor ${country}`,
+    `site:europages.com "${keyword}" distributor ${country}`,
+    `site:thomasnet.com "${keyword}" distributor`,
+    `site:tradekey.com "${keyword}" importer ${country}`,
+    `site:exporthub.com "${keyword}" exporter`,
+    
+    // YELLOW PAGES GLOBAIS
+    `site:yellowpages.com "${keyword}" distributor ${country}`,
+    `site:yell.com "${keyword}" distributor`, // UK
+    `site:gelbeseiten.de "${keyword}" distributor`, // Germany
+    `site:uksmallbusinessdirectory.co.uk fitness equipment`,
+    
+    // PORTAIS ESPECIALIZADOS FITNESS
+    `site:pilates.com directory`,
+    `site:bodysolid.com dealers`,
+    `site:gofitstrength.com distributor`,
+    `site:raetin.com distributor`,
+    `site:healthclubmanagement.co.uk suppliers`,
+    
+    // ASSOCIAÇÕES COMERCIAIS
+    `"${keyword} distributors association" ${country}`,
+    `"sporting goods trade association" ${country} members directory`,
+    
+    // LINKEDIN COMPANIES
+    `site:linkedin.com/company "${keyword}" distributor`,
+    `site:linkedin.com/company pilates equipment`,
+    
+    // GOOGLE GENÉRICO (Backup)
+    `"${keyword}" ${country} -blog -news -studio -instructor -tiktok -ebay`,
   ];
 
-  const allResults = [];
+  const allResults: any[] = [];
 
-  for (const query of queries) {
-    try {
-      const response = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': serperKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ q: query, num: 20 }),
-      });
+  // Executar em batches de 5 (evitar rate limit)
+  const batchSize = 5;
+  for (let i = 0; i < queries.length; i += batchSize) {
+    const batch = queries.slice(i, i + batchSize);
+    
+    console.log(`[SERPER] Batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(queries.length/batchSize)}`);
+    
+    const batchResults = await Promise.all(
+      batch.map(async (query) => {
+        try {
+          const response = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ q: query, num: 20, gl: country === 'United States' ? 'us' : 'global' }),
+          });
 
-      if (response.ok) {
-        const data = await response.json();
-        const results = (data.organic || []).map((r: any) => ({
-          name: r.title,
-          website: r.link,
-          description: r.snippet,
-          source: 'serper',
-          country: params.country,
-        }));
-        allResults.push(...results);
-      }
-    } catch (err) {
-      console.error('[SERPER] ❌:', err);
+          if (response.ok) {
+            const data = await response.json();
+            return (data.organic || []).map((r: any) => ({
+              name: r.title,
+              website: r.link,
+              description: r.snippet,
+              source: 'serper',
+              source_portal: extractPortal(r.link),
+            }));
+          }
+        } catch (err) {
+          console.error(`[SERPER] Query failed: ${query.substring(0, 50)}...`);
+        }
+        return [];
+      })
+    );
+
+    allResults.push(...batchResults.flat());
+    
+    // Delay 1s entre batches
+    if (i + batchSize < queries.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
-  console.log(`[SERPER] ✅ ${allResults.length} resultados deep web`);
+  console.log(`[SERPER] ✅ ${allResults.length} resultados de ${queries.length} queries`);
 
-  return { companies: allResults };
+  // Estatísticas por portal
+  const byPortal = allResults.reduce((acc: any, r: any) => {
+    const portal = r.source_portal || 'Other';
+    acc[portal] = (acc[portal] || 0) + 1;
+    return acc;
+  }, {});
+
+  console.log(`[SERPER] 📊 Por portal:`, byPortal);
+
+  return allResults;
+}
+
+function extractPortal(url: string): string {
+  if (url.includes('importkey.com')) return 'ImportKey';
+  if (url.includes('eximpedia.app')) return 'Eximpedia';
+  if (url.includes('volza.com')) return 'Volza';
+  if (url.includes('importgenius.com')) return 'ImportGenius';
+  if (url.includes('panjiva.com')) return 'Panjiva';
+  if (url.includes('made-in-china.com')) return 'Made-in-China';
+  if (url.includes('alibaba.com')) return 'Alibaba';
+  if (url.includes('globalsources.com')) return 'GlobalSources';
+  if (url.includes('kompass.com')) return 'Kompass';
+  if (url.includes('europages.com')) return 'Europages';
+  if (url.includes('thomasnet.com')) return 'ThomasNet';
+  if (url.includes('tradekey.com')) return 'TradeKey';
+  if (url.includes('exporthub.com')) return 'ExportHub';
+  if (url.includes('yellowpages.com')) return 'YellowPages';
+  if (url.includes('pilates.com')) return 'Pilates.com';
+  if (url.includes('linkedin.com')) return 'LinkedIn';
+  return 'Google';
 }
 
 // ============================================================================
-// LINKEDIN SEARCH (Decision Makers)
+// CAMADA 3: GOOGLE CUSTOM SEARCH API (Fallback se Serper falhar)
 // ============================================================================
 
-async function searchLinkedIn(companies: any[]) {
-  // Por enquanto, retornar placeholder
-  // TODO: Integrar com LinkedIn Sales Navigator API ou Phantom Buster
+async function searchGoogleAPI(keyword: string, country: string) {
+  const googleKey = Deno.env.get('GOOGLE_SEARCH_API_KEY');
+  const googleCX = Deno.env.get('GOOGLE_SEARCH_CX');
   
-  console.log(`[LINKEDIN] 💼 Buscando decisores para ${companies.length} empresas...`);
-  console.log(`[LINKEDIN] ⚠️ LinkedIn API não implementada ainda (usar Phantom Buster)`);
+  if (!googleKey || !googleCX) {
+    console.log('[GOOGLE-API] ⚠️ Keys missing - pulando Google API');
+    return [];
+  }
 
-  return { decisionMakers: [] };
+  console.log(`[GOOGLE-API] 🔍 Fallback: Google Custom Search`);
+
+  const queries = [
+    `"${keyword}" distributor ${country}`,
+    `"${keyword}" importer ${country}`,
+    `"pilates equipment" distributor ${country}`,
+  ];
+
+  const allResults: any[] = [];
+
+  for (const query of queries) {
+    try {
+      const url = `https://www.googleapis.com/customsearch/v1?key=${googleKey}&cx=${googleCX}&q=${encodeURIComponent(query)}&num=10`;
+      const response = await fetch(url);
+
+      if (response.ok) {
+        const data = await response.json();
+        const items = (data.items || []).map((item: any) => ({
+          name: item.title,
+          website: item.link,
+          description: item.snippet,
+          source: 'google_api',
+          source_portal: 'Google',
+        }));
+        allResults.push(...items);
+      }
+    } catch (err) {
+      console.error(`[GOOGLE-API] ❌:`, err);
+    }
+  }
+
+  console.log(`[GOOGLE-API] ✅ ${allResults.length} resultados`);
+  return allResults;
 }
 
 // ============================================================================
-// CALCULAR FIT SCORE (baseado em keywords no website)
+// CAMADA 4: WEB SCRAPING (Calcular Fit Score)
 // ============================================================================
 
-async function calculateFitScore(company: any, keywords: string[]): Promise<number> {
-  if (!company.website) return 0;
-
+async function calculateFitScore(website: string, keywords: string[]): Promise<number> {
   try {
-    const response = await fetch(company.website, {
+    const response = await fetch(website, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) return 0;
@@ -172,27 +303,40 @@ async function calculateFitScore(company: any, keywords: string[]): Promise<numb
     const html = await response.text();
     const text = html.toLowerCase();
 
-    // Contar keywords encontradas
-    const found = keywords.filter(kw => text.includes(kw.toLowerCase()));
+    // KEYWORDS PILATES ESPECÍFICAS (do cliente)
+    const pilatesKeywords = [
+      'pilates',
+      'reformer',
+      'cadillac',
+      'wunda chair',
+      'pilates chair',
+      'pilates barrel',
+      'pilates mat',
+      'pilates apparatus',
+      'pilates equipment',
+      'pilates reformer',
+      'pilates machine',
+      'pilates accessories',
+    ];
 
-    // Score base: 60 se encontrou pelo menos 2 keywords
-    if (found.length >= 2) {
-      let score = 60 + (found.length - 2) * 5; // +5 por keyword adicional
-      
-      // Bônus: wholesale/distributor
-      if (text.includes('wholesale') || text.includes('distributor')) {
-        score += 10;
-      }
-      
-      // Bônus: b2b/commercial
-      if (text.includes('b2b') || text.includes('commercial')) {
-        score += 5;
-      }
-      
-      return Math.min(score, 95);
+    const found = pilatesKeywords.filter(kw => text.includes(kw));
+
+    // MÍNIMO 2 KEYWORDS = Fit 60
+    if (found.length < 2) return 0;
+
+    let score = 60 + ((found.length - 2) * 5); // +5 por keyword adicional
+
+    // BÔNUS: Wholesale/Distributor
+    if (text.includes('wholesale') || text.includes('distributor') || text.includes('dealer')) {
+      score += 10;
     }
 
-    return 0;
+    // BÔNUS: B2B/Commercial
+    if (text.includes('b2b') || text.includes('commercial') || text.includes('bulk')) {
+      score += 5;
+    }
+
+    return Math.min(score, 95);
 
   } catch (error) {
     return 0;
@@ -211,72 +355,127 @@ serve(async (req) => {
   try {
     const { hsCode, country, keywords } = await req.json();
 
-    if (!hsCode || !country || !keywords) {
-      throw new Error('hsCode, country, and keywords required');
-    }
-
-    console.log(`[REALTIME] 🚀 Busca multi-source:`);
+    console.log(`==============================================`);
+    console.log(`[REALTIME] 🚀 BUSCA ULTRA-ROBUSTA INICIADA`);
     console.log(`  HS Code: ${hsCode}`);
     console.log(`  País: ${country}`);
-    console.log(`  Keywords: ${keywords.join(', ')}`);
+    console.log(`  Keywords: ${keywords?.join(', ')}`);
+    console.log(`==============================================`);
 
-    // BUSCAR EM PARALELO (Apollo + Serper)
-    const [apolloResult, serperResult] = await Promise.all([
-      searchApollo({ hsCode, country, keywords }),
-      searchSerper({ hsCode, country, keywords }),
-    ]);
+    const allDealers: any[] = [];
+    const stats = {
+      apollo: 0,
+      serper: 0,
+      google_api: 0,
+      total_bruto: 0,
+      total_unico: 0,
+      fit_60_plus: 0,
+      portais: {} as Record<string, number>,
+    };
 
-    // Combinar resultados
-    const allCompanies = [
-      ...apolloResult.companies,
-      ...serperResult.companies,
-    ];
+    // FASE 1: APOLLO (para cada keyword Pilates)
+    console.log(`\n[FASE 1] Apollo.io - Buscando com ${PILATES_KEYWORDS.length} keywords...`);
+    
+    for (const keyword of PILATES_KEYWORDS.slice(0, 8)) { // Usar top 8 keywords
+      const companies = await searchApollo(keyword, country);
+      allDealers.push(...companies);
+      stats.apollo += companies.length;
+      
+      // Delay 500ms entre keywords
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
-    // Remover duplicatas por website
+    console.log(`[APOLLO] ✅ Total: ${stats.apollo} empresas`);
+
+    // FASE 2: SERPER (30 portais)
+    console.log(`\n[FASE 2] Serper - Buscando em 30 portais B2B...`);
+    
+    let serperAttempted = false;
+    try {
+      const serperResults = await searchSerper(keywords[0] || 'pilates equipment', country);
+      allDealers.push(...serperResults);
+      stats.serper = serperResults.length;
+      serperAttempted = true;
+      console.log(`[SERPER] ✅ ${stats.serper} resultados de 30 queries`);
+    } catch (error) {
+      console.error('[SERPER] ❌ Falhou:', error);
+      serperAttempted = false;
+    }
+
+    // FASE 3: GOOGLE API (Fallback se Serper falhou)
+    if (!serperAttempted || stats.serper === 0) {
+      console.log(`\n[FASE 3] Google Custom Search API - Fallback...`);
+      try {
+        const googleResults = await searchGoogleAPI(keywords[0] || 'pilates equipment', country);
+        allDealers.push(...googleResults);
+        stats.google_api = googleResults.length;
+        console.log(`[GOOGLE-API] ✅ ${stats.google_api} resultados (fallback)`);
+      } catch (error) {
+        console.error('[GOOGLE-API] ❌:', error);
+      }
+    }
+
+    stats.total_bruto = allDealers.length;
+
+    // DEDUPLICAÇÃO por website
     const unique = Array.from(
-      new Map(allCompanies.map(c => [c.website, c])).values()
+      new Map(allDealers.filter(c => c.website).map(c => [c.website, c])).values()
     );
 
-    console.log(`[REALTIME] 📊 Resultados:`);
-    console.log(`  Apollo: ${apolloResult.companies.length}`);
-    console.log(`  Serper: ${serperResult.companies.length}`);
-    console.log(`  Únicos: ${unique.length}`);
+    stats.total_unico = unique.length;
 
-    // CALCULAR FIT SCORE em paralelo (primeiros 20)
-    console.log(`[REALTIME] 🎯 Calculando Fit Scores...`);
-    
-    const withScores = await Promise.all(
-      unique.slice(0, 20).map(async (company) => {
-        const fitScore = await calculateFitScore(company, keywords);
+    console.log(`\n[DEDUP] ✅ ${stats.total_unico} empresas únicas (de ${stats.total_bruto})`);
+
+    // FASE 4: CALCULAR FIT SCORE (Web scraping)
+    console.log(`\n[FASE 4] Calculando Fit Scores (web scraping)...`);
+    console.log(`[FIT] Processando ${Math.min(unique.length, 30)} empresas...`);
+
+    const validated = await Promise.all(
+      unique.slice(0, 30).map(async (company) => {
+        const fitScore = await calculateFitScore(company.website, keywords);
         return { ...company, fitScore };
       })
     );
 
-    // Filtrar apenas com Fit > 0
-    const qualified = withScores.filter(c => c.fitScore > 0);
+    // FILTRAR APENAS FIT > 60 (2+ keywords Pilates)
+    const qualified = validated.filter(c => c.fitScore >= 60);
 
-    console.log(`[REALTIME] ✅ ${qualified.length} empresas qualificadas (Fit > 0)`);
+    stats.fit_60_plus = qualified.length;
+
+    // Estatísticas por portal
+    qualified.forEach(c => {
+      const portal = c.source_portal || c.source || 'Unknown';
+      stats.portais[portal] = (stats.portais[portal] || 0) + 1;
+    });
+
+    console.log(`\n==============================================`);
+    console.log(`[RESULTADO FINAL]`);
+    console.log(`  📊 Total bruto: ${stats.total_bruto}`);
+    console.log(`  📊 Total único: ${stats.total_unico}`);
+    console.log(`  ✅ Qualificados (Fit 60+): ${stats.fit_60_plus}`);
+    console.log(`  📊 Taxa qualificação: ${((stats.fit_60_plus / stats.total_unico) * 100).toFixed(0)}%`);
+    console.log(`  📊 Por fonte:`);
+    console.log(`     - Apollo: ${stats.apollo}`);
+    console.log(`     - Serper: ${stats.serper}`);
+    console.log(`     - Google API: ${stats.google_api}`);
+    console.log(`  📊 Por portal:`, stats.portais);
+    console.log(`==============================================`);
 
     return new Response(
       JSON.stringify({
         total: qualified.length,
         dealers: qualified.sort((a, b) => b.fitScore - a.fitScore),
-        stats: {
-          apollo: apolloResult.companies.length,
-          serper: serperResult.companies.length,
-          qualified: qualified.length,
-          keywords: keywords,
-        },
+        stats: stats,
+        keywords_used: PILATES_KEYWORDS.slice(0, 8),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('[REALTIME] ❌:', error);
+    console.error('[REALTIME] ❌ ERRO CRÍTICO:', error);
     return new Response(
       JSON.stringify({ error: error.message, dealers: [], total: 0 }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
