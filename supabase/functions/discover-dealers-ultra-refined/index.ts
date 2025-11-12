@@ -7,25 +7,50 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// KEYWORDS BASEADAS EM SEO DATA (SEOpital + FounderPal)
+// KEYWORDS ULTRA-ESPECÍFICAS PILATES (Fornecidas pelo cliente)
 // ============================================================================
 
-// TIER 1: High-volume keywords (720+ monthly searches)
-const PRIMARY_KEYWORDS = [
-  'sporting goods distributor',
-  'fitness equipment distributor',
+// CATEGORIA 1: Equipamentos Específicos (HIGH PRECISION)
+const EQUIPMENT_KEYWORDS = [
+  'pilates equipment wholesale',
+  'pilates apparatus wholesale',
   'pilates equipment distributor',
-  'wellness equipment distributor',
-  'training equipment distributor',
+  'pilates reformer wholesale',
+  'pilates cadillac wholesale',
+  'commercial pilates equipment',
+  'professional pilates equipment',
+  'studio pilates equipment',
 ];
 
-// TIER 2: International trade focused (Tendata best practices)
-const TRADE_KEYWORDS = [
-  'sporting goods importer',
-  'fitness equipment importer',
-  'pilates equipment wholesale',
-  'wellness equipment wholesale',
+// CATEGORIA 2: B2B e Parcerias (HIGH INTENT)
+const B2B_KEYWORDS = [
+  'wholesale fitness equipment',
+  'b2b pilates equipment',
+  'become a dealer pilates equipment',
+  'become a distributor pilates equipment',
+  'international distribution pilates equipment',
+  'bulk order pilates equipment',
+  'authorized dealer pilates',
+  'supplier pilates equipment',
+  'partnership opportunities pilates equipment',
 ];
+
+// CATEGORIA 3: Trade e Import (HIGH CONVERSION)
+const TRADE_KEYWORDS = [
+  'pilates equipment import',
+  'fitness equipment import',
+  'export pilates equipment',
+  'trade only pilates equipment supplier',
+  'global sourcing pilates equipment',
+  'wholesaler pricing pilates equipment',
+];
+
+// Combinar todas em uma lista PRIMARY
+const PRIMARY_KEYWORDS = [
+  ...EQUIPMENT_KEYWORDS,
+  ...B2B_KEYWORDS,
+  ...TRADE_KEYWORDS,
+].slice(0, 8); // Usar 8 melhores para não gastar muitos créditos
 
 // ============================================================================
 // APOLLO ULTRA-REFINED SEARCH
@@ -47,37 +72,42 @@ async function apolloUltraRefinedSearch(params: {
     // LOCALIZAÇÃO
     organization_locations: [params.country],
     
-    // INDÚSTRIAS ESPECÍFICAS (NÃO genéricas!)
+    // KEYWORDS ULTRA-ESPECÍFICAS (Pilates B2B)
     q_organization_keyword_tags: [
-      params.keyword, // Keyword principal
-      'sporting goods',
-      'fitness equipment',
+      params.keyword, // Keyword principal da busca
       'pilates equipment',
-      'wellness equipment',
-      'training equipment',
+      'fitness equipment wholesale',
+      'commercial fitness equipment',
+      'studio equipment',
+      'professional pilates',
     ],
     
     // TAMANHO: 20+ funcionários (dealers têm estrutura)
     organization_num_employees_ranges: ['21-50', '51-200', '201-500', '501-1000', '1001-5000'],
     
-    // EXCLUIR SETORES IRRELEVANTES
+    // EXCLUIR SETORES IRRELEVANTES (Ampliado para Pilates)
     organization_not_keyword_tags: [
       // Manufacturing/Non-distribution
       'automotive', 'metals', 'metal recycling', 'scrap metal',
       'food production', 'agriculture', 'grains', 'rice', 'wheat',
       
-      // B2C/Retail
+      // B2C/Retail (STUDIOS NÃO SÃO DEALERS!)
       'retail store', 'online store', 'ecommerce', 'e-commerce',
-      'pilates studio', 'fitness studio', 'gym', 'wellness center',
-      'personal training', 'yoga studio',
+      'pilates studio', 'yoga studio', 'fitness studio', 'gym', 'wellness center',
+      'personal training', 'personal trainer', 'instructor', 'teacher',
+      'boutique studio', 'private studio', 'home studio',
       
       // Content/Media
       'blog', 'magazine', 'news', 'media', 'publishing',
-      'certification', 'training course', 'instructor',
+      'certification', 'training course', 'education',
+      
+      // Services (não são wholesale)
+      'franchise', 'franchising', 'consulting', 'consultant',
       
       // Unrelated
       'auto parts', 'spare parts', 'recycling',
-      'food', 'beverage', 'restaurant', 'cafe'
+      'food', 'beverage', 'restaurant', 'cafe',
+      'pet', 'animal', 'veterinary'
     ],
   };
 
@@ -99,12 +129,14 @@ async function apolloUltraRefinedSearch(params: {
 
   console.log(`[APOLLO-ULTRA] ✅ Preview: ${companies.length} empresas`);
 
-  // FILTRO ADICIONAL: Validar indústria
+  // FILTRO ADICIONAL: Validar indústria (ULTRA-RESTRITIVO para Pilates)
   const filtered = companies.filter((c: any) => {
     const industry = (c.industry || '').toLowerCase();
     const name = (c.name || '').toLowerCase();
+    const description = (c.short_description || '').toLowerCase();
+    const combined = `${industry} ${name} ${description}`;
     
-    // INCLUIR apenas setores relevantes
+    // INCLUIR apenas setores B2B wholesale/distribution
     const validIndustries = [
       'sporting goods',
       'wholesale',
@@ -112,22 +144,40 @@ async function apolloUltraRefinedSearch(params: {
       'export',
       'international trade',
       'distribution',
-      'health, wellness & fitness'
+      'manufacturing', // APENAS se também tem wholesale/distributor
     ];
     
     const hasValidIndustry = validIndustries.some(v => industry.includes(v));
     
-    // EXCLUIR setores irrelevantes mesmo se passaram filtro Apollo
+    // EXCLUIR STUDIOS (principal problema!)
+    const studioKeywords = [
+      'studio', 'gym', 'fitness center', 'wellness center',
+      'instructor', 'teacher', 'trainer', 'coaching',
+      'boutique', 'retreat', 'spa'
+    ];
+    
+    const isStudio = studioKeywords.some(k => combined.includes(k));
+    
+    // EXCLUIR setores totalmente irrelevantes
     const invalidIndustries = [
       'automotive', 'metal', 'recycling', 'food', 'agriculture',
-      'restaurant', 'cafe', 'retail', 'bank', 'financial'
+      'restaurant', 'cafe', 'retail', 'bank', 'financial',
+      'pet', 'animal', 'education', 'software'
     ];
     
     const hasInvalidIndustry = invalidIndustries.some(inv => 
       industry.includes(inv) || name.includes(inv)
     );
     
-    return hasValidIndustry && !hasInvalidIndustry;
+    // INCLUIR se:
+    // 1. Indústria válida OU menciona "wholesale/distributor" no nome/descrição
+    // 2. NÃO é studio
+    // 3. NÃO é indústria inválida
+    const mentionsWholesale = combined.includes('wholesale') || 
+                               combined.includes('distributor') || 
+                               combined.includes('supplier');
+    
+    return (hasValidIndustry || mentionsWholesale) && !isStudio && !hasInvalidIndustry;
   });
 
   console.log(`[APOLLO-ULTRA] ✅ Após filtro: ${filtered.length} (${((filtered.length/companies.length)*100).toFixed(0)}% relevantes)`);
