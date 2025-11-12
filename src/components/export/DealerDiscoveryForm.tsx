@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
+import { searchHSCodes, getHSCode, type HSCode } from '@/data/hsCodes';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -93,6 +94,8 @@ const B2C_EXCLUDE_KEYWORDS = [
 
 export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFormProps) {
   const [hsCode, setHsCode] = useState('');
+  const [hsCodeSearch, setHsCodeSearch] = useState('');
+  const [openHSCombobox, setOpenHSCombobox] = useState(false);
   const [countries, setCountries] = useState<string[]>([]);
   const [minVolume, setMinVolume] = useState('');
   const [openCountryCombobox, setOpenCountryCombobox] = useState(false);
@@ -244,7 +247,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </div>
           </div>
 
-          {/* HS CODE */}
+          {/* HS CODE (com autocomplete) */}
           <div>
             <Label className="flex items-center gap-2 mb-2">
               <Target className="h-4 w-4" />
@@ -257,23 +260,89 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
                       Código NCM/HS do produto que você exporta.<br />
-                      <strong>Exemplos:</strong><br />
-                      • 9506.91.00 (Pilates Equipment)<br />
-                      • 9506.99.00 (Sports Accessories)<br />
-                      • 9403.60.00 (Furniture)
+                      <strong>Autocomplete ativo:</strong> Digite e veja sugestões!<br />
+                      Fonte: WCO Harmonized System Database
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <Input
-              value={hsCode}
-              onChange={(e) => setHsCode(e.target.value)}
-              placeholder="Ex: 9506.91.00 (Pilates Equipment)"
-              className="font-mono"
-            />
+            
+            <Popover open={openHSCombobox} onOpenChange={setOpenHSCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openHSCombobox}
+                  className="w-full justify-between font-mono"
+                >
+                  {hsCode ? (
+                    <span className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      {hsCode}
+                      {getHSCode(hsCode) && (
+                        <span className="text-xs text-muted-foreground font-normal">
+                          - {getHSCode(hsCode)?.description}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    'Digite ou selecione HS Code...'
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[600px] p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Digite HS Code ou produto (ex: pilates, fitness, furniture)..." 
+                    value={hsCodeSearch}
+                    onValueChange={setHsCodeSearch}
+                  />
+                  <CommandEmpty>
+                    Nenhum HS Code encontrado.
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Digite manualmente ou busque por: "pilates", "fitness", "footwear", "telecom", etc.
+                    </div>
+                  </CommandEmpty>
+                  
+                  <CommandGroup heading="Códigos HS Disponíveis">
+                    {searchHSCodes(hsCodeSearch || 'pilates').map((hs) => (
+                      <CommandItem
+                        key={hs.code}
+                        value={`${hs.code} ${hs.description} ${hs.keywords.join(' ')}`}
+                        onSelect={() => {
+                          setHsCode(hs.code);
+                          setOpenHSCombobox(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            hsCode === hs.code ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                        <div className="flex-1">
+                          <div className="font-mono font-semibold">{hs.code}</div>
+                          <div className="text-xs text-muted-foreground">{hs.description}</div>
+                          <div className="flex gap-1 mt-1">
+                            {hs.keywords.slice(0, 3).map((kw, i) => (
+                              <Badge key={i} variant="outline" className="text-xs px-1 py-0">
+                                {kw}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="ml-2">{hs.category}</Badge>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            
             <p className="text-xs text-muted-foreground mt-1">
-              Informe o HS Code principal do produto que deseja exportar
+              💡 Digite para buscar: "pilates", "fitness", "furniture", "footwear", etc.
             </p>
           </div>
 
