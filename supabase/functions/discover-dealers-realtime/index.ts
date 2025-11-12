@@ -55,12 +55,21 @@ async function searchApollo(keyword: string, country: string, minVolume?: number
     page: 1,
     per_page: 50,
     organization_locations: [country],
-    q_organization_keyword_tags: [keyword, 'pilates equipment', 'fitness equipment'],
+    // USAR SÓ A KEYWORD ESPECÍFICA (das 19 keywords Pilates acima)
+    q_organization_keyword_tags: [keyword], // Ex: "pilates equipment wholesale"
     organization_num_employees_ranges: ['21-50', '51-200', '201-500', '501-1000'],
+    // EXCLUSÕES FORTES: B2C, Studios, Outros setores
     organization_not_keyword_tags: [
-      'pilates studio', 'yoga studio', 'fitness studio', 'gym',
-      'instructor', 'teacher', 'personal trainer',
-      'blog', 'news', 'magazine',
+      'pilates studio', 'yoga studio', 'fitness studio', 'gym', 'health club',
+      'instructor', 'teacher', 'personal trainer', 'coach', 'training',
+      'blog', 'news', 'magazine', 'media', 'publisher',
+      'restaurant', 'food', 'beverage', 'catering',
+      'construction', 'building', 'contractor',
+      'automotive', 'car dealer', 'vehicle',
+      'real estate', 'property', 'housing',
+      'software', 'saas', 'technology', 'IT services',
+      'consulting', 'marketing', 'advertising',
+      'retail', 'ecommerce', 'online store',
     ],
   };
 
@@ -387,26 +396,30 @@ serve(async (req) => {
       portais: {} as Record<string, number>,
     };
 
-    // FASE 1: APOLLO (para cada keyword Pilates)
-    console.log(`\n[FASE 1] Apollo.io - Buscando com ${PILATES_KEYWORDS.length} keywords...`);
+    // FASE 1: APOLLO (TODAS as 19 keywords Pilates específicas)
+    console.log(`\n[FASE 1] Apollo.io - Buscando com TODAS as ${PILATES_KEYWORDS.length} keywords Pilates...`);
     
-    for (const keyword of PILATES_KEYWORDS.slice(0, 8)) { // Usar top 8 keywords
+    for (const keyword of PILATES_KEYWORDS) { // USAR TODAS as keywords (19)
       const companies = await searchApollo(keyword, country, minVolume);
       allDealers.push(...companies);
       stats.apollo += companies.length;
       
-      // Delay 500ms entre keywords
+      console.log(`[APOLLO] "${keyword}": ${companies.length} empresas`);
+      
+      // Delay 500ms entre keywords (evitar rate limit)
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     console.log(`[APOLLO] ✅ Total: ${stats.apollo} empresas`);
 
-    // FASE 2: SERPER (30 portais)
+    // FASE 2: SERPER (30 portais B2B) - USAR KEYWORD PILATES PRINCIPAL
     console.log(`\n[FASE 2] Serper - Buscando em 30 portais B2B...`);
     
     let serperAttempted = false;
     try {
-      const serperResults = await searchSerper(keywords[0] || 'pilates equipment', country);
+      // USAR PRIMEIRA KEYWORD PILATES (não custom do usuário!)
+      const mainKeyword = PILATES_KEYWORDS[0]; // "pilates equipment wholesale"
+      const serperResults = await searchSerper(mainKeyword, country);
       allDealers.push(...serperResults);
       stats.serper = serperResults.length;
       serperAttempted = true;
@@ -416,11 +429,13 @@ serve(async (req) => {
       serperAttempted = false;
     }
 
-    // FASE 3: GOOGLE API (Fallback se Serper falhou)
+    // FASE 3: GOOGLE API (Fallback se Serper falhou) - USAR KEYWORD PILATES
     if (!serperAttempted || stats.serper === 0) {
       console.log(`\n[FASE 3] Google Custom Search API - Fallback...`);
       try {
-        const googleResults = await searchGoogleAPI(keywords[0] || 'pilates equipment', country);
+        // USAR PRIMEIRA KEYWORD PILATES (não custom do usuário!)
+        const mainKeyword = PILATES_KEYWORDS[0]; // "pilates equipment wholesale"
+        const googleResults = await searchGoogleAPI(mainKeyword, country);
         allDealers.push(...googleResults);
         stats.google_api = googleResults.length;
         console.log(`[GOOGLE-API] ✅ ${stats.google_api} resultados (fallback)`);
