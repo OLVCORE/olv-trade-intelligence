@@ -50,18 +50,15 @@ export default function ExportDealersPage() {
 
   const searchMutation = useMutation({
     mutationFn: async (params: DealerSearchParams) => {
-      console.log('[EXPORT] 🔍 Buscando dealers B2B...', params);
+      console.log('[EXPORT] 🔍 Buscando dealers B2B (ULTRA-REFINED)...', params);
 
       // Buscar dealers para CADA país selecionado
       const allDealers: Dealer[] = [];
       
       for (const country of params.countries) {
-        const { data, error } = await supabase.functions.invoke('discover-dealers-b2b', {
+        const { data, error } = await supabase.functions.invoke('discover-dealers-ultra-refined', {
           body: {
-            hs_code: params.hsCode,
             country: country,
-            min_volume_usd: params.minVolume || null,
-            keywords: params.keywords || [],
           },
         });
 
