@@ -42,16 +42,16 @@ const PILATES_KEYWORDS = [
 // CAMADA 1: APOLLO.IO (Dados estruturados)
 // ============================================================================
 
-async function searchApollo(keyword: string, country: string) {
+async function searchApollo(keyword: string, country: string, minVolume?: number) {
   const apolloKey = Deno.env.get('APOLLO_API_KEY');
   if (!apolloKey) {
     console.log('[APOLLO] ⚠️ APOLLO_API_KEY missing - pulando Apollo');
     return [];
   }
 
-  console.log(`[APOLLO] 🔍 Keyword: "${keyword}" | País: ${country}`);
+  console.log(`[APOLLO] 🔍 Keyword: "${keyword}" | País: ${country} | Min Volume: ${minVolume ? `$${minVolume}` : 'N/A'}`);
 
-  const payload = {
+  const payload: any = {
     page: 1,
     per_page: 50,
     organization_locations: [country],
@@ -63,6 +63,19 @@ async function searchApollo(keyword: string, country: string) {
       'blog', 'news', 'magazine',
     ],
   };
+
+  // FILTRO VOLUME MÍNIMO (se fornecido)
+  if (minVolume) {
+    // Apollo revenue ranges
+    if (minVolume >= 10000000) {
+      payload.revenue_range = ['10M-50M', '50M-100M', '100M-250M', '250M-500M', '500M-1B', '1B+'];
+    } else if (minVolume >= 5000000) {
+      payload.revenue_range = ['5M-10M', '10M-50M', '50M-100M', '100M+'];
+    } else if (minVolume >= 1000000) {
+      payload.revenue_range = ['1M-5M', '5M-10M', '10M+'];
+    }
+    console.log(`[APOLLO] 💰 Revenue filter: ${payload.revenue_range?.join(', ')}`);
+  }
 
   try {
     const response = await fetch('https://api.apollo.io/v1/organizations/search', {
@@ -353,13 +366,14 @@ serve(async (req) => {
   }
 
   try {
-    const { hsCode, country, keywords } = await req.json();
+    const { hsCode, country, keywords, minVolume } = await req.json();
 
     console.log(`==============================================`);
     console.log(`[REALTIME] 🚀 BUSCA ULTRA-ROBUSTA INICIADA`);
     console.log(`  HS Code: ${hsCode}`);
     console.log(`  País: ${country}`);
     console.log(`  Keywords: ${keywords?.join(', ')}`);
+    console.log(`  Volume Mínimo: ${minVolume ? `$${minVolume.toLocaleString()}` : 'N/A'}`);
     console.log(`==============================================`);
 
     const allDealers: any[] = [];
@@ -377,7 +391,7 @@ serve(async (req) => {
     console.log(`\n[FASE 1] Apollo.io - Buscando com ${PILATES_KEYWORDS.length} keywords...`);
     
     for (const keyword of PILATES_KEYWORDS.slice(0, 8)) { // Usar top 8 keywords
-      const companies = await searchApollo(keyword, country);
+      const companies = await searchApollo(keyword, country, minVolume);
       allDealers.push(...companies);
       stats.apollo += companies.length;
       

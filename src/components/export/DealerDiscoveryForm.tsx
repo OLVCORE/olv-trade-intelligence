@@ -386,10 +386,17 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0">
-                <Command>
-                  <CommandInput placeholder="Buscar país..." />
-                  <CommandEmpty>Nenhum país encontrado.</CommandEmpty>
+              <PopoverContent className="w-[500px] p-0" align="start">
+                <Command className="max-h-[500px]">
+                  <div className="sticky top-0 bg-background z-10 border-b">
+                    <CommandInput placeholder="🔍 Buscar país..." className="h-12" />
+                  </div>
+                  <CommandEmpty>
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      Nenhum país encontrado.
+                    </div>
+                  </CommandEmpty>
+                  <CommandList className="max-h-[400px] overflow-y-auto">{/*Scrollbar fixa*/}
                   
                   {/* TOP MARKETS (Pré-selecionados) */}
                   <CommandGroup heading="Principais Mercados">
@@ -511,6 +518,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       </CommandItem>
                     ))}
                   </CommandGroup>
+                  </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>

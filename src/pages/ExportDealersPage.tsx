@@ -64,7 +64,15 @@ export default function ExportDealersPage() {
       console.log('[EXPORT] 🎯 Produto identificado:', intelligence.description);
       console.log('[EXPORT] 🔑 Keywords:', intelligence.keywords.join(', '));
 
-      // 2. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn)
+      // 2. COMBINAR KEYWORDS (HS Intelligence + Custom do usuário)
+      const allKeywords = [
+        ...intelligence.keywords,
+        ...(params.keywords || []), // Custom keywords (dialetos)
+      ];
+
+      console.log('[EXPORT] 🔑 Keywords finais:', allKeywords.join(', '));
+
+      // 3. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn)
       const allDealers: Dealer[] = [];
       
       for (const country of params.countries) {
@@ -72,7 +80,8 @@ export default function ExportDealersPage() {
           body: {
             hsCode: params.hsCode,
             country: country,
-            keywords: intelligence.keywords,
+            keywords: allKeywords, // Combinado: HS + Custom
+            minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
           },
         });
 
