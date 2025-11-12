@@ -103,6 +103,56 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
   // Keywords selecionadas (todas marcadas por padrão)
   const [includeKeywords, setIncludeKeywords] = useState<string[]>(B2B_INCLUDE_KEYWORDS);
   const [excludeKeywords, setExcludeKeywords] = useState<string[]>(B2C_EXCLUDE_KEYWORDS);
+  
+  // Keywords customizadas (termos locais, dialetos, nomes específicos)
+  const [customKeywords, setCustomKeywords] = useState<string[]>([]);
+  const [customKeywordInput, setCustomKeywordInput] = useState('');
+
+  // Adicionar custom keyword (Tab ou Enter)
+  const handleAddCustomKeyword = (keyword: string) => {
+    const trimmed = keyword.trim();
+    if (trimmed && !customKeywords.includes(trimmed)) {
+      setCustomKeywords([...customKeywords, trimmed]);
+      setCustomKeywordInput('');
+    }
+  };
+
+  // Remover custom keyword
+  const handleRemoveCustomKeyword = (keyword: string) => {
+    setCustomKeywords(customKeywords.filter(k => k !== keyword));
+  };
+
+  // Sugestões baseadas no país selecionado
+  const getLocalizedSuggestions = (): string[] => {
+    if (countries.length === 0) return [];
+    
+    const suggestions: Record<string, string[]> = {
+      // Espanhol (México, Espanha, LATAM)
+      'Mexico': ['gimnasio', 'equipamiento deportivo', 'distribuidor', 'mayorista'],
+      'Spain': ['gimnasio', 'equipamiento', 'distribuidor', 'proveedor'],
+      'Chile': ['gimnasio', 'equipamiento', 'distribuidor'],
+      'Colombia': ['gimnasio', 'equipamiento', 'distribuidor'],
+      
+      // Alemão
+      'Germany': ['turnhalle', 'fitnessgeräte', 'vertrieb', 'großhändler'],
+      
+      // Francês
+      'France': ['équipement', 'gymnastique', 'distributeur', 'grossiste'],
+      
+      // Italiano
+      'Italy': ['palestra', 'attrezzature', 'distributore', 'grossista'],
+      
+      // Japonês
+      'Japan': ['フィットネス', 'ピラティス', 'ディストリビューター'],
+      
+      // Português (Portugal)
+      'Portugal': ['equipamento', 'ginásio', 'distribuidor', 'grossista'],
+    };
+    
+    // Retornar sugestões do primeiro país selecionado
+    const firstCountry = COUNTRIES.find(c => c.code === countries[0])?.nameEn || '';
+    return suggestions[firstCountry] || [];
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +169,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
       minVolumeUSD: minVolume,
       includeKeywords, // Keywords B2B selecionadas
       excludeKeywords, // Keywords B2C selecionadas
-      keywords: ['pilates', 'fitness equipment', 'gym equipment'],
+      keywords: customKeywords.length > 0 
+        ? customKeywords // Se tem custom, usar elas
+        : ['pilates', 'fitness equipment', 'gym equipment'], // Senão, padrão
     });
   };
 
@@ -583,6 +635,83 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             />
             <p className="text-xs text-muted-foreground mt-1">
               Campo opcional - deixe vazio para ver todos os dealers
+            </p>
+          </div>
+
+          {/* KEYWORDS CUSTOMIZADAS (Dialetos, termos locais) */}
+          <div>
+            <Label className="flex items-center gap-2 mb-2">
+              <Package className="h-4 w-4" />
+              Keywords Customizadas
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      <strong>Adicione termos locais!</strong><br />
+                      • Dialetos (ex: "gimnasio" para México)<br />
+                      • Nomes específicos de produtos<br />
+                      • Marcas ou termos regionais<br /><br />
+                      <strong>Como usar:</strong> Digite e aperte <kbd className="px-1 py-0.5 bg-muted rounded">TAB</kbd> ou <kbd className="px-1 py-0.5 bg-muted rounded">ENTER</kbd>
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            
+            <div className="space-y-2">
+              <Input
+                value={customKeywordInput}
+                onChange={(e) => setCustomKeywordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab' || e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomKeyword(customKeywordInput);
+                  }
+                }}
+                placeholder="Digite keyword e aperte TAB (ex: gimnasio, équipement, turnhalle)..."
+              />
+              
+              {/* Sugestões baseadas no país */}
+              {countries.length > 0 && getLocalizedSuggestions().length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-muted-foreground">Sugestões para {COUNTRIES.find(c => c.code === countries[0])?.name}:</span>
+                  {getLocalizedSuggestions().map((suggestion) => (
+                    <Badge
+                      key={suggestion}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary/10"
+                      onClick={() => handleAddCustomKeyword(suggestion)}
+                    >
+                      + {suggestion}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {/* Keywords adicionadas */}
+              {customKeywords.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded">
+                  {customKeywords.map((keyword) => (
+                    <Badge key={keyword} variant="secondary" className="gap-1">
+                      {keyword}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomKeyword(keyword)}
+                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <p className="text-xs text-muted-foreground mt-1">
+              💡 Útil para: Dialetos regionais, nomes locais, marcas específicas do país
             </p>
           </div>
 
