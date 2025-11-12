@@ -7,15 +7,20 @@ import { DealerCard, DealersEmptyState, type Dealer } from '@/components/export/
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { 
   Globe, 
   AlertCircle, 
   TrendingUp, 
   Users, 
   Building2,
-  Sparkles
+  Sparkles,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { saveDealersToCompanies } from '@/services/dealerToCompanyFlow';
 
 // ============================================================================
 // MAIN PAGE
@@ -25,6 +30,19 @@ export default function ExportDealersPage() {
   const { currentWorkspace } = useTenant();
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [searchParams, setSearchParams] = useState<DealerSearchParams | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // PROTEÇÃO CONTRA PERDA DE DADOS
+  useUnsavedChanges(hasUnsavedChanges, 
+    '⚠️ ATENÇÃO!\n\n' +
+    `Você tem ${dealers.length} DEALERS NÃO SALVOS.\n\n` +
+    'Se sair agora vai PERDER:\n' +
+    '• Resultados da busca Apollo\n' +
+    '• Créditos Apollo gastos\n' +
+    '• Tempo de pesquisa\n\n' +
+    'Deseja realmente sair SEM SALVAR?'
+  );
 
   // ============================================================================
   // SEARCH DEALERS (via Edge Function)
@@ -67,10 +85,14 @@ export default function ExportDealersPage() {
         toast.info('Nenhum dealer encontrado', {
           description: 'Tente ajustar os filtros de busca',
         });
+        setHasUnsavedChanges(false);
       } else {
+        // MARCAR COMO NÃO SALVO
+        setHasUnsavedChanges(true);
+        
         toast.success(`✅ ${data.length} dealer(s) B2B encontrado(s)!`, {
-          description: `Clique em "Salvar na Base" para adicionar à sua base de dados`,
-          duration: 5000,
+          description: '⚠️ IMPORTANTE: Clique em "SALVAR DEALERS" para não perder os resultados!',
+          duration: 10000,
         });
       }
     },
@@ -85,6 +107,46 @@ export default function ExportDealersPage() {
   const handleSearch = (params: DealerSearchParams) => {
     setSearchParams(params);
     searchMutation.mutate(params);
+  };
+
+  // ============================================================================
+  // SALVAR DEALERS → COMPANIES → QUARENTENA
+  // ============================================================================
+
+  const handleSaveDealers = async () => {
+    if (dealers.length === 0) {
+      toast.error('Nenhum dealer para salvar');
+      return;
+    }
+
+    setIsSaving(true);
+    console.log('[EXPORT] 💾 Salvando dealers...', dealers);
+
+    try {
+      const result = await saveDealersToCompanies(dealers, currentWorkspace!);
+      
+      if (result.success) {
+        toast.success(`✅ ${result.saved} dealer(s) salvos com sucesso!`, {
+          description: `${result.newCompanies} novos, ${result.updated} atualizados, ${result.skipped} duplicados`,
+          duration: 6000,
+        });
+        
+        // LIMPAR DEALERS E DESMARCAR UNSAVED
+        setDealers([]);
+        setHasUnsavedChanges(false);
+        
+        console.log('[EXPORT] ✅ Salvamento completo:', result);
+      } else {
+        throw new Error(result.error || 'Erro desconhecido ao salvar');
+      }
+    } catch (error: any) {
+      console.error('[EXPORT] ❌ Erro ao salvar dealers:', error);
+      toast.error('Erro ao salvar dealers', {
+        description: error.message,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ============================================================================
@@ -219,6 +281,33 @@ export default function ExportDealersPage() {
           </div>
         </div>
       </Card>
+
+      {/* FLOATING SAVE BUTTON */}
+      {hasUnsavedChanges && dealers.length > 0 && (
+        <div className="fixed bottom-8 right-8 z-50 animate-in fade-in slide-in-from-bottom-4">
+          <Button
+            size="lg"
+            onClick={handleSaveDealers}
+            disabled={isSaving}
+            className="shadow-2xl bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 text-lg font-semibold"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                Salvando {dealers.length} dealer(s)...
+              </>
+            ) : (
+              <>
+                <Save className="h-6 w-6 mr-3" />
+                💾 SALVAR {dealers.length} DEALER(S)
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-center mt-2 text-muted-foreground bg-background/90 px-3 py-1 rounded">
+            ⚠️ Não saia sem salvar!
+          </p>
+        </div>
+      )}
     </div>
   );
 }

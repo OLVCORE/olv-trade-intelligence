@@ -48,6 +48,7 @@ import { ApolloOrgIdDialog } from '@/components/companies/ApolloOrgIdDialog';
 import { ApolloDebugDialog } from '@/components/companies/ApolloDebugDialog';
 import { DiagnosticAIPanel } from '@/components/companies/DiagnosticAIPanel';
 import { CompanyIntelligenceChat } from '@/components/companies/CompanyIntelligenceChat';
+import { InternationalCompanySection } from '@/components/companies/InternationalCompanySection';
 import { MultiLayerEnrichButton } from '@/components/canvas/MultiLayerEnrichButton';
 import apolloLogo from "@/assets/logos/apollo.ico";
 import phantomLogo from "@/assets/logos/phantombuster.png";
@@ -752,6 +753,23 @@ export default function CompanyDetailPage() {
                 </TooltipTrigger>
                 <TooltipContent>
                   Controle de uso de créditos Apollo.io e histórico de consumo
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger 
+                    value="internacional" 
+                    className="gap-2 data-[state=active]:glass-card data-[state=active]:text-primary"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Internacional
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Dados internacionais, Import/Export Fit Score, decisores B2B
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1892,6 +1910,12 @@ export default function CompanyDetailPage() {
             <CreditsDashboard />
             <CreditUsageHistory />
           </div>
+        </TabsContent>
+
+        <TabsContent value="internacional" className="space-y-3 animate-fade-in">
+          <InternationalCompanySection 
+            data={company?.international_data || company?.raw_data || {}} 
+          />
         </TabsContent>
       </Tabs>
 

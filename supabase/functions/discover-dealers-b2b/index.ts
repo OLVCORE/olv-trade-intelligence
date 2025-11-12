@@ -8,72 +8,95 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// B2B KEYWORDS COMPLETOS (Dealers/Distribuidores APENAS)
+// B2B KEYWORDS ULTRA-REFINADOS (Apenas Distribuidores/Importadores PUROS)
 // ============================================================================
 
 const B2B_INCLUDE_KEYWORDS = [
-  // Core B2B
+  // Core B2B (nuclear)
   'distributor',
   'wholesaler',
   'dealer',
   'importer',
+  'exporter',
   'trading company',
-  'distribution',
-  'wholesale',
-  'import',
-  'export',
-  'b2b supplier',
-  'b2b',
+  'distribution center',
+  'wholesale distributor',
+  'import-export',
   
   // Manufacturing
-  'sporting and athletic goods manufacturing',
+  'manufacturer',
+  'sporting goods manufacturer',
   'fitness equipment manufacturer',
   'sports equipment manufacturer',
-  'manufacturing',
+  'industrial manufacturer',
   
-  // Trade
+  // Trade internacional
   'international trade',
-  'international trade & development',
   'global trade',
   'import export',
+  'export management',
+  'procurement',
+  'purchasing',
   
-  // Specific to fitness/pilates
+  // Equipamentos específicos
   'fitness equipment',
   'pilates equipment',
-  'professional pilates equipment',
-  'certified pilates equipment',
   'gym equipment',
   'sports equipment',
   'athletic equipment',
+  'commercial fitness',
+  'professional fitness',
   
-  // Services (B2B only)
-  'wellness & fitness services', // Se for distribuidor/B2B
-  'sports and recreation', // Se for distribuidor
+  // Supply chain
+  'supply chain',
+  'logistics',
+  'warehousing',
+  'fulfillment',
   
-  // Engineering (manufacturers)
-  'mechanical engineering',
-  'industrial engineering'
+  // B2B explícito
+  'B2B fitness equipment',
+  'bulk fitness equipment'
 ];
 
 const B2C_EXCLUDE_KEYWORDS = [
-  // Studios & Gyms (B2C)
-  'studio',
-  'gym',
-  'wellness center',
+  // Studios e academias (B2C)
+  'pilates studio',
+  'yoga studio',
+  'fitness studio',
+  'gym franchise',
   'fitness center',
+  'wellness center',
   'health club',
   'athletic club',
   'recreation center',
   'sports club',
+  'studio',
+  'gym',
   
-  // Personal/Small (B2C)
+  // Profissionais individuais (B2C)
+  'instructor',
+  'teacher',
+  'trainer',
+  'coach',
+  'therapist',
   'personal training',
   'personal trainer',
   'boutique',
   'boutique fitness',
-  'boutique studio',
   
-  // Healthcare (not B2B)
+  // Conteúdo/Educação (B2C)
+  'blog',
+  'magazine',
+  'news',
+  'media',
+  'publication',
+  'certification',
+  'course',
+  'training center',
+  'school',
+  'academy',
+  
+  // Healthcare (não é B2B)
   'physiotherapy',
   'physical therapy',
   'rehabilitation center',
@@ -90,6 +113,11 @@ const B2C_EXCLUDE_KEYWORDS = [
   'online store',
   'consumer internet',
   'consumers',
+  
+  // Varejo final (não atacado)
+  'retail store',
+  'shop',
+  'boutique',
   
   // Apparel (not equipment)
   'clothing',
@@ -159,17 +187,26 @@ async function searchDealersViaApollo(params: {
     // BUSCA POR KEYWORDS (mais efetivo que industry tags)
     q_organization_name_or_keywords: 'fitness equipment OR gym equipment OR sports equipment OR pilates equipment OR wellness equipment OR medical equipment',
     
-    // AND deve ter B2B keywords
-    q_organization_keyword_tags: [
-      'distributor',
-      'wholesaler',
-      'dealer',
-      'supplier',
-      'manufacturer',
+    // AND deve ter B2B keywords (ULTRA-REFINADO)
+    q_organization_keyword_tags: B2B_INCLUDE_KEYWORDS.slice(0, 10), // Primeiros 10 mais importantes
+    
+    // NOT B2C keywords (ELIMINAR TUDO QUE É B2C)
+    q_organization_not_keyword_tags: B2C_EXCLUDE_KEYWORDS.slice(0, 15), // Top 15 exclusões
+    
+    // TAMANHO (B2B real - eliminar muito pequenos)
+    organization_num_employees_ranges: [
+      '51,200',    // Small B2B
+      '201,500',   // Medium B2B
+      '501,1000',  // Large B2B
+      '1001,5000', // Enterprise
+      '5001,10000' // Large Enterprise
     ],
     
-    // Filtros de tamanho (dealers têm estrutura)
-    organization_num_employees_ranges: ['11-20', '21-50', '51-100', '101-200', '201-500'],
+    // RECEITA (eliminar micro-empresas)
+    revenue_range: {
+      min: 5000000,  // Mínimo $5M anual
+      max: 500000000 // Máximo $500M (não mega-corporações)
+    }
   };
 
   const response = await fetch('https://api.apollo.io/v1/organizations/search', {
