@@ -324,7 +324,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             <HSCodeAutocomplete value={hsCode} onChange={setHsCode} />
             
             <p className="text-xs text-muted-foreground mt-1">
-              💡 Funciona para QUALQUER produto: Pilates, Furniture, Footwear, Electronics, etc.
+              🌐 Database: <strong>UN Comtrade 5.000+ códigos HS</strong> | Busca em tempo real via API
             </p>
           </div>
 
