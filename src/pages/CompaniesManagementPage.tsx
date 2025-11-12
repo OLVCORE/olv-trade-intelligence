@@ -73,15 +73,6 @@ export default function CompaniesManagementPage() {
   const [sortBy, setSortBy] = useState<'name' | 'cnpj' | 'industry' | 'created_at' | 'cnpj_status'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
-  // ✅ MENSAGEM DE REDIRECIONAMENTO (quando vem de Export Dealers)
-  useEffect(() => {
-    if (location.state?.message) {
-      toast.success(location.state.message);
-      // Limpar state para não mostrar de novo
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.state]);
-  
   // 🔍 FILTROS POR COLUNA (tipo Excel)
   const [filterOrigin, setFilterOrigin] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
@@ -1732,17 +1723,6 @@ export default function CompaniesManagementPage() {
                 </Button>
               </div>
             ) : (
-              <ExpandableCompaniesTable
-                companies={paginatedCompanies}
-                selectedCompanies={selectedCompanies}
-                onToggleSelect={toggleSelectCompany}
-                onToggleSelectAll={toggleSelectAll}
-                onRefresh={refetch}
-                showCheckboxes={true}
-              />
-            )}
-            
-            {/* ===== TABELA ANTIGA REMOVIDA - AGORA USA ExpandableCompaniesTable ===== 
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2154,7 +2134,7 @@ export default function CompaniesManagementPage() {
                   ))}
                 </TableBody>
               </Table>
-            ===== FIM TABELA ANTIGA ===== */}
+            )}
             
             {/* Paginação */}
             {companies.length > 0 && (
