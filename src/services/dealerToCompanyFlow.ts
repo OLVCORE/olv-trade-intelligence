@@ -14,6 +14,8 @@ export interface Dealer {
   name: string;
   website?: string;
   country: string;
+  city?: string;
+  state?: string;
   
   // Dados da empresa
   employeeCount?: number;
@@ -24,6 +26,7 @@ export interface Dealer {
   // Links externos
   linkedinUrl?: string;
   apolloId?: string;
+  apollo_link?: string;
   
   // Classificação
   b2bType?: 'distributor' | 'wholesaler' | 'importer' | 'manufacturer' | 'retailer' | 'trader';
@@ -33,6 +36,15 @@ export interface Dealer {
   contactPhone?: string;
   contactName?: string;
   contactTitle?: string;
+  
+  // Decisores
+  decision_makers?: Array<{
+    name: string;
+    title: string;
+    email?: string;
+    linkedin_url?: string;
+    apollo_link?: string;
+  }>;
   
   // Scores e metadata
   fitScore?: number;
@@ -105,10 +117,19 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
       country: dealer.country,
       industry: dealer.industry || null,
       employee_count: dealer.employeeCount || null,
+      employees_count: dealer.employeeCount || null,
+      linkedin_url: dealer.linkedinUrl || null,
+      apollo_id: dealer.apolloId || null,
+      b2b_type: dealer.b2bType || 'distributor',
+      description: dealer.description || null,
+      data_source: 'dealer_discovery',
+      tenant_id: currentWorkspace?.tenant_id || null,
+      workspace_id: currentWorkspace?.id || null,
       
-      // ✅ NORMALIZADOR UNIVERSAL: hunter_domain_data (JSONB)
-      hunter_domain_data: {
+      // ✅ NORMALIZADOR UNIVERSAL: raw_data (JSONB) - TODOS OS DADOS!
+      raw_data: {
         apollo_id: dealer.apolloId,
+        apollo_link: dealer.apollo_link || (dealer.apolloId ? `https://app.apollo.io/#/companies/${dealer.apolloId}` : null),
         linkedin_url: dealer.linkedinUrl,
         b2b_type: dealer.b2bType || 'distributor',
         fit_score: dealer.fitScore || 50,
@@ -118,6 +139,14 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
         validated: true,
         type: dealer.b2bType ? `${dealer.b2bType[0].toUpperCase()}${dealer.b2bType.slice(1)}` : 'Distributor',
         notes: `Importado via busca B2B - Fit Score ${dealer.fitScore || 50}`,
+        decision_makers: dealer.decision_makers || [],
+        contact_email: dealer.contactEmail,
+        contact_phone: dealer.contactPhone,
+        contact_name: dealer.contactName,
+        contact_title: dealer.contactTitle,
+        revenue: dealer.revenue,
+        apollo_data: dealer.apolloData,
+        hunter_data: dealer.hunterData,
       },
     }));
     

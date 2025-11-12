@@ -141,3 +141,4 @@ Responda: "✅ Entendido! Vou apenas VALIDAR e TESTAR. Não vou criar/modificar 
 
 E então execute o PASSO 1 (reconhecimento).
 
+
