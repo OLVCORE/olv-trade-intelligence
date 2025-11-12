@@ -1723,6 +1723,17 @@ export default function CompaniesManagementPage() {
                 </Button>
               </div>
             ) : (
+              <ExpandableCompaniesTable
+                companies={paginatedCompanies}
+                selectedCompanies={selectedCompanies}
+                onToggleSelect={toggleSelectCompany}
+                onToggleSelectAll={toggleSelectAll}
+                onRefresh={refetch}
+                showCheckboxes={true}
+              />
+            )}
+            
+            {/* ===== TABELA ANTIGA REMOVIDA - AGORA USA ExpandableCompaniesTable ===== 
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2134,7 +2145,7 @@ export default function CompaniesManagementPage() {
                   ))}
                 </TableBody>
               </Table>
-            )}
+            ===== FIM TABELA ANTIGA ===== */}
             
             {/* Paginação */}
             {companies.length > 0 && (
