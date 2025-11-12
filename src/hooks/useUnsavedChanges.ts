@@ -8,7 +8,6 @@
  */
 
 import { useEffect } from 'react';
-import { useBlocker } from 'react-router-dom';
 
 /**
  * Hook para proteger dados não salvos
@@ -38,26 +37,13 @@ export function useUnsavedChanges(
   hasUnsavedChanges: boolean,
   customMessage?: string
 ) {
-  // Default message
-  const message = customMessage || 
-    '⚠️ ATENÇÃO!\n\n' +
-    'Você tem ALTERAÇÕES NÃO SALVAS.\n\n' +
-    'Se sair agora, vai PERDER:\n' +
-    '• Dados preenchidos\n' +
-    '• Resultados de buscas\n' +
-    '• Créditos de API gastos\n\n' +
-    'Deseja realmente sair SEM SALVAR?';
-  
-  // Block React Router navigation (sidebar, Link clicks)
-  const blocker = useBlocker(hasUnsavedChanges);
-  
   // Block browser navigation (refresh, close tab, back/forward)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
         // Chrome requires returnValue to be set
-        e.returnValue = 'Você tem alterações não salvas';
+        e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?';
         return e.returnValue;
       }
     };
@@ -68,21 +54,6 @@ export function useUnsavedChanges(
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasUnsavedChanges]);
-  
-  // Handle React Router blocker (sidebar navigation)
-  useEffect(() => {
-    if (blocker.state === 'blocked') {
-      const confirmed = window.confirm(message);
-      
-      if (confirmed) {
-        // User confirmed, allow navigation
-        blocker.proceed();
-      } else {
-        // User cancelled, stay on page
-        blocker.reset();
-      }
-    }
-  }, [blocker, message]);
   
   // Visual indicator in console (for debugging)
   useEffect(() => {
