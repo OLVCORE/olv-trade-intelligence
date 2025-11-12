@@ -61,7 +61,7 @@ export function identifyProduct(hsCode: string): HSCodeIntelligence | null {
   // Normalizar HS Code (remover pontos, espaços)
   const normalized = hsCode.replace(/[.\s]/g, '');
   
-  // Buscar correspondência exata
+  // Buscar correspondência exata no database local
   if (HS_CODE_DATABASE[hsCode]) {
     return generateIntelligence(hsCode, HS_CODE_DATABASE[hsCode]);
   }
@@ -78,9 +78,35 @@ export function identifyProduct(hsCode: string): HSCodeIntelligence | null {
     return generateIntelligence(hsCode, HS_CODE_DATABASE[four]);
   }
   
-  // Não encontrado - buscar na API WCO (futuro)
-  console.warn(`[HS] ⚠️ HS Code ${hsCode} não encontrado no database local`);
-  return null;
+  // FALLBACK: Gerar keywords genéricas baseado no capítulo (primeiros 2 dígitos)
+  const chapter = normalized.substring(0, 2);
+  const chapterKeywords: Record<string, string[]> = {
+    '95': ['sporting goods', 'fitness equipment', 'toys', 'games', 'sports equipment'],
+    '94': ['furniture', 'bedding', 'lamps', 'lighting'],
+    '64': ['footwear', 'shoes', 'boots', 'sneakers'],
+    '85': ['electrical equipment', 'electronics', 'machinery'],
+    '84': ['machinery', 'mechanical appliances', 'equipment'],
+    '39': ['plastics', 'plastic products'],
+    '73': ['steel', 'iron products', 'metal articles'],
+    '90': ['medical devices', 'optical instruments', 'precision instruments'],
+  };
+  
+  if (chapterKeywords[chapter]) {
+    console.log(`[HS] ⚠️ HS Code ${hsCode} não no database, usando keywords genéricas do capítulo ${chapter}`);
+    return generateIntelligence(hsCode, {
+      description: `Products under HS Chapter ${chapter}`,
+      keywords: chapterKeywords[chapter],
+      category: `HS Chapter ${chapter}`,
+    });
+  }
+  
+  // Última opção: keywords ultra-genéricas
+  console.warn(`[HS] ⚠️ HS Code ${hsCode} desconhecido, usando keywords genéricas`);
+  return generateIntelligence(hsCode, {
+    description: 'Product classification to be determined',
+    keywords: ['distributor', 'importer', 'wholesaler', 'trading company'],
+    category: 'General',
+  });
 }
 
 /**
