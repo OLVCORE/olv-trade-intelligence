@@ -105,7 +105,7 @@ export default function CompaniesManagementPage() {
     
     // Filtro por Origem
     if (filterOrigin.length > 0) {
-      filtered = filtered.filter(c => filterOrigin.includes(c.source_name || ''));
+      filtered = filtered.filter(c => filterOrigin.includes((c as any).data_source || ''));
     }
     
     // Filtro por Status CNPJ
@@ -1740,7 +1740,7 @@ export default function CompaniesManagementPage() {
                       <ColumnFilter
                         column="source_name"
                         title="Origem"
-                        values={allCompanies.map(c => c.source_name)}
+                        values={allCompanies.map(c => (c as any).data_source || 'N/A')}
                         selectedValues={filterOrigin}
                         onFilterChange={setFilterOrigin}
                         onSort={() => handleSort('source_name')}
