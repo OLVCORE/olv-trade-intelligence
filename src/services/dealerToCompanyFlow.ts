@@ -95,9 +95,9 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
   console.log(`💾 [FLOW] Salvando ${dealers.length} dealers...`);
   
   try {
-    // ETAPA 1: Preparar dados para companies (SCHEMA CORRETO!)
+    // ETAPA 1: Preparar dados para companies (NORMALIZADOR UNIVERSAL!)
     const companiesToInsert = dealers.map(dealer => ({
-      // Schema real da tabela companies:
+      // ✅ Campos base (tabela companies)
       company_name: dealer.name,
       website: dealer.website || null,
       city: dealer.city || null,
@@ -105,17 +105,19 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
       country: dealer.country,
       industry: dealer.industry || null,
       employee_count: dealer.employeeCount || null,
-      revenue_usd: null, // Não temos revenue em USD ainda
       
-      // Dados internacionais no JSONB
-      international_data: {
+      // ✅ NORMALIZADOR UNIVERSAL: hunter_domain_data (JSONB)
+      hunter_domain_data: {
         apollo_id: dealer.apolloId,
         linkedin_url: dealer.linkedinUrl,
         b2b_type: dealer.b2bType || 'distributor',
-        fit_score: dealer.fitScore,
+        fit_score: dealer.fitScore || 50,
         description: dealer.description,
-        source: 'dealer_discovery_ultra_refined',
+        source: 'dealer_discovery_realtime',
         search_date: new Date().toISOString(),
+        validated: true,
+        type: dealer.b2bType ? `${dealer.b2bType[0].toUpperCase()}${dealer.b2bType.slice(1)}` : 'Distributor',
+        notes: `Importado via busca B2B - Fit Score ${dealer.fitScore || 50}`,
       },
     }));
     
