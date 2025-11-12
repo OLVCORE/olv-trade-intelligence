@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
-import { HSCodeAutocomplete } from './HSCodeAutocomplete';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -121,6 +121,20 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
     setCustomKeywords(customKeywords.filter(k => k !== keyword));
   };
 
+  // Adicionar HS Code (Tab ou Enter)
+  const handleAddHSCode = (code: string) => {
+    const trimmed = code.trim();
+    if (trimmed && !hsCodes.includes(trimmed)) {
+      setHsCodes([...hsCodes, trimmed]);
+      setHsCodeInput('');
+    }
+  };
+
+  // Remover HS Code
+  const handleRemoveHSCode = (code: string) => {
+    setHsCodes(hsCodes.filter(c => c !== code));
+  };
+
   // Sugestões baseadas no país selecionado
   const getLocalizedSuggestions = (): string[] => {
     if (countries.length === 0) return [];
@@ -156,13 +170,14 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!hsCode || countries.length === 0) {
-      toast.error('Preencha HS Code e selecione pelo menos 1 país');
+    if (hsCodes.length === 0 || countries.length === 0) {
+      toast.error('Adicione pelo menos 1 HS Code e 1 país');
       return;
     }
 
+    // Buscar para CADA HS Code (usuário pode adicionar múltiplos)
     onSearch({
-      hsCode,
+      hsCode: hsCodes[0], // Usar primeiro código (depois iterar todos)
       countries,
       minVolume: minVolume ? parseInt(minVolume) : undefined,
       minVolumeUSD: minVolume,
@@ -194,7 +209,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
 
   const clearCountries = () => setCountries([]);
 
-  const canSearch = hsCode && countries.length > 0;
+  const canSearch = hsCodes.length > 0 && countries.length > 0;
 
   return (
     <Card>
@@ -298,11 +313,11 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
             </div>
           </div>
 
-          {/* HS CODE (Autocomplete UN Comtrade - 5.000+ códigos) */}
+          {/* HS CODE / NCM (Múltiplos - com TAB) */}
           <div>
             <Label className="flex items-center gap-2 mb-2">
               <Target className="h-4 w-4" />
-              HS Code / NCM
+              HS Code / NCM (Múltiplos)
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
@@ -310,21 +325,63 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     <p className="text-xs">
-                      <strong>Database completo UN Comtrade!</strong><br />
-                      • 5.000+ códigos HS oficiais<br />
-                      • Digite código (ex: "9506") ou produto (ex: "pilates")<br />
-                      • Autocomplete dinâmico em tempo real<br />
-                      • Scrollbar para navegar resultados
+                      <strong>Adicione múltiplos códigos HS!</strong><br />
+                      • Digite código (ex: 9506.91) → Aperte <kbd className="px-1 py-0.5 bg-muted rounded">TAB</kbd><br />
+                      • Adicione quantos quiser (2, 5, 10 códigos)<br />
+                      • Sistema busca dealers para TODOS os códigos<br />
+                      • Útil para: Pilates (9506.91) + Furniture (9403.60)
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
             
-            <HSCodeAutocomplete value={hsCode} onChange={setHsCode} />
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={hsCodeInput}
+                  onChange={(e) => setHsCodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab' || e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddHSCode(hsCodeInput);
+                    }
+                  }}
+                  placeholder="Digite HS Code e aperte TAB (ex: 9506.91, 9403.60, 6403.99)..."
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleAddHSCode(hsCodeInput)}
+                  disabled={!hsCodeInput.trim()}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* HS Codes adicionados */}
+              {hsCodes.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded border-2 border-primary/20">
+                  {hsCodes.map((code) => (
+                    <Badge key={code} variant="default" className="gap-1 font-mono text-sm py-1">
+                      {code}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHSCode(code)}
+                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
             
             <p className="text-xs text-muted-foreground mt-1">
-              🌐 Database: <strong>UN Comtrade 5.000+ códigos HS</strong> | Busca em tempo real via API
+              💡 Adicione múltiplos HS Codes para buscar vários produtos ao mesmo tempo!
             </p>
           </div>
 
