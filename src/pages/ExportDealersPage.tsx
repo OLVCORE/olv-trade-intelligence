@@ -53,24 +53,30 @@ export default function ExportDealersPage() {
     mutationFn: async (params: DealerSearchParams) => {
       console.log('[EXPORT] 🔍 Busca INTELIGENTE multi-source...', params);
 
-      // 1. IDENTIFICAR PRODUTO pelo HS Code
+      // 1. IDENTIFICAR PRODUTO(S) pelos HS Codes (MÚLTIPLOS!)
       const { identifyProduct } = await import('@/services/hsCodeIntelligence');
-      const intelligence = identifyProduct(params.hsCode);
-
-      if (!intelligence) {
-        throw new Error(`HS Code ${params.hsCode} não reconhecido. Digite os primeiros 4-6 dígitos do código HS.`);
+      const hsCodes = Array.isArray(params.hsCodes) ? params.hsCodes : [params.hsCode].filter(Boolean);
+      
+      if (hsCodes.length === 0) {
+        throw new Error('Adicione pelo menos 1 HS Code para buscar');
       }
 
-      console.log('[EXPORT] 🎯 Produto identificado:', intelligence.description);
-      console.log('[EXPORT] 🔑 Keywords:', intelligence.keywords.join(', '));
+      // Coletar keywords de TODOS os HS Codes
+      const allHSKeywords: string[] = [];
+      for (const code of hsCodes) {
+        const intelligence = identifyProduct(code);
+        if (intelligence) {
+          allHSKeywords.push(...intelligence.keywords);
+          console.log(`[EXPORT] 🎯 HS ${code}: ${intelligence.description}`);
+        }
+      }
 
       // 2. COMBINAR KEYWORDS (HS Intelligence + Custom do usuário)
       const allKeywords = [
-        ...intelligence.keywords,
-        ...(params.keywords || []), // Custom keywords (dialetos)
+        ...new Set([...allHSKeywords, ...(params.keywords || [])]), // Remove duplicatas
       ];
 
-      console.log('[EXPORT] 🔑 Keywords finais:', allKeywords.join(', '));
+      console.log(`[EXPORT] 🔑 Keywords finais (${allKeywords.length}):`, allKeywords.join(', '));
 
       // 3. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn)
       const allDealers: Dealer[] = [];
@@ -78,7 +84,7 @@ export default function ExportDealersPage() {
       for (const country of params.countries) {
         const { data, error } = await supabase.functions.invoke('discover-dealers-realtime', {
           body: {
-            hsCode: params.hsCode,
+            hsCode: hsCodes[0], // Usar primeiro HS Code (depois iterar todos)
             country: country,
             keywords: allKeywords, // Combinado: HS + Custom
             minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
@@ -249,7 +255,7 @@ export default function ExportDealersPage() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Busca: HS {searchParams?.hsCode} em {searchParams?.countries?.length || 0} {searchParams?.countries?.length === 1 ? 'país' : 'países'}
+                Busca: {searchParams?.hsCodes?.length || 0} HS Code(s) em {searchParams?.countries?.length || 0} {searchParams?.countries?.length === 1 ? 'país' : 'países'}
               </div>
             </div>
           </CardContent>

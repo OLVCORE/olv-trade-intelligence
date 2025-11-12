@@ -54,7 +54,8 @@ interface DealerDiscoveryFormProps {
 }
 
 export interface DealerSearchParams {
-  hsCode: string;
+  hsCode?: string; // LEGACY (deprecated, usar hsCodes)
+  hsCodes?: string[]; // NOVO: Múltiplos HS Codes
   countries: string[];
   minVolume?: number;
   minVolumeUSD?: string;
@@ -177,9 +178,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
       return;
     }
 
-    // Buscar para CADA HS Code (usuário pode adicionar múltiplos)
+    // Buscar para TODOS os HS Codes
     onSearch({
-      hsCode: hsCodes[0], // Usar primeiro código (depois iterar todos)
+      hsCodes: hsCodes, // ✅ Array completo de HS Codes
       countries,
       minVolume: minVolume ? parseInt(minVolume) : undefined,
       minVolumeUSD: minVolume,
