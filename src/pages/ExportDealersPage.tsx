@@ -51,29 +51,43 @@ export default function ExportDealersPage() {
 
   const searchMutation = useMutation({
     mutationFn: async (params: DealerSearchParams) => {
-      console.log('[EXPORT] 🔍 Buscando dealers B2B (ULTRA-REFINED)...', params);
+      console.log('[EXPORT] 🔍 Busca INTELIGENTE multi-source...', params);
 
-      // Buscar dealers para CADA país selecionado
+      // 1. IDENTIFICAR PRODUTO pelo HS Code
+      const { identifyProduct } = await import('@/services/hsCodeIntelligence');
+      const intelligence = identifyProduct(params.hsCode);
+
+      if (!intelligence) {
+        throw new Error(`HS Code ${params.hsCode} não reconhecido. Digite os primeiros 4-6 dígitos do código HS.`);
+      }
+
+      console.log('[EXPORT] 🎯 Produto identificado:', intelligence.description);
+      console.log('[EXPORT] 🔑 Keywords:', intelligence.keywords.join(', '));
+
+      // 2. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn)
       const allDealers: Dealer[] = [];
       
       for (const country of params.countries) {
-        const { data, error } = await supabase.functions.invoke('discover-dealers-ultra-refined', {
+        const { data, error } = await supabase.functions.invoke('discover-dealers-realtime', {
           body: {
+            hsCode: params.hsCode,
             country: country,
+            keywords: intelligence.keywords,
           },
         });
 
         if (error) {
-          console.error('[EXPORT] ❌ Erro ao buscar dealers em', country, error);
-          continue; // Continua com próximo país
+          console.error('[EXPORT] ❌ Erro em', country, error);
+          continue;
         }
 
         if (data?.dealers) {
+          console.log(`[EXPORT] ✅ ${country}: ${data.dealers.length} dealers (Fit > 0)`);
           allDealers.push(...data.dealers);
         }
       }
 
-      console.log('[EXPORT] ✅ Total de dealers encontrados:', allDealers.length);
+      console.log('[EXPORT] ✅ Total: ${allDealers.length} dealers qualificados`);
       return allDealers;
     },
     onSuccess: (data) => {

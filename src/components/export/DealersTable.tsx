@@ -238,8 +238,59 @@ export function DealersTable({ dealers }: DealersTableProps) {
                                     <ExternalLink className="h-3 w-3" />
                                   </a>
                                 )}
+                                {dealer.apollo_link && (
+                                  <a
+                                    href={dealer.apollo_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                                  >
+                                    <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-4 w-4" />
+                                    Apollo.io
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
                               </div>
                             </div>
+
+                            {/* DECISORES (se disponível) */}
+                            {dealer.decision_makers && dealer.decision_makers.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-2">Decisores ({dealer.decision_makers.length})</h4>
+                                <div className="space-y-2">
+                                  {dealer.decision_makers.slice(0, 5).map((dm: any, idx: number) => (
+                                    <div key={idx} className="p-2 bg-muted/30 rounded text-xs">
+                                      <div className="font-medium">{dm.name}</div>
+                                      <div className="text-muted-foreground">{dm.title}</div>
+                                      <div className="flex gap-2 mt-1">
+                                        {dm.linkedin_url && (
+                                          <a
+                                            href={dm.linkedin_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-primary hover:underline"
+                                          >
+                                            <Linkedin className="h-3 w-3" />
+                                            LinkedIn
+                                          </a>
+                                        )}
+                                        {dm.apollo_link && (
+                                          <a
+                                            href={dm.apollo_link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-primary hover:underline"
+                                          >
+                                            <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-3 w-3" />
+                                            Apollo
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
 
                             {dealer.b2bType && (
                               <div>
