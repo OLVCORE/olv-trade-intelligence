@@ -25,46 +25,37 @@ export function useEnrichmentStatus(companyId?: string) {
         .from('companies')
         .select(`
           id,
-          name,
-          cnpj,
-          raw_data,
-          digital_maturity_score
+          company_name,
+          hunter_domain_data
         `)
         .eq('id', companyId)
         .single();
 
       if (error) throw error;
 
-      const [decisorsCountRes, digitalPresenceRes, insightsRes, legalDataRes] = await Promise.all([
-        supabase.from('decision_makers').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('digital_presence').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('insights').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
-        supabase.from('legal_data').select('id').eq('company_id', companyId).maybeSingle(),
-      ]);
-
       // ✅ LÓGICA SIMPLIFICADA: Conta apenas enriquecimentos REAIS e ÚTEIS
-      const rawData = (company.raw_data as any) || {};
+      const rawData = (company.hunter_domain_data as any) || {};
       
       const status: EnrichmentStatus = {
         companyId: company.id,
-        companyName: company.name,
-        hasReceitaWS: !!(rawData?.enriched_receita && rawData?.receita),
-        hasDecisionMakers: (decisorsCountRes.count || 0) > 0,
-        hasDigitalPresence: !!(rawData?.digital_intelligence), // Digital Intelligence tab
-        hasMaturityScore: !!company.digital_maturity_score,
-        hasFitScore: false,
-        hasLegalData: !!(rawData?.totvs_report), // TOTVS 9-tabs report
-        hasInsights: (insightsRes.count || 0) > 0,
+        companyName: company.company_name,
+        hasReceitaWS: false, // N/A para empresas internacionais
+        hasDecisionMakers: false,
+        hasDigitalPresence: !!(rawData?.fit_score),
+        hasMaturityScore: !!(rawData?.fit_score),
+        hasFitScore: !!(rawData?.fit_score),
+        hasLegalData: false,
+        hasInsights: false,
         completionPercentage: 0,
         isFullyEnriched: false,
       };
 
-      // Calcula percentual de completude (APENAS 4 ITENS CRÍTICOS)
+      // Calcula percentual de completude
       const checks = [
-        status.hasReceitaWS,        // 1. Dados Receita Federal (API Brasil/ReceitaWS)
-        status.hasDecisionMakers,   // 2. Decisores Apollo
-        status.hasDigitalPresence,  // 3. Digital Intelligence
-        status.hasLegalData,        // 4. TOTVS Report (9 tabs)
+        !!(rawData?.fit_score),      // 1. Fit Score
+        !!(rawData?.validated),      // 2. Validado
+        !!company.company_name,      // 3. Nome
+        !!company.website,           // 4. Website
       ];
       
       status.completionPercentage = Math.round(
@@ -90,51 +81,37 @@ export function useAllEnrichmentStatus() {
         .from('companies')
         .select(`
           id,
-          name,
-          cnpj,
-          raw_data,
-          digital_maturity_score
+          company_name,
+          website,
+          hunter_domain_data
         `);
 
       if (error) throw error;
 
-      // Buscar conjuntos de relacionamentos para todas as empresas
-      const [decisorsListRes, digitalMaturityListRes, insightsListRes, legalDataListRes] = await Promise.all([
-        supabase.from('decision_makers').select('company_id'),
-        supabase.from('digital_presence').select('company_id'),
-        supabase.from('insights').select('company_id'),
-        supabase.from('legal_data').select('company_id'),
-      ]);
-
-      const decisorsSet = new Set((decisorsListRes.data || []).map((r: any) => r.company_id));
-      const digitalMaturitySet = new Set((digitalMaturityListRes.data || []).map((r: any) => r.company_id));
-      const insightsSet = new Set((insightsListRes.data || []).map((r: any) => r.company_id));
-      const legalDataSet = new Set((legalDataListRes.data || []).map((r: any) => r.company_id));
-
       const statusList: EnrichmentStatus[] = companies.map(company => {
-        // ✅ LÓGICA SIMPLIFICADA: Conta apenas enriquecimentos REAIS e ÚTEIS
-        const rawData = (company.raw_data as any) || {};
+        // ✅ LÓGICA SIMPLIFICADA: Dados de hunter_domain_data
+        const rawData = (company.hunter_domain_data as any) || {};
         
         const status: EnrichmentStatus = {
           companyId: company.id,
-          companyName: company.name,
-          hasReceitaWS: !!(rawData?.enriched_receita && rawData?.receita),
-          hasDecisionMakers: decisorsSet.has(company.id),
-          hasDigitalPresence: !!(rawData?.digital_intelligence), // Digital Intelligence tab
-          hasMaturityScore: !!company.digital_maturity_score,
-          hasFitScore: false,
-          hasLegalData: !!(rawData?.totvs_report), // TOTVS 9-tabs report
-          hasInsights: insightsSet.has(company.id),
+          companyName: company.company_name,
+          hasReceitaWS: false, // N/A para empresas internacionais
+          hasDecisionMakers: false,
+          hasDigitalPresence: !!(rawData?.fit_score),
+          hasMaturityScore: !!(rawData?.fit_score),
+          hasFitScore: !!(rawData?.fit_score),
+          hasLegalData: !!(rawData?.validated),
+          hasInsights: false,
           completionPercentage: 0,
           isFullyEnriched: false,
         };
 
-        // Calcula percentual de completude (APENAS 4 ITENS CRÍTICOS)
+        // Calcula percentual de completude
         const checks = [
-          status.hasReceitaWS,        // 1. Dados Receita Federal (API Brasil/ReceitaWS)
-          status.hasDecisionMakers,   // 2. Decisores Apollo
-          status.hasDigitalPresence,  // 3. Digital Intelligence
-          status.hasLegalData,        // 4. TOTVS Report (9 tabs)
+          !!(rawData?.fit_score),      // 1. Fit Score
+          !!(rawData?.validated),      // 2. Validado
+          !!company.company_name,      // 3. Nome
+          !!company.website,           // 4. Website
         ];
         
         status.completionPercentage = Math.round(

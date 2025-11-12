@@ -489,7 +489,7 @@ export default function CompaniesManagementPage() {
           .from('companies')
           .update({ 
             raw_data: mergedRaw,
-            company_name: receita.nome || company.name,
+            company_name: company.company_name || receita.nome,
             ...(industryFromReceita ? { industry: industryFromReceita } : {})
           })
           .eq('id', companyId);
@@ -736,7 +736,7 @@ export default function CompaniesManagementPage() {
           const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: { 
               company_id: company.id,
-              company_name: company.company_name || company.name,
+              company_name: company.company_name,
               domain: domain,
               modes: ['people', 'company'],
               city: (company as any).raw_data?.receita_federal?.municipio || (company as any).city,
@@ -844,9 +844,9 @@ export default function CompaniesManagementPage() {
         
         return [
           company.cnpj || '',
-          company.name || '',
+          company.company_name || '',
           receitaData?.fantasia || '',
-          receitaData?.razao_social || company.name || '',
+          receitaData?.razao_social || company.company_name || '',
           company.website || '',
           company.domain || '',
           digitalPresence?.instagram || '',
@@ -967,9 +967,9 @@ export default function CompaniesManagementPage() {
         
         return {
           'CNPJ': company.cnpj || '',
-          'Nome da Empresa': company.name || '',
+          'Nome da Empresa': company.company_name || '',
           'Nome Fantasia': receitaData?.fantasia || '',
-          'Razão Social': receitaData?.razao_social || company.name || '',
+          'Razão Social': receitaData?.razao_social || company.company_name || '',
           'Website': company.website || '',
           'Domínio': company.domain || '',
           'Instagram': digitalPresence?.instagram || '',
@@ -1089,7 +1089,7 @@ export default function CompaniesManagementPage() {
       doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 34);
 
       const tableData = companies.map(company => [
-        company.name,
+        company.company_name,
         company.cnpj || 'N/A',
         (company as any).cnpj_status || 'pendente',
         company.industry || 'N/A',
@@ -1212,7 +1212,7 @@ export default function CompaniesManagementPage() {
                       if (error) throw error;
                       enriched++;
                     } catch (e) {
-                      console.error(`Error enriching ${company.name}:`, e);
+                      console.error(`Error enriching ${company.company_name}:`, e);
                       errors++;
                     }
                   }
@@ -1248,12 +1248,12 @@ export default function CompaniesManagementPage() {
                           .maybeSingle(); // 🔧 USAR maybeSingle() ao invés de single()
 
                         if (checkError) {
-                          console.error(`❌ Erro ao verificar empresa ${company.name}:`, checkError);
+                          console.error(`❌ Erro ao verificar empresa ${company.company_name}:`, checkError);
                           throw checkError;
                         }
 
                         if (existing) {
-                          console.log(`✓ Empresa ${company.name} já está no ICP`);
+                          console.log(`✓ Empresa ${company.company_name} já está no ICP`);
                           skipped++;
                           continue;
                         }
@@ -1266,7 +1266,7 @@ export default function CompaniesManagementPage() {
                           .single();
 
                         if (!fullCompany?.cnpj) {
-                          console.warn(`⚠️ Empresa ${company.name} sem CNPJ - pulando integração`);
+                          console.warn(`⚠️ Empresa ${company.company_name} sem CNPJ - pulando integração`);
                           skipped++;
                           continue;
                         }
@@ -1304,14 +1304,14 @@ export default function CompaniesManagementPage() {
                           });
 
                         if (insertError) {
-                          console.error(`❌ Erro ao inserir ${company.name} no ICP:`, insertError);
+                          console.error(`❌ Erro ao inserir ${company.company_name} no ICP:`, insertError);
                           throw insertError;
                         }
                         
-                        console.log(`✅ ${company.name} integrada ao ICP!`);
+                        console.log(`✅ ${company.company_name} integrada ao ICP!`);
                         sent++;
                       } catch (e: any) {
-                        console.error(`❌ Error integrating ${company.name} to ICP:`, e);
+                        console.error(`❌ Error integrating ${company.company_name} to ICP:`, e);
                         console.error('Detalhes do erro:', JSON.stringify(e, null, 2));
                         errors++;
                       }
@@ -1650,7 +1650,7 @@ export default function CompaniesManagementPage() {
                         if (error) throw error;
                         enriched++;
                       } catch (e) {
-                        console.error(`Error enriching ${company.name}:`, e);
+                        console.error(`Error enriching ${company.company_name}:`, e);
                         errors++;
                       }
                     }
@@ -1842,7 +1842,7 @@ export default function CompaniesManagementPage() {
                               onClick={() => navigate(`/company/${company.id}`)}
                               className="font-medium hover:text-primary hover:underline text-left"
                             >
-                              {(company as any).razao_social || company.name || (company as any).nome_fantasia || 'Sem nome'}
+                              {(company as any).razao_social || company.company_name || (company as any).nome_fantasia || 'Sem nome'}
                             </button>
                             {company.domain && (
                               <p className="text-xs text-muted-foreground">{company.domain}</p>
@@ -2052,7 +2052,7 @@ export default function CompaniesManagementPage() {
                         <div className="flex items-center justify-end gap-2">
                           <STCAgent 
                             companyId={company.id}
-                            companyName={company.name || 'Empresa'}
+                            companyName={company.company_name || 'Empresa'}
                             cnpj={company.cnpj}
                           />
                           <CompanyRowActions
@@ -2065,7 +2065,7 @@ export default function CompaniesManagementPage() {
                           onEnrich360={() => handleEnrich(company.id)}
                           onEnrichApollo={async () => {
                             try {
-                              if (!company.name && !company.domain && !company.website) {
+                              if (!company.company_name && !company.domain && !company.website) {
                                 toast.error('Apollo requer nome ou domínio da empresa');
                                 return;
                               }
@@ -2074,7 +2074,7 @@ export default function CompaniesManagementPage() {
                               const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
                                 body: { 
                                   company_id: company.id,
-                                  company_name: company.name,
+                                  company_name: company.company_name,
                                   domain: company.website || company.domain,
                                   modes: ['people', 'company'] // 🔥 PESSOAS + ORGANIZAÇÃO
                                 }
