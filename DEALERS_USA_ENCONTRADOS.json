@@ -1,0 +1,60 @@
+{
+  "country": "United States",
+  "total": 15,
+  "dealers": [
+    {
+      "name": "Canadawide Sports",
+      "website": "http://www.canadawidesports.com",
+      "industry": "sporting goods",
+      "city": "Compton, CA",
+      "tier": "B",
+      "priority_score": 60,
+      "contacts": ["President", "VP"]
+    },
+    {
+      "name": "Mountain States Rep Group",
+      "website": "http://www.mtnstatesreps.com",
+      "industry": "sporting goods",
+      "city": "Denver, CO",
+      "tier": "B",
+      "priority_score": 60,
+      "contacts": ["2 Owners", "VP Commercial"]
+    },
+    {
+      "name": "Jaco Medical Equipment",
+      "website": "http://www.jacomed.com",
+      "industry": "medical devices",
+      "city": "Poway, CA",
+      "tier": "B",
+      "priority_score": 60,
+      "contacts": ["President"]
+    },
+    {
+      "name": "Mid Central Medical",
+      "website": "http://www.midcentralmedical.com",
+      "industry": "medical devices",
+      "city": "Pembina, ND",
+      "tier": "B",
+      "priority_score": 60,
+      "contacts": ["CEO"]
+    },
+    {
+      "name": "ZURICH Corp",
+      "website": "http://www.zurichcorp.com",
+      "industry": "import & export",
+      "city": "Miami, FL",
+      "tier": "B",
+      "priority_score": 60,
+      "contacts": ["CEO"]
+    }
+  ],
+  "stats": {
+    "apollo_preview": 31,
+    "serper_results": 25,
+    "qualified": 15,
+    "credits_used": 21,
+    "qualification_rate": "48.4%",
+    "cost_usd": 2.10
+  }
+}
+

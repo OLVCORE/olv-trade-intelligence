@@ -148,30 +148,28 @@ async function searchDealersViaApollo(params: {
     minVolume: params.min_volume_usd
   });
 
-  // Construir query Apollo para B2B apenas
+  // Construir query Apollo para FITNESS DISTRIBUTORS
   const apolloPayload = {
     page: 1,
-    per_page: 50, // Buscar até 50 dealers
+    per_page: 25, // 25 dealers = ~25 créditos Apollo
     
     // Filtros geográficos
     organization_locations: [params.country],
     
-    // Filtros de indústria/keywords B2B (PERSONALIZÁVEIS!)
+    // BUSCA POR KEYWORDS (mais efetivo que industry tags)
+    q_organization_name_or_keywords: 'fitness equipment OR gym equipment OR sports equipment OR pilates equipment OR wellness equipment OR medical equipment',
+    
+    // AND deve ter B2B keywords
     q_organization_keyword_tags: [
-      ...includeKw.map(kw => kw.toLowerCase()), // Keywords selecionadas pelo usuário
-      ...params.keywords,
-      'fitness equipment',
-      'sports equipment',
-      'gym equipment'
+      'distributor',
+      'wholesaler',
+      'dealer',
+      'supplier',
+      'manufacturer',
     ],
     
     // Filtros de tamanho (dealers têm estrutura)
-    organization_num_employees_ranges: ['11-20', '21-50', '51-100', '101-200', '201-500', '501-1000', '1001+'],
-    
-    // Filtros de receita (dealers têm volume)
-    revenue_range: params.min_volume_usd 
-      ? [`${params.min_volume_usd}+`]
-      : ['1M-10M', '10M-50M', '50M-100M', '100M-250M', '250M-500M', '500M-1B', '1B+']
+    organization_num_employees_ranges: ['11-20', '21-50', '51-100', '101-200', '201-500'],
   };
 
   const response = await fetch('https://api.apollo.io/v1/organizations/search', {

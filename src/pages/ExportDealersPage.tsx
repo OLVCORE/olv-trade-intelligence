@@ -68,8 +68,8 @@ export default function ExportDealersPage() {
           description: 'Tente ajustar os filtros de busca',
         });
       } else {
-        toast.success(`✅ ${data.dealers.length} dealer(s) B2B encontrado(s)!`, {
-          description: `Apenas distribuidores/wholesalers (B2C excluídos)`,
+        toast.success(`✅ ${data.length} dealer(s) B2B encontrado(s)!`, {
+          description: `Clique em "Salvar na Base" para adicionar à sua base de dados`,
           duration: 5000,
         });
       }
