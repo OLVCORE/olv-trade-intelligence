@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Search, Edit, Trash2, Zap, Plus, Loader2, Eye, Sparkles, ArrowUpDown, CheckCircle, AlertTriangle, XCircle, Clock, RefreshCw, FileText, Download, FileSpreadsheet, Image, Upload, Database, Target, Users, Globe } from 'lucide-react';
+import { Building2, Search, Edit, Trash2, Zap, Plus, Loader2, Eye, Sparkles, ArrowUpDown, CheckCircle, AlertTriangle, XCircle, Clock, RefreshCw, FileText, Download, FileSpreadsheet, Image, Upload, Database, Target, Users, Globe, ChevronDown, ChevronUp, MapPin, ExternalLink, Linkedin, Mail, Phone } from 'lucide-react';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
@@ -80,6 +80,13 @@ export default function CompaniesManagementPage() {
   const [filterRegion, setFilterRegion] = useState<string[]>([]);
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
   const [filterEnrichment, setFilterEnrichment] = useState<string[]>([]); // ✅ NOVO: Filtro por enriquecimento
+  
+  // ✅ EXPANSÃO DE LINHAS (card dropdown)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  
+  const toggleRow = (companyId: string) => {
+    setExpandedRow(expandedRow === companyId ? null : companyId);
+  };
   
   // 🔥 DEBOUNCE: Só busca após 500ms de inatividade
   useEffect(() => {
@@ -1845,12 +1852,26 @@ export default function CompaniesManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {paginatedCompanies.map((company) => (
-                    <TableRow key={company.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedCompanies.includes(company.id)}
-                          onCheckedChange={() => toggleSelectCompany(company.id)}
-                        />
+                    <>
+                    <TableRow 
+                      key={company.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => toggleRow(company.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedCompanies.includes(company.id)}
+                            onCheckedChange={() => toggleSelectCompany(company.id)}
+                          />
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            {expandedRow === company.id ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -2131,6 +2152,205 @@ export default function CompaniesManagementPage() {
                         </div>
                       </TableCell>
                     </TableRow>
+                    
+                    {/* LINHA EXPANDIDA - CARD DROPDOWN COM TODOS OS DADOS */}
+                    {expandedRow === company.id && (
+                      <TableRow>
+                        <TableCell colSpan={11} className="bg-muted/30 p-0">
+                          <Card className="border-0 shadow-none">
+                            <CardContent className="p-6">
+                              <div className="grid grid-cols-2 gap-6">
+                                {/* COLUNA ESQUERDA */}
+                                <div className="space-y-4">
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Building2 className="h-4 w-4" />
+                                      Informações Gerais
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Nome:</span>
+                                        <span className="font-medium">{company.company_name}</span>
+                                      </div>
+                                      {company.cnpj && (
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">CNPJ:</span>
+                                          <span className="font-mono text-xs">{company.cnpj}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Indústria:</span>
+                                        <span className="font-medium">{company.industry || 'N/A'}</span>
+                                      </div>
+                                      {(company.employee_count || company.employees_count) && (
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Funcionários:</span>
+                                          <Badge variant="secondary">
+                                            {company.employee_count || company.employees_count}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      {((company as any).data_source || (company as any).raw_data?.source) && (
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Origem:</span>
+                                          <Badge variant="outline">
+                                            {(company as any).data_source || (company as any).raw_data?.source}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <MapPin className="h-4 w-4" />
+                                      Localização
+                                    </h4>
+                                    <div className="space-y-1 text-sm">
+                                      {company.city && <p className="text-muted-foreground">{company.city}</p>}
+                                      {company.state && <p className="text-muted-foreground">{company.state}</p>}
+                                      {company.country && <p className="font-medium">{company.country}</p>}
+                                    </div>
+                                  </div>
+                                  
+                                  {(company.description || (company as any).raw_data?.notes) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold mb-2">Descrição</h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {company.description || (company as any).raw_data?.notes}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* COLUNA DIREITA */}
+                                <div className="space-y-4">
+                                  {/* FIT SCORE */}
+                                  {(() => {
+                                    const fitScore = (company as any).raw_data?.fit_score || 0;
+                                    const b2bType = (company as any).raw_data?.type || (company as any).b2b_type;
+                                    
+                                    if (fitScore > 0) {
+                                      return (
+                                        <div>
+                                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                            <Target className="h-4 w-4" />
+                                            Fit Score
+                                          </h4>
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                                <div
+                                                  className={`h-full ${fitScore >= 80 ? 'bg-green-500' : fitScore >= 60 ? 'bg-yellow-500' : 'bg-orange-500'}`}
+                                                  style={{ width: `${fitScore}%` }}
+                                                />
+                                              </div>
+                                            </div>
+                                            <span className="text-2xl font-bold">{fitScore}</span>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mt-2">
+                                            {fitScore >= 80 && '🟢 Excelente fit para B2B'}
+                                            {fitScore >= 60 && fitScore < 80 && '🟡 Bom fit para B2B'}
+                                            {fitScore < 60 && '🟠 Fit moderado'}
+                                          </p>
+                                          {b2bType && (
+                                            <Badge variant="default" className="mt-2">{b2bType}</Badge>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  
+                                  {/* LINKS EXTERNOS */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Globe className="h-4 w-4" />
+                                      Links Externos
+                                    </h4>
+                                    <div className="space-y-2">
+                                      {company.website && (
+                                        <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                          <Globe className="h-4 w-4" />
+                                          Website
+                                          <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                      )}
+                                      {company.linkedin_url && (
+                                        <a href={company.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                          <Linkedin className="h-4 w-4" />
+                                          LinkedIn
+                                          <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                      )}
+                                      {(() => {
+                                        const apolloId = company.apollo_id || (company as any).raw_data?.apollo_id;
+                                        const apolloLink = (company as any).raw_data?.apollo_link || (apolloId ? `https://app.apollo.io/#/companies/${apolloId}` : null);
+                                        if (apolloLink) {
+                                          return (
+                                            <a href={apolloLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                              <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-4 w-4" />
+                                              Apollo.io
+                                              <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* DECISORES */}
+                                  {(() => {
+                                    const decisores = (company as any).raw_data?.decision_makers || [];
+                                    if (decisores.length > 0) {
+                                      return (
+                                        <div>
+                                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            Decisores ({decisores.length})
+                                          </h4>
+                                          <div className="space-y-2">
+                                            {decisores.slice(0, 5).map((dm: any, idx: number) => (
+                                              <div key={idx} className="p-2 bg-muted/30 rounded text-xs border">
+                                                <div className="font-medium">{dm.name}</div>
+                                                <div className="text-muted-foreground">{dm.title}</div>
+                                                <div className="flex gap-3 mt-2">
+                                                  {dm.linkedin_url && (
+                                                    <a href={dm.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                                      <Linkedin className="h-3 w-3" />
+                                                      LinkedIn
+                                                    </a>
+                                                  )}
+                                                  {dm.apollo_link && (
+                                                    <a href={dm.apollo_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                                      <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-3 w-3" />
+                                                      Apollo
+                                                    </a>
+                                                  )}
+                                                  {dm.email && (
+                                                    <a href={`mailto:${dm.email}`} className="flex items-center gap-1 text-primary hover:underline">
+                                                      <Mail className="h-3 w-3" />
+                                                      Email
+                                                    </a>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </>
                   ))}
                 </TableBody>
               </Table>
