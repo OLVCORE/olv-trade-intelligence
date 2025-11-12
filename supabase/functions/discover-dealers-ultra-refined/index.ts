@@ -14,16 +14,17 @@ const corsHeaders = {
 const PRIMARY_KEYWORDS = [
   'sporting goods distributor',
   'fitness equipment distributor',
-  'sporting goods wholesaler',
-  'athletic equipment distributor',
+  'pilates equipment distributor',
+  'wellness equipment distributor',
+  'training equipment distributor',
 ];
 
 // TIER 2: International trade focused (Tendata best practices)
 const TRADE_KEYWORDS = [
   'sporting goods importer',
   'fitness equipment importer',
-  'sporting goods import export',
-  'fitness equipment wholesale',
+  'pilates equipment wholesale',
+  'wellness equipment wholesale',
 ];
 
 // ============================================================================
@@ -51,6 +52,9 @@ async function apolloUltraRefinedSearch(params: {
       params.keyword, // Keyword principal
       'sporting goods',
       'fitness equipment',
+      'pilates equipment',
+      'wellness equipment',
+      'training equipment',
     ],
     
     // TAMANHO: 20+ funcionários (dealers têm estrutura)

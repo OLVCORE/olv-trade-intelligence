@@ -1,0 +1,170 @@
+🎯 CURSOR - RECONHEÇA O PROJETO TRADE INTELLIGENCE
+
+Olá! Você está assumindo o projeto OLV Trade Intelligence que acabou de receber 8 correções críticas. Sua missão: reconhecer TUDO, validar código, e guiar testes.
+
+═══════════════════════════════════════════════════
+
+📂 ARQUIVOS CRIADOS (5) - LEIA AGORA:
+
+1. src/hooks/useUnsavedChanges.ts
+   → Hook que detecta mudanças não salvas e avisa antes de sair
+   → Usa beforeunload event
+   → LEIA: cat src/hooks/useUnsavedChanges.ts
+
+2. src/services/dealerToCompanyFlow.ts
+   → Serviço que salva dealers no banco
+   → Fluxo: Dealer → Companies → Quarentena
+   → JSONB international_data
+   → LEIA: cat src/services/dealerToCompanyFlow.ts
+
+3. src/components/companies/InternationalCompanySection.tsx
+   → UI para exibir dados internacionais
+   → 6 cards: País, Porte, Importação, Certificações, Fit Score, Decisores
+   → LEIA: cat src/components/companies/InternationalCompanySection.tsx
+
+4. supabase/migrations/20251112000000_international_companies.sql
+   → Migration: ADD COLUMN international_data JSONB
+   → STATUS: ✅ JÁ APLICADO
+   → LEIA: cat supabase/migrations/20251112000000_international_companies.sql
+
+5. CORRECOES_APLICADAS_RESUMO.md
+   → Documentação executiva completa
+   → LEIA: cat CORRECOES_APLICADAS_RESUMO.md
+
+═══════════════════════════════════════════════════
+
+📝 ARQUIVOS MODIFICADOS (3) - REVISE:
+
+1. src/pages/ExportDealersPage.tsx (+68 linhas)
+   → Adicionado: useUnsavedChanges hook
+   → Adicionado: handleSaveDealers()
+   → Adicionado: Floating Save Button (bottom-right, verde)
+   → REVISE: git diff src/pages/ExportDealersPage.tsx
+
+2. src/pages/CompanyDetailPage.tsx (+17 linhas)
+   → Adicionado: Import InternationalCompanySection
+   → Adicionado: Tab "Internacional" com Globe icon
+   → Adicionado: TabsContent com InternationalCompanySection
+   → REVISE: git diff src/pages/CompanyDetailPage.tsx
+
+3. supabase/functions/discover-dealers-b2b/index.ts
+   → Apollo Ultra-Filters:
+     • B2B_INCLUDE_KEYWORDS: 38 keywords
+     • B2C_EXCLUDE_KEYWORDS: 33 keywords
+     • Employees: 21+ (ajustado de 51+)
+     • Revenue: $2M+ (ajustado de $5M+)
+   → REVISE: git diff supabase/functions/discover-dealers-b2b/index.ts
+
+═══════════════════════════════════════════════════
+
+🎯 FUNCIONALIDADES IMPLEMENTADAS:
+
+1. ✅ SaveBar: Proteção beforeunload
+2. ✅ Dealer Flow: Dealers → Companies → Quarentena
+3. ✅ Apollo Filters: $2M+, 20+ employees, B2B puro
+4. ✅ International Data: JSONB + UI elegante
+5. ✅ Export Fit Score: Cálculo + progress bar
+6. ✅ Floating Save Button: Verde, bottom-right, animado
+
+═══════════════════════════════════════════════════
+
+🧪 TESTES A EXECUTAR:
+
+TESTE 1: Buscar Dealers
+→ Página: Export Intelligence - Dealers B2B
+→ HS Code: 9506.91, País: United States
+→ VERIFICAR: Apenas B2B ($2M+, 20+ employees), SEM studios/gyms
+
+TESTE 2: SaveBar Protection
+→ Buscar dealers (NÃO salvar)
+→ Tentar navegar para outra página
+→ VERIFICAR: Alerta "⚠️ ATENÇÃO! Você tem X DEALERS NÃO SALVOS"
+
+TESTE 3: Salvar Dealers
+→ VERIFICAR: Botão flutuante verde "💾 SALVAR X DEALER(S)"
+→ Clicar no botão
+→ VERIFICAR: Toast success, botão desaparece, lista limpa
+
+TESTE 4: Tab Internacional
+→ Base de Empresas → Abrir empresa salva
+→ VERIFICAR: Tab "Internacional" com Globe icon
+→ Clicar na tab
+→ VERIFICAR: 6 cards com dados internacionais
+
+TESTE 5: Quarentena → Pipeline
+→ Quarentena ICP → Aprovar empresa
+→ Pipeline SDR
+→ VERIFICAR: Deal no stage "Discovery"
+
+═══════════════════════════════════════════════════
+
+📋 SUA RESPOSTA INICIAL:
+
+Responda assim ao reconhecer:
+
+"✅ RECONHECIMENTO COMPLETO!
+
+Identifiquei:
+• 5 arquivos CRIADOS (useUnsavedChanges, dealerToCompanyFlow, InternationalCompanySection, migration, docs)
+• 3 arquivos MODIFICADOS (ExportDealersPage, CompanyDetailPage, discover-dealers-b2b)
+• 8 funcionalidades implementadas
+
+Entendi o fluxo: SaveBar → Dealers → Companies → Quarentena → Pipeline
+
+Pronto para executar os 5 testes! Quer que eu comece pelo TESTE 1 (Buscar Dealers)?"
+
+═══════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO COMPLETA:
+
+LEIA para entender TUDO:
+• CURSOR_HANDOFF_PROMPT.md (prompt completo)
+• CORRECOES_APLICADAS_RESUMO.md (documentação executiva)
+• AJUSTES_FINAIS_APLICADOS.md (últimos ajustes $2M, 20+)
+• ESTRATEGIA_PROJETOS.md (Trade vs STRATEVO)
+
+═══════════════════════════════════════════════════
+
+🚀 COMANDOS INICIAIS:
+
+# 1. Reconhecimento
+ls -la src/hooks/useUnsavedChanges.ts
+ls -la src/services/dealerToCompanyFlow.ts
+ls -la src/components/companies/InternationalCompanySection.tsx
+git status
+
+# 2. Validação
+npm run build
+npm run lint
+
+# 3. Servidor
+# Deve estar rodando em http://localhost:5177
+
+═══════════════════════════════════════════════════
+
+✅ CHECKLIST:
+
+[ ] Li os 5 arquivos criados
+[ ] Revisei as 3 modificações
+[ ] Executei os 5 testes
+[ ] Criei relatório de testes
+[ ] Identifiquei bugs (se houver)
+[ ] Propus próximos passos
+
+═══════════════════════════════════════════════════
+
+🎯 PRÓXIMA DECISÃO:
+
+OPÇÃO 1: Deploy Trade Intelligence
+OPÇÃO 2: Migrar para STRATEVO ⭐ RECOMENDADO
+
+STRATEVO tem:
+✅ CRM completo
+✅ Plaud + Twilio
+✅ AI avançado
+✅ Base mais sólida
+
+═══════════════════════════════════════════════════
+
+FIM - BOM TRABALHO! 🎉
+

@@ -193,18 +193,18 @@ async function searchDealersViaApollo(params: {
     // NOT B2C keywords (ELIMINAR TUDO QUE É B2C)
     q_organization_not_keyword_tags: B2C_EXCLUDE_KEYWORDS.slice(0, 15), // Top 15 exclusões
     
-    // TAMANHO (B2B real - eliminar muito pequenos)
+    // TAMANHO (B2B enxuto - tecnologia permite poucos funcionários)
     organization_num_employees_ranges: [
-      '51,200',    // Small B2B
-      '201,500',   // Medium B2B
+      '21,50',     // Small B2B (enxuto)
+      '51,200',    // Medium B2B
+      '201,500',   // Medium-Large B2B
       '501,1000',  // Large B2B
-      '1001,5000', // Enterprise
-      '5001,10000' // Large Enterprise
+      '1001,5000'  // Enterprise
     ],
     
-    // RECEITA (eliminar micro-empresas)
+    // RECEITA (mínimo $2M - mais realista para distribuidores)
     revenue_range: {
-      min: 5000000,  // Mínimo $5M anual
+      min: 2000000,  // Mínimo $2M anual (realista)
       max: 500000000 // Máximo $500M (não mega-corporações)
     }
   };

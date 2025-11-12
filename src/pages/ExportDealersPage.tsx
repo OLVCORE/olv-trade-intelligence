@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { DealerDiscoveryForm, type DealerSearchParams } from '@/components/export/DealerDiscoveryForm';
 import { DealerCard, DealersEmptyState, type Dealer } from '@/components/export/DealerCard';
+import { DealersTable } from '@/components/export/DealersTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -232,30 +233,11 @@ export default function ExportDealersPage() {
         </Card>
       )}
 
-      {/* RESULTS GRID */}
+      {/* RESULTS TABLE */}
       {dealers.length === 0 && !searchMutation.isPending ? (
         <DealersEmptyState />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dealers.map((dealer) => (
-            <DealerCard
-              key={dealer.id}
-              dealer={dealer}
-              onViewDetails={(d) => {
-                toast.info('Detalhes do dealer', {
-                  description: `Abrindo detalhes de ${d.name}`,
-                });
-                // TODO: Abrir modal ou navegar para página de detalhes
-              }}
-              onGenerateProposal={(d) => {
-                toast.info('Gerar proposta comercial', {
-                  description: `Criando proposta para ${d.name}`,
-                });
-                // TODO: Abrir modal de geração de proposta (FASE 6)
-              }}
-            />
-          ))}
-        </div>
+        <DealersTable dealers={dealers} />
       )}
 
       {/* INFO FOOTER */}

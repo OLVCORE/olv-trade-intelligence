@@ -1,0 +1,143 @@
+🔍 CURSOR - APENAS RECONHEÇA E VALIDE (NÃO IMPLEMENTE NADA NOVO)
+
+IMPORTANTE: Outro Cursor JÁ FEZ TODO O TRABALHO. Você só precisa:
+1. Reconhecer o que foi feito
+2. Validar que está correto
+3. Executar testes para verificar que funciona
+
+NÃO CRIE NADA NOVO! NÃO MODIFIQUE NADA! APENAS VALIDE!
+
+═══════════════════════════════════════════════════
+
+📦 O QUE JÁ FOI FEITO (APENAS LEIA E CONFIRME):
+
+✅ 5 ARQUIVOS CRIADOS:
+1. src/hooks/useUnsavedChanges.ts
+2. src/services/dealerToCompanyFlow.ts
+3. src/components/companies/InternationalCompanySection.tsx
+4. supabase/migrations/20251112000000_international_companies.sql
+5. CORRECOES_APLICADAS_RESUMO.md
+
+✅ 3 ARQUIVOS MODIFICADOS:
+1. src/pages/ExportDealersPage.tsx (SaveBar + botão flutuante)
+2. src/pages/CompanyDetailPage.tsx (Tab Internacional)
+3. supabase/functions/discover-dealers-b2b/index.ts (Apollo filters: $2M+, 20+ employees)
+
+✅ 8 FUNCIONALIDADES IMPLEMENTADAS:
+1. SaveBar com proteção beforeunload
+2. Dealer → Companies → Quarentena flow
+3. Apollo Ultra-Filters ($2M+ revenue, 20+ employees)
+4. International data (JSONB column)
+5. Tab "Internacional" na CompanyDetailPage
+6. Export Fit Score (cálculo + UI)
+7. Floating Save Button (verde, bottom-right)
+8. Decisores B2B identificados
+
+═══════════════════════════════════════════════════
+
+🎯 SUA ÚNICA TAREFA: VALIDAR E TESTAR
+
+PASSO 1: RECONHECIMENTO (apenas confirme que os arquivos existem)
+```bash
+ls -la src/hooks/useUnsavedChanges.ts
+ls -la src/services/dealerToCompanyFlow.ts
+ls -la src/components/companies/InternationalCompanySection.tsx
+git status
+```
+
+RESPONDA: "✅ Arquivos encontrados! Reconhecimento completo."
+
+═══════════════════════════════════════════════════
+
+PASSO 2: VALIDAÇÃO DE CÓDIGO (verifique erros)
+```bash
+npm run build
+```
+
+SE HOUVER ERROS: Liste os erros encontrados
+SE NÃO HOUVER ERROS: Responda "✅ Build passou! Código válido."
+
+═══════════════════════════════════════════════════
+
+PASSO 3: TESTES FUNCIONAIS (guie o usuário)
+
+TESTE 1: Verificar que servidor está rodando
+→ Abra http://localhost:5177
+→ DIGA: "Servidor está rodando? (Sim/Não)"
+
+TESTE 2: Buscar Dealers B2B
+→ Navegue: Export Intelligence - Dealers B2B
+→ Preencha: HS Code 9506.91, País United States
+→ Clique: Buscar Dealers
+→ VERIFIQUE: Retornou dealers? (Sim/Não)
+→ VERIFIQUE: São APENAS distribuidores/importadores? (Sim/Não)
+→ VERIFIQUE: NÃO tem studios/gyms? (Sim/Não)
+
+TESTE 3: SaveBar Protection
+→ Após buscar dealers, NÃO salve
+→ Tente navegar para outra página
+→ VERIFIQUE: Apareceu alerta "⚠️ ATENÇÃO"? (Sim/Não)
+
+TESTE 4: Salvar Dealers
+→ VERIFIQUE: Aparece botão verde "💾 SALVAR X DEALER(S)" no canto inferior direito? (Sim/Não)
+→ Clique no botão
+→ VERIFIQUE: Apareceu toast "✅ X dealer(s) salvos"? (Sim/Não)
+→ VERIFIQUE: Botão desapareceu? (Sim/Não)
+
+TESTE 5: Tab Internacional
+→ Navegue: Base de Empresas
+→ Abra uma empresa que foi salva
+→ VERIFIQUE: Existe tab "Internacional" com ícone Globe? (Sim/Não)
+→ Clique na tab
+→ VERIFIQUE: Aparecem os cards (País, Porte, Score, etc.)? (Sim/Não)
+
+═══════════════════════════════════════════════════
+
+📋 FORMATO DA SUA RESPOSTA:
+
+Responda EXATAMENTE assim:
+
+"✅ VALIDAÇÃO COMPLETA - TRADE INTELLIGENCE
+
+## RECONHECIMENTO:
+✅ 5 arquivos criados encontrados
+✅ 3 arquivos modificados encontrados
+✅ Build passou sem erros [OU] ❌ Erros encontrados: [liste]
+
+## TESTES EXECUTADOS:
+1. Servidor rodando: [✅ SIM / ❌ NÃO]
+2. Buscar Dealers: [✅ PASSOU / ❌ FALHOU]
+3. SaveBar Protection: [✅ PASSOU / ❌ FALHOU]
+4. Salvar Dealers: [✅ PASSOU / ❌ FALHOU]
+5. Tab Internacional: [✅ PASSOU / ❌ FALHOU]
+
+## BUGS ENCONTRADOS:
+[Liste bugs se houver, ou escreva "Nenhum"]
+
+## CONCLUSÃO:
+[Tudo funcionando ✅ / Problemas encontrados ❌]"
+
+═══════════════════════════════════════════════════
+
+⚠️ IMPORTANTE - NÃO FAÇA:
+
+❌ NÃO crie novos arquivos
+❌ NÃO modifique código existente
+❌ NÃO implemente novas features
+❌ NÃO faça deploy
+❌ NÃO mude filtros Apollo (já estão corretos: $2M+, 20+ employees)
+
+✅ APENAS:
+✅ Reconheça o que foi feito
+✅ Valide o código
+✅ Execute testes
+✅ Reporte resultados
+
+═══════════════════════════════════════════════════
+
+🎯 COMECE AGORA:
+
+Responda: "✅ Entendido! Vou apenas VALIDAR e TESTAR. Não vou criar/modificar nada. Começando reconhecimento dos arquivos..."
+
+E então execute o PASSO 1 (reconhecimento).
+
