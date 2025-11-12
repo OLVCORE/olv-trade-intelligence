@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { DealerDiscoveryForm, type DealerSearchParams } from '@/components/export/DealerDiscoveryForm';
@@ -17,7 +18,8 @@ import {
   Building2,
   Sparkles,
   Save,
-  Loader2
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -28,6 +30,7 @@ import { saveDealersToCompanies } from '@/services/dealerToCompanyFlow';
 // ============================================================================
 
 export default function ExportDealersPage() {
+  const navigate = useNavigate();
   const { currentWorkspace } = useTenant();
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [searchParams, setSearchParams] = useState<DealerSearchParams | null>(null);
@@ -154,8 +157,8 @@ export default function ExportDealersPage() {
       
       if (result.success) {
         toast.success(`✅ ${result.saved} dealer(s) salvos com sucesso!`, {
-          description: `${result.newCompanies} novos, ${result.updated} atualizados, ${result.skipped} duplicados`,
-          duration: 6000,
+          description: `Redirecionando para Base de Empresas...`,
+          duration: 3000,
         });
         
         // LIMPAR DEALERS E DESMARCAR UNSAVED
@@ -163,6 +166,16 @@ export default function ExportDealersPage() {
         setHasUnsavedChanges(false);
         
         console.log('[EXPORT] ✅ Salvamento completo:', result);
+        
+        // ✅ REDIRECIONAR AUTOMATICAMENTE PARA BASE DE EMPRESAS
+        setTimeout(() => {
+          navigate('/companies', { 
+            state: { 
+              message: `${result.saved} dealer(s) importados com sucesso!`,
+              highlight: 'dealer_discovery' 
+            } 
+          });
+        }, 1500);
       } else {
         throw new Error(result.error || 'Erro desconhecido ao salvar');
       }
