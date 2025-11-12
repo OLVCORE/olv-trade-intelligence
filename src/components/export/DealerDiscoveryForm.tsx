@@ -94,7 +94,8 @@ const B2C_EXCLUDE_KEYWORDS = [
 ];
 
 export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFormProps) {
-  const [hsCode, setHsCode] = useState('');
+  const [hsCodes, setHsCodes] = useState<string[]>([]); // MÚLTIPLOS HS Codes
+  const [hsCodeInput, setHsCodeInput] = useState(''); // Input temporário
   const [countries, setCountries] = useState<string[]>([]);
   const [minVolume, setMinVolume] = useState('');
   const [openCountryCombobox, setOpenCountryCombobox] = useState(false);
