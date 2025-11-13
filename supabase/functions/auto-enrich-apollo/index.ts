@@ -202,28 +202,64 @@ serve(async (req) => {
       );
     }
 
-    // Atualizar empresa no banco
-    console.log('💾 [AUTO-ENRICH] Salvando no banco...');
+    // MERGE INTELIGENTE: Ler dados existentes primeiro
+    console.log('📖 [AUTO-ENRICH] Lendo dados existentes...');
+    const { data: existingCompany } = await supabase
+      .from('companies')
+      .select('apollo_id, linkedin_url, description, raw_data')
+      .eq('id', companyId)
+      .single();
+    
+    // Preparar dados para merge (NUNCA sobrescreve campos preenchidos!)
+    const updateData: any = {
+      enrichment_source: 'auto', // Marca como auto (será 'manual' se usuário editar)
+      enriched_at: new Date().toISOString(),
+    };
+    
+    // Apollo ID: Só adiciona se NÃO existe
+    if (!existingCompany?.apollo_id) {
+      updateData.apollo_id = org.id;
+      console.log('✅ [AUTO-ENRICH] Apollo ID adicionado:', org.id);
+    } else {
+      console.log('⏭️ [AUTO-ENRICH] Apollo ID já existe, preservando:', existingCompany.apollo_id);
+    }
+    
+    // LinkedIn: Só adiciona se NÃO existe
+    if (!existingCompany?.linkedin_url && org.linkedin_url) {
+      updateData.linkedin_url = org.linkedin_url;
+      console.log('✅ [AUTO-ENRICH] LinkedIn adicionado:', org.linkedin_url);
+    } else {
+      console.log('⏭️ [AUTO-ENRICH] LinkedIn já existe, preservando:', existingCompany?.linkedin_url);
+    }
+    
+    // Descrição: Só adiciona se NÃO existe OU está vazia
+    if (!existingCompany?.description && (org.short_description || org.description)) {
+      updateData.description = org.short_description || org.description;
+      console.log('✅ [AUTO-ENRICH] Descrição adicionada');
+    } else {
+      console.log('⏭️ [AUTO-ENRICH] Descrição já existe, preservando');
+    }
+    
+    // raw_data: Merge profundo (preserva campos existentes + adiciona novos)
+    const existingRawData = (existingCompany?.raw_data || {}) as any;
+    const newRawData = {
+      ...existingRawData, // Preserva TUDO que já existe
+      apollo_id: existingRawData.apollo_id || org.id, // Só adiciona se não existe
+      apollo_link: existingRawData.apollo_link || `https://app.apollo.io/#/companies/${org.id}`,
+      linkedin_url: existingRawData.linkedin_url || org.linkedin_url,
+      decision_makers: decisionMakers.length > 0 ? decisionMakers : existingRawData.decision_makers || [], // Só sobrescreve se trouxer novos
+      auto_enrich_method: searchMethod,
+      auto_enriched_at: new Date().toISOString(),
+      // Preserva TODOS os outros campos que já existem (fit_score, type, notes, etc.)
+    };
+    
+    updateData.raw_data = newRawData;
+    
+    // Atualizar empresa no banco (com merge inteligente)
+    console.log('💾 [AUTO-ENRICH] Salvando no banco (MERGE, não sobrescrever)...');
     const { error: updateError } = await supabase
       .from('companies')
-      .update({
-        apollo_id: org.id,
-        linkedin_url: org.linkedin_url || null,
-        description: org.short_description || org.description || null,
-        enrichment_source: 'auto', // ⚠️ MARCA COMO AUTO
-        enriched_at: new Date().toISOString(),
-        raw_data: supabase.raw(`
-          COALESCE(raw_data, '{}'::jsonb) || 
-          '${JSON.stringify({
-            apollo_id: org.id,
-            apollo_link: `https://app.apollo.io/#/companies/${org.id}`,
-            linkedin_url: org.linkedin_url,
-            decision_makers: decisionMakers,
-            auto_enrich_method: searchMethod,
-            auto_enriched_at: new Date().toISOString(),
-          })}'::jsonb
-        `),
-      })
+      .update(updateData)
       .eq('id', companyId);
 
     if (updateError) {
