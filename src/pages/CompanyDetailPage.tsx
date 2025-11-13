@@ -1167,34 +1167,26 @@ export default function CompanyDetailPage() {
 
           {/* Estrutura Organizacional - Grid 2 Colunas */}
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card className="glass-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="h-5 w-5 text-primary" />
-                  Quadro de Pessoal
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Funcionários Total</p>
-                    <p className="text-sm font-bold text-primary">{rawData.funcionarios_presumido_matriz_cnpj || company.employees || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Este CNPJ</p>
-                    <p className="text-sm font-semibold">{rawData.funcionarios_presumido_este_cnpj || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">PAT Funcionários</p>
-                    <p className="text-sm font-semibold">{rawData.pat_funcionarios || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Qtd. Filiais</p>
-                    <p className="text-sm font-semibold">{rawData.qtd_filiais || '0'}</p>
-                  </div>
+            <CollapsibleCard title="Quadro de Pessoal" icon={Users} defaultExpanded={false}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Funcionários Total</p>
+                  <p className="text-sm font-bold text-primary">{rawData.funcionarios_presumido_matriz_cnpj || company.employees || 'N/A'}</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Este CNPJ</p>
+                  <p className="text-sm font-semibold">{rawData.funcionarios_presumido_este_cnpj || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">PAT Funcionários</p>
+                  <p className="text-sm font-semibold">{rawData.pat_funcionarios || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">Qtd. Filiais</p>
+                  <p className="text-sm font-semibold">{rawData.qtd_filiais || '0'}</p>
+                </div>
+              </div>
+            </CollapsibleCard>
 
             <CollapsibleCard title="Sócios e Administradores" icon={UserPlus} defaultExpanded={false}>
               <div className="max-h-48 overflow-y-auto">
@@ -1288,14 +1280,13 @@ export default function CompanyDetailPage() {
           {/* ❌ REMOVIDO: Card "Decisores & Colaboradores" (redundante e inútil) */}
 
           {decisors.length > 0 && (
-            <Card className="glass-card border-2 border-blue-500/30">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Target className="h-5 w-5 text-primary" />
-                  Decisores Cadastrados ({decisors.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <CollapsibleCard 
+              title={`Decisores Cadastrados (${decisors.length})`} 
+              icon={Target} 
+              defaultExpanded={true}
+              className="border-2 border-blue-500/30"
+            >
+              <div>
                 {console.log('[CompanyDetail] 🎯 Renderizando', decisors.length, 'decisores')}
                 
                 {/* 🔍 FILTROS AVANÇADOS */}
@@ -1496,8 +1487,8 @@ export default function CompanyDetailPage() {
                     );
                   })}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CollapsibleCard>
           )}
         </TabsContent>
 
