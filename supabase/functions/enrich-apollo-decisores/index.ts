@@ -395,6 +395,10 @@ serve(async (req) => {
           ...existingRawData,
           enriched_apollo: true,
           apollo_decisores_count: decisores.length,
+          // ✅ CAMPOS DIRETOS para aparecer no card
+          apollo_id: organizationId,
+          apollo_link: organizationId ? `https://app.apollo.io/#/companies/${organizationId}` : null,
+          linkedin_url: organizationData?.linkedin_url || existingRawData.linkedin_url,
           // ✅ NOVO: Dados completos da organização
           apollo_organization: organizationData ? {
             id: organizationData.id,
@@ -416,9 +420,21 @@ serve(async (req) => {
         }
       };
       
-      // ✅ ATUALIZAR CAMPO 'industry' SE APOLLO TROUXE
+      // ✅ ATUALIZAR CAMPOS DIRETOS DA EMPRESA
+      if (organizationId) {
+        updateData.apollo_id = organizationId;
+      }
+      
+      if (organizationData?.linkedin_url) {
+        updateData.linkedin_url = organizationData.linkedin_url;
+      }
+      
       if (organizationData?.industry) {
         updateData.industry = organizationData.industry;
+      }
+      
+      if (organizationData?.short_description) {
+        updateData.description = organizationData.short_description;
       }
 
       await supabaseClient
