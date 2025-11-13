@@ -2183,13 +2183,28 @@ export default function CompaniesManagementPage() {
                       </TableCell>
                     </TableRow>
                     
-                    {/* LINHA EXPANDIDA - CARD DROPDOWN COM TODOS OS DADOS */}
-                    {expandedRow === company.id && (
-                      <TableRow>
-                        <TableCell colSpan={11} className="bg-muted/30 p-0">
-                          <Card className="border-0 shadow-none">
-                            <CardContent className="p-6">
-                              <div className="grid grid-cols-2 gap-6">
+                               {/* LINHA EXPANDIDA - CARD DROPDOWN COM TODOS OS DADOS */}
+                               {expandedRow === company.id && (() => {
+                                 console.log('[CARD EXPANDIDO] 🔍 Dados da empresa:', {
+                                   id: company.id,
+                                   name: company.company_name,
+                                   city: company.city,
+                                   state: company.state,
+                                   country: company.country,
+                                   linkedin_url: company.linkedin_url,
+                                   apollo_id: company.apollo_id,
+                                   data_source: (company as any).data_source,
+                                   raw_data_linkedin: (company as any).raw_data?.linkedin_url,
+                                   raw_data_apollo: (company as any).raw_data?.apollo_id,
+                                   raw_data_source: (company as any).raw_data?.source,
+                                 });
+                                 
+                                 return (
+                                   <TableRow>
+                                     <TableCell colSpan={11} className="bg-muted/30 p-0">
+                                       <Card className="border-0 shadow-none">
+                                         <CardContent className="p-6">
+                                           <div className="grid grid-cols-2 gap-6">
                                 {/* COLUNA ESQUERDA */}
                                 <div className="space-y-4">
                                   <div>
@@ -2198,36 +2213,34 @@ export default function CompaniesManagementPage() {
                                       Informações Gerais
                                     </h4>
                                     <div className="space-y-2 text-sm">
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Nome:</span>
-                                        <span className="font-medium">{company.company_name}</span>
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Nome:</span>
+                                        <span className="font-medium flex-1">{company.company_name}</span>
                                       </div>
                                       {company.cnpj && (
-                                        <div className="flex justify-between">
-                                          <span className="text-muted-foreground">CNPJ:</span>
-                                          <span className="font-mono text-xs">{company.cnpj}</span>
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-muted-foreground min-w-[100px]">CNPJ:</span>
+                                          <span className="font-mono text-xs flex-1">{company.cnpj}</span>
                                         </div>
                                       )}
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Indústria:</span>
-                                        <span className="font-medium">{company.industry || 'N/A'}</span>
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Indústria:</span>
+                                        <span className="font-medium flex-1">{company.industry || 'N/A'}</span>
                                       </div>
                                       {(company.employee_count || company.employees_count) && (
-                                        <div className="flex justify-between">
-                                          <span className="text-muted-foreground">Funcionários:</span>
-                                          <Badge variant="secondary">
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-muted-foreground min-w-[100px]">Funcionários:</span>
+                                          <Badge variant="secondary" className="flex-1 justify-start w-fit">
                                             {company.employee_count || company.employees_count}
                                           </Badge>
                                         </div>
                                       )}
-                                      {((company as any).data_source || (company as any).raw_data?.source) && (
-                                        <div className="flex justify-between">
-                                          <span className="text-muted-foreground">Origem:</span>
-                                          <Badge variant="outline">
-                                            {(company as any).data_source || (company as any).raw_data?.source}
-                                          </Badge>
-                                        </div>
-                                      )}
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Origem:</span>
+                                        <Badge variant="outline" className="flex-1 justify-start w-fit">
+                                          {(company as any).data_source || (company as any).raw_data?.source || 'N/A'}
+                                        </Badge>
+                                      </div>
                                     </div>
                                   </div>
                                   
@@ -2390,7 +2403,8 @@ export default function CompaniesManagementPage() {
                           </Card>
                         </TableCell>
                       </TableRow>
-                    )}
+                    );
+                  })()}
                     </>
                   ))}
                 </TableBody>
