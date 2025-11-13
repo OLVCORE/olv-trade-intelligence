@@ -2432,12 +2432,39 @@ export default function CompaniesManagementPage() {
                                     </h4>
                                     <div className="space-y-2">
                                       {/* WEBSITE */}
-                                      {company.website && (
-                                        <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                                          <Globe className="h-4 w-4" />
-                                          Website
-                                          <ExternalLink className="h-3 w-3" />
-                                        </a>
+                                      {company.website ? (
+                                        <div className="flex items-center gap-2">
+                                          <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                            <Globe className="h-4 w-4" />
+                                            Website
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 p-0"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/company/${company.id}`);
+                                            }}
+                                            title="Editar website na página da empresa"
+                                          >
+                                            <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs h-7"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/company/${company.id}`);
+                                          }}
+                                        >
+                                          <Plus className="h-3 w-3 mr-1" />
+                                          Adicionar Website
+                                        </Button>
                                       )}
                                       
                                       {/* LINKEDIN (ler de company.linkedin_url OU raw_data.linkedin_url) */}
@@ -2445,14 +2472,41 @@ export default function CompaniesManagementPage() {
                                         const linkedinUrl = company.linkedin_url || (company as any).raw_data?.linkedin_url;
                                         if (linkedinUrl) {
                                           return (
-                                            <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                                              <Linkedin className="h-4 w-4" />
-                                              LinkedIn
-                                              <ExternalLink className="h-3 w-3" />
-                                            </a>
+                                            <div className="flex items-center gap-2">
+                                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                                <Linkedin className="h-4 w-4" />
+                                                LinkedIn
+                                                <ExternalLink className="h-3 w-3" />
+                                              </a>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-4 w-4 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  navigate(`/company/${company.id}`);
+                                                }}
+                                                title="Editar LinkedIn na página da empresa"
+                                              >
+                                                <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                              </Button>
+                                            </div>
                                           );
                                         }
-                                        return null;
+                                        return (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/company/${company.id}`);
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Adicionar LinkedIn
+                                          </Button>
+                                        );
                                       })()}
                                       
                                       {/* APOLLO (ler de company.apollo_id OU raw_data.apollo_id) */}
