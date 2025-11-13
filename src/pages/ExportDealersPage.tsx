@@ -101,7 +101,20 @@ export default function ExportDealersPage() {
 
         if (data?.dealers) {
           console.log(`[EXPORT] ✅ ${country}: ${data.dealers.length} dealers (Fit > 0)`);
-          allDealers.push(...data.dealers);
+          
+          // ✅ CONVERTER snake_case para camelCase (Edge Function → Frontend)
+          const convertedDealers = data.dealers.map((d: any) => ({
+            ...d,
+            linkedinUrl: d.linkedin_url || d.linkedinUrl, // ← FIX: converter snake_case
+            apolloId: d.apollo_id || d.apolloId,
+            apollo_link: d.apollo_link,
+            employeeCount: d.employee_count || d.employeeCount,
+            fitScore: d.fitScore || 50,
+            b2bType: d.b2bType || 'distributor',
+            decision_makers: d.decision_makers || [],
+          }));
+          
+          allDealers.push(...convertedDealers);
         }
       }
 
