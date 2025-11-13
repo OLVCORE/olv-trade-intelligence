@@ -2437,10 +2437,26 @@ export default function CompaniesManagementPage() {
                                               </div>
                                             ))}
                                           </div>
+                                        );
+                                      }
+                                      // Se não tem decisores, mostrar mensagem e botão
+                                      return (
+                                        <div className="text-center py-4 space-y-3">
+                                          <p className="text-xs text-muted-foreground">Nenhum decisor cadastrado</p>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/company/${company.id}`);
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Buscar Decisores no Apollo
+                                          </Button>
                                         </div>
                                       );
-                                    }
-                                    return null;
                                   })()}
                                 </div>
                               </div>
