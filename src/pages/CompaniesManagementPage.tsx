@@ -2399,16 +2399,16 @@ export default function CompaniesManagementPage() {
                                     </div>
                                   </div>
                                   
-                                  {/* DECISORES */}
-                                  {(() => {
-                                    const decisores = (company as any).raw_data?.decision_makers || [];
-                                    if (decisores.length > 0) {
-                                      return (
-                                        <div>
-                                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                            <Users className="h-4 w-4" />
-                                            Decisores ({decisores.length})
-                                          </h4>
+                                  {/* DECISORES - SEMPRE MOSTRAR (mesmo que vazio) */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Users className="h-4 w-4" />
+                                      Decisores ({(company as any).raw_data?.decision_makers?.length || 0})
+                                    </h4>
+                                    {(() => {
+                                      const decisores = (company as any).raw_data?.decision_makers || [];
+                                      if (decisores.length > 0) {
+                                        return (
                                           <div className="space-y-2">
                                             {decisores.slice(0, 5).map((dm: any, idx: number) => (
                                               <div key={idx} className="p-2 bg-muted/30 rounded text-xs border">
