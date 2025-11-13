@@ -89,6 +89,9 @@ export default function CompaniesManagementPage() {
     setExpandedRow(expandedRow === companyId ? null : companyId);
   };
   
+  // 🤖 AUTO-ENRIQUECIMENTO
+  const [isAutoEnriching, setIsAutoEnriching] = useState(false);
+  
   // 🔥 DEBOUNCE: Só busca após 500ms de inatividade
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -537,6 +540,84 @@ export default function CompaniesManagementPage() {
       });
     } finally {
       setEnrichingReceitaId(null);
+    }
+  };
+
+  // 🤖 AUTO-ENRIQUECIMENTO EM LOTE (Apollo com Nome + Cidade + País + Website)
+  const handleAutoEnrichAll = async () => {
+    try {
+      setIsAutoEnriching(true);
+      
+      // Filtrar empresas que precisam de enriquecimento:
+      // - Sem Apollo ID OU
+      // - Com Apollo mas enriquecido automaticamente (pode refinar)
+      const toEnrich = companies.filter(c => 
+        !c.apollo_id || (c as any).enrichment_source === 'auto'
+      );
+      
+      if (toEnrich.length === 0) {
+        toast.info('Todas as empresas já estão enriquecidas!');
+        setIsAutoEnriching(false);
+        return;
+      }
+      
+      logger.info(`🤖 [AUTO-ENRICH] Iniciando enriquecimento de ${toEnrich.length} empresas`, 'CompaniesManagement');
+      toast.info(`Enriquecendo ${toEnrich.length} empresas automaticamente...`);
+      
+      let enriched = 0;
+      let skipped = 0;
+      let errors = 0;
+      
+      for (const company of toEnrich) {
+        try {
+          // Chamar Edge Function de auto-enriquecimento
+          const { data, error } = await supabase.functions.invoke('auto-enrich-apollo', {
+            body: {
+              companyId: company.id,
+              companyName: company.company_name,
+              city: company.city,
+              state: company.state,
+              country: company.country,
+              website: company.website, // Opcional, mas aumenta precisão se existir
+            }
+          });
+          
+          if (error) {
+            logger.error(`❌ [AUTO-ENRICH] Erro em ${company.company_name}:`, error, 'CompaniesManagement');
+            errors++;
+            continue;
+          }
+          
+          if (data?.success) {
+            logger.info(`✅ [AUTO-ENRICH] ${company.company_name} enriquecido com ${data.decisores} decisores`, 'CompaniesManagement');
+            enriched++;
+          } else {
+            logger.warn(`⚠️ [AUTO-ENRICH] ${company.company_name} pulado: ${data?.message}`, 'CompaniesManagement');
+            skipped++;
+          }
+          
+          // Pequeno delay para não sobrecarregar API
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (e: any) {
+          logger.error(`❌ [AUTO-ENRICH] Exceção em ${company.company_name}:`, e, 'CompaniesManagement');
+          errors++;
+        }
+      }
+      
+      // Atualizar lista
+      await refetch();
+      
+      // Feedback final
+      const message = `✅ Auto-enriquecimento concluído!\n${enriched} enriquecidas | ${skipped} puladas | ${errors} erros`;
+      logger.info(message, 'CompaniesManagement');
+      toast.success(message);
+      
+    } catch (error: any) {
+      logger.error('❌ [AUTO-ENRICH] Erro geral:', error, 'CompaniesManagement');
+      toast.error('Erro ao executar auto-enriquecimento');
+    } finally {
+      setIsAutoEnriching(false);
     }
   };
 
@@ -1684,6 +1765,27 @@ export default function CompaniesManagementPage() {
 
                   {/* ✅ APOLLO ID MANUAL - BUSCA DIRETA POR ORGANIZATION ID */}
                   <ApolloOrgIdDialog onEnrich={handleApolloManualEnrich} />
+
+                  {/* 🤖 AUTO-ENRIQUECIMENTO EM LOTE */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAutoEnrichAll}
+                    disabled={isAutoEnriching || companies.length === 0}
+                    className="border-dashed"
+                  >
+                    {isAutoEnriching ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Enriquecendo...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                        Auto-Enriquecer Todas
+                      </>
+                    )}
+                  </Button>
 
                   {/* Dropdown de Ações em Massa */}
                   <CompaniesActionsMenu
