@@ -1792,10 +1792,10 @@ export default function CompaniesManagementPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleSort('cnpj')}
+                        onClick={() => handleSort('country')}
                         className="h-8 flex items-center gap-1"
                       >
-                        CNPJ
+                        Localização
                         <ArrowUpDown className="h-3 w-3" />
                       </Button>
                     </TableHead>
@@ -1937,55 +1937,38 @@ export default function CompaniesManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {editingCnpjId === company.id ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              value={cnpjInput}
-                              onChange={(e) => setCnpjInput(e.target.value)}
-                              placeholder="00000000000000"
-                              className="h-7 w-[140px] text-xs"
-                              maxLength={14}
-                            />
-                            <Button 
-                              size="sm" 
-                              variant="secondary" 
-                              className="h-7 px-2"
-                              onClick={() => saveCnpj(company.id, cnpjInput)}
-                            >
-                              Salvar
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2"
-                              onClick={() => { 
-                                setEditingCnpjId(null); 
-                                setCnpjInput(''); 
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {company.cnpj ? (
-                              <Badge variant="outline">{company.cnpj}</Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">N/A</span>
-                            )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 px-2"
-                              onClick={() => { 
-                                setEditingCnpjId(company.id); 
-                                setCnpjInput(company.cnpj || ''); 
-                              }}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {(() => {
+                            const country = company.country || 'N/A';
+                            const uf = (company.location as any)?.state || 
+                                       (company as any).raw_data?.receita?.uf ||
+                                       (company as any).raw_data?.uf || company.state;
+                            const city = (company.location as any)?.city || 
+                                         (company as any).raw_data?.receita?.municipio ||
+                                         (company as any).raw_data?.municipio || company.city;
+                            
+                            if (country !== 'N/A') {
+                              return (
+                                <>
+                                  <Badge variant="secondary" className="w-fit">
+                                    {country}
+                                  </Badge>
+                                  {uf && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={uf}>
+                                      {uf}
+                                    </span>
+                                  )}
+                                  {city && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={city}>
+                                      {city}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            }
+                            return <span className="text-xs text-muted-foreground">N/A</span>;
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {(company as any).source_name ? (
