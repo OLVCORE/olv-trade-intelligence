@@ -534,7 +534,7 @@ export default function CompanyDetailPage() {
             <div className="space-y-2">
               <CardTitle className="text-3xl flex items-center gap-3">
                 <Building2 className="h-8 w-8 text-blue-600 dark:text-lime-400" />
-                <span className="text-blue-700 dark:text-lime-300">{company.name}</span>
+                <span className="text-blue-700 dark:text-lime-300">{company.company_name || company.name}</span>
               </CardTitle>
               {receitaData?.fantasia && receitaData.fantasia !== company.name && (
                 <p className="text-lg text-muted-foreground">Nome Fantasia: {receitaData.fantasia}</p>
