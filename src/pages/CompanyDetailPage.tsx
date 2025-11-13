@@ -352,32 +352,27 @@ export default function CompanyDetailPage() {
   const handleEnrichApollo = async (apolloOrgId?: string) => {
     setIsEnriching(true);
     try {
-      console.log('[CompanyDetail] 🚀 Buscando decisores Apollo para:', company.name);
+      console.log('[CompanyDetail] 🚀 Buscando decisores Apollo para:', company?.company_name || company?.name);
       console.log('[CompanyDetail] 📋 Apollo Org ID:', apolloOrgId || 'N/A');
+      console.log('[CompanyDetail] 🔍 Company ID:', id);
       
       toast.info('Buscando decisores no Apollo.io...', {
         description: apolloOrgId ? 'Usando Organization ID manual' : 'Usando nome da empresa'
       });
       
-      // Salvar Apollo Org ID na empresa se fornecido
-      if (apolloOrgId) {
-        await supabase
-          .from('companies')
-          .update({ apollo_organization_id: apolloOrgId })
-          .eq('id', id);
-      }
-      
       // Usar função simplificada enrich-apollo-decisores COM FILTROS INTELIGENTES
       const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
           company_id: id,
-          company_name: company.name,
-          domain: company.domain || company.website,
-          apollo_org_id: apolloOrgId || company.apollo_organization_id,
+          companyId: id, // Backward compatibility
+          company_name: company?.company_name || company?.name,
+          companyName: company?.company_name || company?.name, // Backward compatibility
+          domain: company?.domain || company?.website,
+          apollo_org_id: apolloOrgId,
           modes: ['people', 'company'],
-          city: receitaData?.municipio || company.city,
-          state: receitaData?.uf || company.state,
-          industry: company.industry
+          city: receitaData?.municipio || company?.city,
+          state: receitaData?.uf || company?.state,
+          industry: company?.industry
         }
       });
       
@@ -387,18 +382,46 @@ export default function CompanyDetailPage() {
       }
 
       console.log('[CompanyDetail] ✅ Apollo retornou:', data);
+      console.log('[CompanyDetail] 📊 Decisores encontrados:', (data as any)?.decisores?.length || 0);
+      console.log('[CompanyDetail] 💾 Decisores salvos:', (data as any)?.decisores_salvos || 0);
       
-      // ✅ INVALIDAR TODAS AS QUERIES RELACIONADAS
-      queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
-      queryClient.invalidateQueries({ queryKey: ['decision_makers', id] });
-      queryClient.invalidateQueries({ queryKey: ['companies'] }); // ← ATUALIZAR LISTA DE EMPRESAS
+      // ✅ MARCAR COMO MANUAL (proteger contra sobrescrita automática)
+      await supabase
+        .from('companies')
+        .update({ 
+          enrichment_source: 'manual', // ⚠️ PROTEGE contra auto-enriquecimento
+          enriched_at: new Date().toISOString(),
+        })
+        .eq('id', id);
       
-      toast.success('Decisores encontrados!', {
-        description: `${(data as any)?.decisores?.length || (data as any)?.decisores_salvos || 0} decisores salvos no banco`
+      console.log('[CompanyDetail] ✅ Marcado como enrichment_source = "manual"');
+      
+      // ✅ INVALIDAR E REFETCH FORÇADO
+      console.log('[CompanyDetail] 🔄 Invalidando cache...');
+      await queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
+      await queryClient.invalidateQueries({ queryKey: ['decision_makers', id] });
+      await queryClient.invalidateQueries({ queryKey: ['companies'] }); // Atualizar lista principal
+      
+      // ⚡ REFETCH FORÇADO IMEDIATO
+      console.log('[CompanyDetail] ⚡ Fazendo refetch forçado...');
+      await queryClient.refetchQueries({ queryKey: ['company-detail', id] });
+      await queryClient.refetchQueries({ queryKey: ['decision_makers', id] });
+      
+      console.log('[CompanyDetail] 🎉 Refetch concluído!');
+      
+      toast.success('✅ Decisores enriquecidos com sucesso!', {
+        description: `${(data as any)?.decisores_salvos || (data as any)?.decisores?.length || 0} decisores salvos. Recarregando página...`,
+        duration: 3000,
       });
+      
+      // 🔄 RELOAD DA PÁGINA COMPLETA (garante que tudo atualiza)
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+      
     } catch (e: any) {
       console.error('[CompanyDetail] ❌ Erro completo:', e);
-      toast.error('Erro ao buscar decisores', { 
+      toast.error('❌ Erro ao buscar decisores', { 
         description: e.message || 'Verifique o Apollo Organization ID'
       });
     } finally {
