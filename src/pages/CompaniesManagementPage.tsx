@@ -2457,7 +2457,8 @@ export default function CompaniesManagementPage() {
                                           </Button>
                                         </div>
                                       );
-                                  })()}
+                                    })()}
+                                  </div>
                                 </div>
                               </div>
                             </CardContent>
