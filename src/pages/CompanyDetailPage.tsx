@@ -387,11 +387,13 @@ export default function CompanyDetailPage() {
 
       console.log('[CompanyDetail] ✅ Apollo retornou:', data);
       
+      // ✅ INVALIDAR TODAS AS QUERIES RELACIONADAS
       queryClient.invalidateQueries({ queryKey: ['company-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['decision_makers', id] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] }); // ← ATUALIZAR LISTA DE EMPRESAS
       
       toast.success('Decisores encontrados!', {
-        description: `${(data as any)?.decisores_salvos || 0} decisores salvos no banco`
+        description: `${(data as any)?.decisores?.length || (data as any)?.decisores_salvos || 0} decisores salvos no banco`
       });
     } catch (e: any) {
       console.error('[CompanyDetail] ❌ Erro completo:', e);
