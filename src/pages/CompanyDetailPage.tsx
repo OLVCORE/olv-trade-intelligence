@@ -50,6 +50,7 @@ import { DiagnosticAIPanel } from '@/components/companies/DiagnosticAIPanel';
 import { CompanyIntelligenceChat } from '@/components/companies/CompanyIntelligenceChat';
 import { InternationalCompanySection } from '@/components/companies/InternationalCompanySection';
 import { MultiLayerEnrichButton } from '@/components/canvas/MultiLayerEnrichButton';
+import { CollapsibleCard } from '@/components/companies/CollapsibleCard';
 import apolloLogo from "@/assets/logos/apollo.ico";
 import phantomLogo from "@/assets/logos/phantombuster.png";
 import { CompanyEnrichmentTabs } from '@/components/companies/CompanyEnrichmentTabs';
@@ -919,85 +920,69 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* Identificação Cadastral - 4 Colunas Compactas */}
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Shield className="h-4 w-4 text-primary" />
-                Identificação Cadastral
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="p-2 border rounded bg-muted/10">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Razão Social</p>
-                  <p className="text-xs font-semibold truncate">{receitaData?.razao_social || company.name}</p>
-                </div>
-                <div className="p-2 border rounded bg-muted/10">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Nome Fantasia</p>
-                  <p className="text-xs font-semibold">{receitaData?.fantasia || rawData.nome_fantasia || 'N/A'}</p>
-                </div>
-                <div className="p-2 border rounded bg-muted/10">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Tipo Unidade</p>
-                  <p className="text-xs font-semibold">{rawData.tipo_unidade || receitaData?.tipo || 'Matriz'}</p>
-                </div>
-                <div className="p-2 border rounded bg-muted/10">
-                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Natureza Jurídica</p>
-                  <p className="text-xs font-semibold">{receitaData?.natureza_juridica || rawData.natureza_juridica || 'N/A'}</p>
-                </div>
+          <CollapsibleCard title="Identificação Cadastral" icon={Shield} defaultExpanded={true}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="p-2 border rounded bg-muted/10">
+                <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Razão Social</p>
+                <p className="text-xs font-semibold truncate">{receitaData?.razao_social || company.name}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="p-2 border rounded bg-muted/10">
+                <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Nome Fantasia</p>
+                <p className="text-xs font-semibold">{receitaData?.fantasia || rawData.nome_fantasia || 'N/A'}</p>
+              </div>
+              <div className="p-2 border rounded bg-muted/10">
+                <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Tipo Unidade</p>
+                <p className="text-xs font-semibold">{rawData.tipo_unidade || receitaData?.tipo || 'Matriz'}</p>
+              </div>
+              <div className="p-2 border rounded bg-muted/10">
+                <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Natureza Jurídica</p>
+                <p className="text-xs font-semibold">{receitaData?.natureza_juridica || rawData.natureza_juridica || 'N/A'}</p>
+              </div>
+            </div>
+          </CollapsibleCard>
 
           {/* Localização + Mapa - Grid 2 Colunas */}
           <div className="grid lg:grid-cols-2 gap-4">
-            <Card className="glass-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  Localização Completa
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Logradouro</p>
-                    <p className="text-xs font-medium">{receitaData?.logradouro || rawData.logradouro || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Número</p>
-                    <p className="text-xs font-medium">{receitaData?.numero || rawData.numero || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Complemento</p>
-                    <p className="text-xs font-medium">{receitaData?.complemento || rawData.complemento || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Bairro</p>
-                    <p className="text-xs font-medium">{receitaData?.bairro || rawData.bairro || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">CEP</p>
-                    <p className="text-xs font-mono font-medium">{receitaData?.cep || rawData.cep || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Cidade</p>
-                    <p className="text-xs font-medium">{receitaData?.municipio || rawData.cidade || (company.location as any)?.city || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Estado</p>
-                    <p className="text-xs font-medium">{receitaData?.uf || rawData.uf || (company.location as any)?.state || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Microrregião</p>
-                    <p className="text-xs font-medium">{rawData.microrregiao || 'N/A'}</p>
-                  </div>
-                  <div className="p-2 border rounded bg-muted/10">
-                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Mesorregião</p>
-                    <p className="text-xs font-medium">{rawData.mesorregiao || 'N/A'}</p>
-                  </div>
+            <CollapsibleCard title="Localização Completa" icon={MapPin} defaultExpanded={false}>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Logradouro</p>
+                  <p className="text-xs font-medium">{receitaData?.logradouro || rawData.logradouro || 'N/A'}</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Número</p>
+                  <p className="text-xs font-medium">{receitaData?.numero || rawData.numero || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Complemento</p>
+                  <p className="text-xs font-medium">{receitaData?.complemento || rawData.complemento || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Bairro</p>
+                  <p className="text-xs font-medium">{receitaData?.bairro || rawData.bairro || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">CEP</p>
+                  <p className="text-xs font-mono font-medium">{receitaData?.cep || rawData.cep || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Cidade</p>
+                  <p className="text-xs font-medium">{receitaData?.municipio || rawData.cidade || (company.location as any)?.city || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Estado</p>
+                  <p className="text-xs font-medium">{receitaData?.uf || rawData.uf || (company.location as any)?.state || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Microrregião</p>
+                  <p className="text-xs font-medium">{rawData.microrregiao || 'N/A'}</p>
+                </div>
+                <div className="p-2 border rounded bg-muted/10">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-0.5">Mesorregião</p>
+                  <p className="text-xs font-medium">{rawData.mesorregiao || 'N/A'}</p>
+                </div>
+              </div>
+            </CollapsibleCard>
 
             {receitaData?.cep && (
               <Card className="glass-card">
@@ -1021,14 +1006,8 @@ export default function CompanyDetailPage() {
           </div>
 
           {/* Contatos Completos */}
-          <Card className="glass-card">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Phone className="h-5 w-5 text-primary" />
-                Informações de Contato
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <CollapsibleCard title="Informações de Contato" icon={Phone} defaultExpanded={false}>
+            <div className="space-y-4">
               {/* Telefones - Layout Compacto 4 Colunas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="p-2 border rounded bg-muted/10">
@@ -1121,18 +1100,12 @@ export default function CompanyDetailPage() {
                   <p className="text-xs truncate">{rawData.email_receita_federal || receitaData?.email || 'N/A'}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Atividade Econômica Completa */}
-          <Card className="glass-card">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Briefcase className="h-5 w-5 text-primary" />
-                Atividade Econômica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <CollapsibleCard title="Atividade Econômica" icon={Briefcase} defaultExpanded={false}>
+            <div className="space-y-3">
               {/* Info Rápida - 4 Colunas Compactas */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="p-2 border rounded bg-muted/10">
@@ -1189,8 +1162,8 @@ export default function CompanyDetailPage() {
                   <p className="text-xs font-mono">{rawData.cod_ncms_primarios}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* Estrutura Organizacional - Grid 2 Colunas */}
           <div className="grid lg:grid-cols-2 gap-4">
