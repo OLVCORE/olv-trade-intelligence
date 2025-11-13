@@ -1855,19 +1855,24 @@ export default function CompaniesManagementPage() {
                     <>
                     <TableRow 
                       key={company.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="hover:bg-muted/50"
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={selectedCompanies.includes(company.id)}
-                            onCheckedChange={() => toggleSelectCompany(company.id)}
-                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedCompanies.includes(company.id)}
+                              onCheckedChange={() => toggleSelectCompany(company.id)}
+                            />
+                          </div>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-6 w-6"
-                            onClick={() => toggleRow(company.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRow(company.id);
+                            }}
                           >
                             {expandedRow === company.id ? (
                               <ChevronUp className="h-4 w-4" />
