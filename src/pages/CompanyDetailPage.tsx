@@ -1196,41 +1196,27 @@ export default function CompanyDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="glass-card">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <UserPlus className="h-5 w-5 text-primary" />
-                  Sócios e Administradores
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-48 overflow-y-auto">
-                  {receitaData?.qsa && receitaData.qsa.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {receitaData.qsa.map((socio: any, i: number) => (
-                        <div key={i} className="p-2 bg-muted/20 rounded border text-xs">
-                          <p className="font-semibold text-primary">{socio.nome_socio || socio.nome}</p>
-                          <p className="text-muted-foreground">{socio.qualificacao_socio || socio.qual} {socio.faixa_etaria && `• ${socio.faixa_etaria}`}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum sócio cadastrado</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <CollapsibleCard title="Sócios e Administradores" icon={UserPlus} defaultExpanded={false}>
+              <div className="max-h-48 overflow-y-auto">
+                {receitaData?.qsa && receitaData.qsa.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {receitaData.qsa.map((socio: any, i: number) => (
+                      <div key={i} className="p-2 bg-muted/20 rounded border text-xs">
+                        <p className="font-semibold text-primary">{socio.nome_socio || socio.nome}</p>
+                        <p className="text-muted-foreground">{socio.qualificacao_socio || socio.qual} {socio.faixa_etaria && `• ${socio.faixa_etaria}`}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nenhum sócio cadastrado</p>
+                )}
+              </div>
+            </CollapsibleCard>
           </div>
 
           {/* Informações Financeiras */}
-          <Card className="glass-card">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <DollarSign className="h-5 w-5 text-primary" />
-                Informações Financeiras
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <CollapsibleCard title="Informações Financeiras" icon={DollarSign} defaultExpanded={false}>
+            <div className="space-y-3">
               {/* Info Financeira Principal */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <div className="p-2 bg-blue-50 dark:bg-lime-500/10 rounded border border-blue-200 dark:border-lime-500/30">
@@ -1296,8 +1282,8 @@ export default function CompanyDetailPage() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
 
           {/* ❌ REMOVIDO: Card "Decisores & Colaboradores" (redundante e inútil) */}
 
