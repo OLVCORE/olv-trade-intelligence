@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { logger } from '@/lib/utils/logger';
 import { BulkUploadDialog } from '@/components/companies/BulkUploadDialog';
 import { ApolloImportDialog } from '@/components/companies/ApolloImportDialog';
+import { ApolloOrgIdDialog } from '@/components/companies/ApolloOrgIdDialog';
 import { BulkActionsToolbar } from '@/components/companies/BulkActionsToolbar';
 import { CompanyRowActions } from '@/components/companies/CompanyRowActions';
 import { HeaderActionsMenu } from '@/components/companies/HeaderActionsMenu';
@@ -809,6 +810,37 @@ export default function CompaniesManagementPage() {
       toast.error('Erro ao executar enriquecimento em lote');
     } finally {
       setIsBatchEnrichingApollo(false);
+    }
+  };
+
+  // ✅ ENRIQUECIMENTO APOLLO MANUAL (via Organization ID)
+  const handleApolloManualEnrich = async (apolloOrgId: string) => {
+    try {
+      toast.info('🔍 Buscando contatos no Apollo.io...', {
+        description: 'Isso pode levar alguns segundos'
+      });
+
+      const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
+        body: { apolloOrgId }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`✅ ${data.count || 0} decisores encontrados!`, {
+          description: data.organizationName || 'Dados salvos com sucesso'
+        });
+        refetch(); // Atualizar lista de empresas
+      } else {
+        toast.warning('⚠️ Nenhum decisor encontrado', {
+          description: 'Verifique o Organization ID'
+        });
+      }
+    } catch (error) {
+      console.error('Error enriching Apollo manual:', error);
+      toast.error('Erro ao buscar contatos no Apollo', {
+        description: error instanceof Error ? error.message : 'Tente novamente'
+      });
     }
   };
 
@@ -1646,6 +1678,9 @@ export default function CompaniesManagementPage() {
                       Integrar ICP ({selectedCompanies.length})
                     </Button>
                   )}
+
+                  {/* ✅ APOLLO ID MANUAL - BUSCA DIRETA POR ORGANIZATION ID */}
+                  <ApolloOrgIdDialog onEnrich={handleApolloManualEnrich} />
 
                   {/* Dropdown de Ações em Massa */}
                   <CompaniesActionsMenu
