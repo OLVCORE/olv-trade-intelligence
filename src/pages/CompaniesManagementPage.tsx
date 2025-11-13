@@ -821,14 +821,17 @@ export default function CompaniesManagementPage() {
       });
 
       const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
-        body: { apolloOrgId }
+        body: { apollo_org_id: apolloOrgId } // ✅ FIX: parâmetro correto
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error enriching Apollo:', error);
+        throw error;
+      }
 
       if (data?.success) {
-        toast.success(`✅ ${data.count || 0} decisores encontrados!`, {
-          description: data.organizationName || 'Dados salvos com sucesso'
+        toast.success(`✅ ${data.decisores?.length || 0} decisores encontrados!`, {
+          description: data.message || 'Dados salvos com sucesso'
         });
         refetch(); // Atualizar lista de empresas
       } else {
@@ -2313,6 +2316,7 @@ export default function CompaniesManagementPage() {
                                       Links Externos
                                     </h4>
                                     <div className="space-y-2">
+                                      {/* WEBSITE */}
                                       {company.website && (
                                         <a href={company.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
                                           <Globe className="h-4 w-4" />
@@ -2320,13 +2324,23 @@ export default function CompaniesManagementPage() {
                                           <ExternalLink className="h-3 w-3" />
                                         </a>
                                       )}
-                                      {company.linkedin_url && (
-                                        <a href={company.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                                          <Linkedin className="h-4 w-4" />
-                                          LinkedIn
-                                          <ExternalLink className="h-3 w-3" />
-                                        </a>
-                                      )}
+                                      
+                                      {/* LINKEDIN (ler de company.linkedin_url OU raw_data.linkedin_url) */}
+                                      {(() => {
+                                        const linkedinUrl = company.linkedin_url || (company as any).raw_data?.linkedin_url;
+                                        if (linkedinUrl) {
+                                          return (
+                                            <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                              <Linkedin className="h-4 w-4" />
+                                              LinkedIn
+                                              <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                      
+                                      {/* APOLLO (ler de company.apollo_id OU raw_data.apollo_id) */}
                                       {(() => {
                                         const apolloId = company.apollo_id || (company as any).raw_data?.apollo_id;
                                         const apolloLink = (company as any).raw_data?.apollo_link || (apolloId ? `https://app.apollo.io/#/companies/${apolloId}` : null);
