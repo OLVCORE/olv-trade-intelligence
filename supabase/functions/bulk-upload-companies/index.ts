@@ -103,6 +103,13 @@ serve(async (req) => {
           revenue: null, // DESABILITADO: formato brasileiro causa erro
           digital_maturity_score: row['Score Maturidade Digital'] ? parseFloat(String(row['Score Maturidade Digital'])) : null,
           
+          // ✅ CAMPOS PARA CARD EXPANSÍVEL
+          data_source: 'csv_upload', // ← NOVO: para aparecer no card
+          city: row.municipio || row['Município'] || row.cidade || null,
+          state: row.uf || row.UF || row.estado || null,
+          country: row.pais || row['País'] || 'Brasil',
+          linkedin_url: row.linkedin || row.LinkedIn || null,
+          
           // 🏷️ CAMPOS DE RASTREABILIDADE
           source_type: row.source_type || 'csv',
           source_name: row.source_name || metadata?.source_name || null,
