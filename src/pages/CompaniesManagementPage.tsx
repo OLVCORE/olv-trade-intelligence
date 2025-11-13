@@ -2258,9 +2258,26 @@ export default function CompaniesManagementPage() {
                                   
                                   {(company.description || (company as any).raw_data?.notes) && (
                                     <div>
-                                      <h4 className="text-sm font-semibold mb-2">Descrição</h4>
+                                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                        Descrição
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-4 w-4 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/company/${company.id}`);
+                                          }}
+                                          title="Editar descrição na página da empresa"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                      </h4>
                                       <p className="text-sm text-muted-foreground">
                                         {company.description || (company as any).raw_data?.notes}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1 italic">
+                                        💡 Esta descrição pode ser enriquecida via Apollo/LinkedIn
                                       </p>
                                     </div>
                                   )}
@@ -2342,14 +2359,42 @@ export default function CompaniesManagementPage() {
                                         const apolloLink = (company as any).raw_data?.apollo_link || (apolloId ? `https://app.apollo.io/#/companies/${apolloId}` : null);
                                         if (apolloLink) {
                                           return (
-                                            <a href={apolloLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                                              <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-4 w-4" />
-                                              Apollo.io
-                                              <ExternalLink className="h-3 w-3" />
-                                            </a>
+                                            <div className="flex items-center gap-2">
+                                              <a href={apolloLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                                <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-4 w-4" />
+                                                Apollo.io
+                                                <ExternalLink className="h-3 w-3" />
+                                              </a>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-4 w-4 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  navigate(`/company/${company.id}`);
+                                                }}
+                                                title="Editar Apollo ID na página da empresa"
+                                              >
+                                                <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                              </Button>
+                                            </div>
                                           );
                                         }
-                                        return null;
+                                        // Se não tem Apollo ID, mostrar botão para adicionar
+                                        return (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/company/${company.id}`);
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Adicionar Apollo ID
+                                          </Button>
+                                        );
                                       })()}
                                     </div>
                                   </div>
