@@ -104,6 +104,10 @@ serve(async (req: Request) => {
     const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
 
     console.log('[enrich-apollo] ⚠️ Verificação de créditos DESABILITADA para testes');
+    
+    // Estimar créditos antes de iniciar
+    const estimate = await estimateCredits(sb, input.organization_id, input.modes);
+    console.log('[enrich-apollo] Créditos estimados:', estimate);
 
     const requestId = crypto.randomUUID();
     const activityId = input.activity_id || crypto.randomUUID();

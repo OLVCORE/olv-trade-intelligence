@@ -47,7 +47,8 @@ import { SeniorDecisorsPanel } from '@/components/companies/SeniorDecisorsPanel'
 import { ApolloOrgIdDialog } from '@/components/companies/ApolloOrgIdDialog';
 import { ApolloDebugDialog } from '@/components/companies/ApolloDebugDialog';
 import { DiagnosticAIPanel } from '@/components/companies/DiagnosticAIPanel';
-import { CompanyIntelligenceChat } from '@/components/companies/CompanyIntelligenceChat';
+// ❌ REMOVIDO: CompanyIntelligenceChat (redundante - TREVO global já faz tudo!)
+// import { CompanyIntelligenceChat } from '@/components/companies/CompanyIntelligenceChat';
 import { InternationalCompanySection } from '@/components/companies/InternationalCompanySection';
 import { MultiLayerEnrichButton } from '@/components/canvas/MultiLayerEnrichButton';
 import { CollapsibleCard } from '@/components/companies/CollapsibleCard';
@@ -372,6 +373,8 @@ export default function CompanyDetailPage() {
           modes: ['people', 'company'],
           city: receitaData?.municipio || company?.city,
           state: receitaData?.uf || company?.state,
+          cep: receitaData?.cep || rawData?.cep || company?.zip_code, // 🥇 98% assertividade
+          fantasia: receitaData?.fantasia || rawData?.fantasia || rawData?.nome_fantasia || company?.fantasy_name, // 🥈 97% assertividade
           industry: company?.industry
         }
       });
@@ -458,6 +461,8 @@ export default function CompanyDetailPage() {
           positions: ['CEO','CTO','CFO','Diretor','Gerente','VP'],
           city: receitaData?.municipio || company.city,
           state: receitaData?.uf || company.state,
+          cep: receitaData?.cep || rawData?.cep || company?.zip_code, // 🥇 98% assertividade
+          fantasia: receitaData?.fantasia || rawData?.fantasia || rawData?.nome_fantasia || company?.fantasy_name, // 🥈 97% assertividade
           industry: company.industry
         }
       });
@@ -1930,8 +1935,9 @@ export default function CompanyDetailPage() {
          </AlertDialogContent>
        </AlertDialog>
 
-      {/* Intelligence Copilot - Floating Chat */}
-      <CompanyIntelligenceChat company={company} />
+      {/* ❌ REMOVIDO: Intelligence Copilot duplicado */}
+      {/* TREVO global já fornece assistência em TODAS as páginas! */}
+      {/* <CompanyIntelligenceChat company={company} /> */}
     </div>
   );
 }

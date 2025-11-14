@@ -38,9 +38,9 @@ export function EnrichmentProgressModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-w-3xl max-h-[85vh] w-[90vw]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="text-xl">{title}</DialogTitle>
         </DialogHeader>
 
         {/* Progress Summary */}
@@ -74,7 +74,7 @@ export function EnrichmentProgressModal({
           </div>
 
           {/* Company List */}
-          <ScrollArea className="h-[400px] border rounded-md p-4">
+          <ScrollArea className="h-[450px] border rounded-md p-4">
             <div className="space-y-2">
               {companies.map((company) => (
                 <div

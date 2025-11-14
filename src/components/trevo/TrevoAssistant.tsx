@@ -15,6 +15,7 @@ interface TrevoAssistantProps {
 export function TrevoAssistant({ context }: TrevoAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // 🆕 Estado de expansão (tela cheia)
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -72,52 +73,40 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 group">
-        {/* Botão principal com design neutro e profissional */}
+      <div className="fixed bottom-6 right-6 z-[999] group">
+        {/* 🟢 BOTÃO VERDE NEON PARA TESTE - IMPOSSÍVEL NÃO VER! */}
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="h-16 w-16 rounded-2xl shadow-2xl bg-card text-foreground border border-border relative overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-lg hover:bg-accent hover:text-accent-foreground"
+          className="h-20 w-20 rounded-full shadow-2xl bg-green-500 text-white border-4 border-green-300 relative overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-lg hover:bg-green-600 animate-pulse"
           aria-label="Abrir TREVO, assistente inteligente"
+          style={{ boxShadow: '0 0 30px rgba(34, 197, 94, 0.8)' }}
         >
-          {/* brilho suave ao passar o mouse */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-br from-foreground/5 to-transparent" />
-          
-          {/* Ícone */}
+          {/* Ícone ENORME */}
           <div className="relative z-10">
-            <Clover className="h-7 w-7 text-primary" />
+            <Clover className="h-10 w-10 text-white font-bold" />
           </div>
           
-          {/* Detalhe sutil */}
-          <Sparkles className="absolute top-2 right-2 h-3 w-3 text-primary/70" />
-          
-          {/* Indicador de status */}
-          <span className="absolute -top-1 -right-1 h-5 w-5 bg-primary rounded-full border-2 border-background flex items-center justify-center">
-            <span className="h-2 w-2 bg-background rounded-full animate-pulse" />
-          </span>
-          
-          {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-3 px-4 py-3 bg-popover text-popover-foreground rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap border border-border backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Clover className="h-4 w-4 text-primary" />
-              <p className="text-sm font-semibold">TREVO · Assistente</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Seu guia inteligente de vendas</p>
-            <div className="absolute bottom-0 right-4 translate-y-1/2 rotate-45 w-2 h-2 bg-popover border-r border-b border-border" />
+          {/* Tooltip VERDE */}
+          <div className="absolute bottom-full right-0 mb-3 px-4 py-3 bg-green-600 text-white rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap border-2 border-green-300">
+            <p className="text-base font-bold">🟢 NOVO TREVO ATUALIZADO!</p>
           </div>
         </Button>
-        
-        {/* Anel pulsante discreto */}
-        <div className="pointer-events-none absolute inset-0 rounded-2xl bg-primary/30 animate-ping opacity-15" />
       </div>
     );
   }
 
   return (
     <div 
-      className={`fixed bottom-6 right-6 z-50 w-[440px] transition-all duration-300 ${isMinimized ? 'h-[70px]' : 'h-[650px]'}`}
+      className={`fixed z-[60] transition-all duration-300 ${
+        isExpanded 
+          ? 'inset-6' // 🔥 Tela cheia (com margem de 24px)
+          : isMinimized 
+            ? 'bottom-6 right-6 w-[440px] h-[70px]' // 📦 Minimizado
+            : 'bottom-6 right-6 w-[440px] h-[650px]' // 📋 Normal
+      }`}
     >
-      <Card className="flex flex-col h-full shadow-2xl border border-border overflow-hidden bg-background/95">
+      <Card className="flex flex-col h-full shadow-2xl border border-border overflow-hidden bg-background/95 backdrop-blur-sm">
         {/* Header neutro */}
         <div className="flex items-center justify-between p-4 border-b bg-card relative">
           <div className="flex items-center gap-3 relative z-10">
@@ -143,19 +132,49 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="h-9 w-9 hover:bg-accent rounded-lg transition-all duration-200"
-            >
-              {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            </Button>
+            
+            {/* 🆕 Botão Expandir/Tela Cheia */}
+            {!isMinimized && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsExpanded(!isExpanded);
+                  setIsMinimized(false); // Garantir que não esteja minimizado
+                }}
+                className="h-9 w-9 hover:bg-accent rounded-lg transition-all duration-200"
+                title={isExpanded ? 'Modo normal' : 'Expandir tela cheia'}
+              >
+                {isExpanded ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4 text-primary" />
+                )}
+              </Button>
+            )}
+            
+            {/* Botão Minimizar/Maximizar */}
+            {!isExpanded && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsMinimized(!isMinimized);
+                  setIsExpanded(false); // Garantir que não esteja expandido
+                }}
+                className="h-9 w-9 hover:bg-accent rounded-lg transition-all duration-200"
+                title={isMinimized ? 'Restaurar' : 'Minimizar'}
+              >
+                {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+              </Button>
+            )}
+            
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
               className="h-9 w-9 hover:bg-accent rounded-lg transition-all duration-200"
+              title="Fechar"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -166,7 +185,7 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
           <>
             {/* Messages Area */}
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              <div className="space-y-4">
+              <div className={`space-y-4 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
                 {messages.map((message, index) => {
                   const suggestedLinks = message.role === 'assistant' 
                     ? extractSuggestedLinks(message.content)
@@ -178,13 +197,17 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
                       className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} transition-opacity duration-300`}
                     >
                       <div
-                        className={`max-w-[85%] rounded-lg p-3 ${
+                        className={`rounded-lg p-3 ${
+                          isExpanded ? 'max-w-[90%]' : 'max-w-[85%]'
+                        } ${
                           message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'
                         }`}
                       >
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <div className={`prose dark:prose-invert max-w-none ${
+                          isExpanded ? 'prose-base' : 'prose-sm'
+                        }`}>
                           <ReactMarkdown
                             components={{
                               // Customizar links para abrir em nova aba se forem externos
@@ -255,25 +278,29 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
 
             {/* Input Area */}
             <div className="p-4 border-t bg-card">
-              <div className="flex gap-2">
+              <div className={`flex gap-2 ${isExpanded ? 'max-w-4xl mx-auto' : ''}`}>
                 <Textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Digite sua mensagem... (Enter para enviar)"
-                  className="min-h-[70px] max-h-[140px] resize-none border-border focus:border-primary focus:ring-primary/20 rounded-xl"
+                  className={`resize-none border-border focus:border-primary focus:ring-primary/20 rounded-xl ${
+                    isExpanded ? 'min-h-[100px] max-h-[200px]' : 'min-h-[70px] max-h-[140px]'
+                  }`}
                   disabled={isLoading}
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="h-[70px] w-[70px] rounded-xl shadow-lg bg-primary text-primary-foreground transition-all duration-300 hover:bg-primary/90 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`rounded-xl shadow-lg bg-primary text-primary-foreground transition-all duration-300 hover:bg-primary/90 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isExpanded ? 'h-[100px] w-[100px]' : 'h-[70px] w-[70px]'
+                  }`}
                 >
                   {isLoading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Loader2 className={`animate-spin ${isExpanded ? 'h-8 w-8' : 'h-6 w-6'}`} />
                   ) : (
-                    <Send className="h-6 w-6" />
+                    <Send className={isExpanded ? 'h-8 w-8' : 'h-6 w-6'} />
                   )}
                 </Button>
               </div>

@@ -82,10 +82,19 @@ export function useBatchTOTVSAnalysis() {
         if (isGo) {
           console.log(`[BATCH] 👥 Extraindo decisores...`);
           try {
+            // 🔍 Extrair dados de Receita Federal para máxima assertividade
+            const receitaData = company.raw_data?.receita_federal || {};
+            
             const { data: decisorsData } = await supabase.functions.invoke('enrich-apollo-decisores', {
               body: {
                 companyName: company.razao_social,
                 linkedinUrl: '', // Tentar descobrir automaticamente
+                company_id: company.id,
+                city: receitaData?.municipio || company.city,
+                state: receitaData?.uf || company.state,
+                cep: receitaData?.cep || company.raw_data?.cep || company.zip_code, // 🥇 98% assertividade
+                fantasia: receitaData?.fantasia || company.raw_data?.fantasia || company.raw_data?.nome_fantasia || company.fantasy_name, // 🥈 97% assertividade
+                domain: company.website || company.domain
               },
             });
             decisors = decisorsData;

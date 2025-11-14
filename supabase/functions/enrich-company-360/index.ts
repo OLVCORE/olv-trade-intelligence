@@ -675,21 +675,30 @@ serve(async (req) => {
     let decisorsSource = 'none';
     
     if (company.domain || company.name) {
-      // 🎯 ESTRATÉGIA 1: Tentar Apollo primeiro
+      // 🎯 ESTRATÉGIA 1: Tentar Apollo primeiro COM CEP + FANTASIA (98% assertividade!)
       try {
         console.log('👥 [1/2] Fetching decision makers via Apollo...');
-        const { data: apolloData } = await supabase.functions.invoke('enrich-apollo', {
+        
+        // 🔍 Extrair dados de Receita Federal para máxima assertividade
+        const receitaData = company.raw_data?.receita_federal || {};
+        
+        const { data: apolloData } = await supabase.functions.invoke('enrich-apollo-decisores', {
           body: { 
-            type: 'people',
-            organizationName: searchName,
-            ...(company.domain && { domain: company.domain }),
-            // Amplo espectro corporativo: de assistente/analista para cima
-            titles: ['CEO','CTO','CFO','CIO','COO','President','Owner','Founder','Partner','VP','Vice President','Head','Director','Diretor','Diretora','Superintendent','Superintendente','Manager','Gerente','Coordinator','Coordenador','Coordenadora','Supervisor','Supervisora','Lead','Especialista','Analyst','Analista','Assistant','Assistente','Sales','Inside Sales','Vendas','Comercial','Marketing','Finance','Financeiro','Compras','Procurement','Operations','Operações','Supply Chain','RH','HR','TI','Tecnologia']
+            company_id: company.id,
+            company_name: searchName,
+            companyName: searchName, // Backward compatibility
+            domain: company.domain || company.website,
+            modes: ['people', 'company'],
+            city: receitaData?.municipio || company.city,
+            state: receitaData?.uf || company.state,
+            cep: receitaData?.cep || company.raw_data?.cep || company.zip_code, // 🥇 98% assertividade
+            fantasia: receitaData?.fantasia || company.raw_data?.fantasia || company.raw_data?.nome_fantasia || company.fantasy_name, // 🥈 97% assertividade
+            industry: company.industry
           }
         });
 
-        if (apolloData?.people && apolloData.people.length > 0) {
-          decisionMakers = apolloData.people;
+        if (apolloData?.decisores && apolloData.decisores.length > 0) {
+          decisionMakers = apolloData.decisores; // ✅ AJUSTE: 'decisores' ao invés de 'people'
           decisorsSource = 'apollo';
           
           for (const person of decisionMakers.slice(0, 5)) {

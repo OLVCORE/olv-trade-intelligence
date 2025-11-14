@@ -273,8 +273,14 @@ export async function discoverFullDigitalPresence(
   if (presence.website) {
     try {
       const domain = new URL(presence.website).hostname.replace('www.', '');
+      // ⚠️ NOTA: Não temos company_id aqui (discovery), então não há CEP/Fantasia
+      // Assertividade será menor (fallback para busca por nome + domínio apenas)
       const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
-        body: { companyName: razaoSocial, domain },
+        body: { 
+          companyName: razaoSocial, 
+          domain
+          // ❌ city, state, cep, fantasia não disponíveis (contexto de discovery sem company_id)
+        },
       });
 
       if (!error && data?.decisores) {

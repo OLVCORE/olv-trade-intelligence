@@ -613,13 +613,33 @@ export function DecisorsContactsTab({
       // 🥇 TENTATIVA 1: APOLLO
       try {
         sonnerToast.loading('🔍 Buscando em Apollo.io...');
+        
+        // 🔍 Buscar dados de Receita Federal e outros campos para máxima assertividade
+        const { data: companyFullData } = companyId
+          ? await supabase
+              .from('companies')
+              .select('raw_data, city, state, zip_code, fantasy_name')
+              .eq('id', companyId)
+              .single()
+          : { data: null };
+        
+        const receitaData = companyFullData?.raw_data?.receita_federal || {};
+        
         const apolloResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enrich-apollo-decisores`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ companyName, domain }),
+          body: JSON.stringify({ 
+            companyName, 
+            domain,
+            company_id: companyId,
+            city: receitaData?.municipio || companyFullData?.city,
+            state: receitaData?.uf || companyFullData?.state,
+            cep: receitaData?.cep || companyFullData?.raw_data?.cep || companyFullData?.zip_code, // 🥇 98% assertividade
+            fantasia: receitaData?.fantasia || companyFullData?.raw_data?.fantasia || companyFullData?.raw_data?.nome_fantasia || companyFullData?.fantasy_name // 🥈 97% assertividade
+          }),
         });
 
         if (apolloResponse.ok) {

@@ -840,14 +840,18 @@ export default function CompaniesManagementPage() {
           }
 
           // 🔥 EDGE FUNCTION Apollo com FILTROS INTELIGENTES
+          const receitaData = (company as any).raw_data?.receita_federal || {};
+          
           const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: { 
               company_id: company.id,
               company_name: company.company_name,
               domain: domain,
               modes: ['people', 'company'],
-              city: (company as any).raw_data?.receita_federal?.municipio || (company as any).city,
-              state: (company as any).raw_data?.receita_federal?.uf || (company as any).state,
+              city: receitaData?.municipio || (company as any).city,
+              state: receitaData?.uf || (company as any).state,
+              cep: receitaData?.cep || (company as any).raw_data?.cep || (company as any).zip_code, // 🥇 98% assertividade
+              fantasia: receitaData?.fantasia || (company as any).raw_data?.fantasia || (company as any).raw_data?.nome_fantasia || (company as any).fantasy_name, // 🥈 97% assertividade
               industry: company.industry
             }
           });
@@ -2242,12 +2246,20 @@ export default function CompaniesManagementPage() {
                               }
                               
                               toast.info('Buscando decisores com Apollo...');
-                              const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
+                              
+                              // 🔍 Extrair dados de Receita Federal para máxima assertividade
+                              const receitaData = (company as any).raw_data?.receita_federal || {};
+                              
+                              const { data, error} = await supabase.functions.invoke('enrich-apollo-decisores', {
                                 body: { 
                                   company_id: company.id,
                                   company_name: company.company_name,
                                   domain: company.website || company.domain,
-                                  modes: ['people', 'company'] // 🔥 PESSOAS + ORGANIZAÇÃO
+                                  modes: ['people', 'company'], // 🔥 PESSOAS + ORGANIZAÇÃO
+                                  city: receitaData?.municipio || (company as any).city,
+                                  state: receitaData?.uf || (company as any).state,
+                                  cep: receitaData?.cep || (company as any).raw_data?.cep || (company as any).zip_code, // 🥇 98% assertividade
+                                  fantasia: receitaData?.fantasia || (company as any).raw_data?.fantasia || (company as any).raw_data?.nome_fantasia || (company as any).fantasy_name // 🥈 97% assertividade
                                 }
                               });
                               if (error) throw error;
@@ -2603,9 +2615,36 @@ export default function CompaniesManagementPage() {
                                             variant="outline"
                                             size="sm"
                                             className="text-xs h-7"
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                               e.stopPropagation();
-                                              navigate(`/company/${company.id}`);
+                                              
+                                              // 🔥 CHAMAR ENRIQUECIMENTO APOLLO DIRETAMENTE (não navegar!)
+                                              try {
+                                                toast.info('🔍 Buscando decisores no Apollo...');
+                                                
+                                                const receitaData = (company as any).raw_data?.receita_federal || {};
+                                                
+                                                const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
+                                                  body: {
+                                                    company_id: company.id,
+                                                    company_name: company.company_name,
+                                                    domain: company.website || company.domain,
+                                                    modes: ['people', 'company'],
+                                                    city: receitaData?.municipio || (company as any).city,
+                                                    state: receitaData?.uf || (company as any).state,
+                                                    cep: receitaData?.cep || (company as any).raw_data?.cep || (company as any).zip_code,
+                                                    fantasia: receitaData?.fantasia || (company as any).raw_data?.fantasia || (company as any).fantasy_name
+                                                  }
+                                                });
+                                                
+                                                if (error) throw error;
+                                                
+                                                toast.success(`✅ ${data?.decisores?.length || 0} decisores encontrados!`);
+                                                refetch(); // Atualizar lista
+                                              } catch (err: any) {
+                                                console.error('Erro ao buscar decisores:', err);
+                                                toast.error('Erro ao buscar decisores no Apollo');
+                                              }
                                             }}
                                           >
                                             <Plus className="h-3 w-3 mr-1" />

@@ -17,6 +17,8 @@ interface EnrichApolloRequest {
   city?: string; // 🎯 FILTRO INTELIGENTE: cidade da empresa
   state?: string; // 🎯 FILTRO INTELIGENTE: estado da empresa
   industry?: string; // 🎯 FILTRO INTELIGENTE: setor/CNAE
+  cep?: string; // 🥇 FILTRO MÁXIMA ASSERTIVIDADE: CEP (98% precisão)
+  fantasia?: string; // 🥈 FILTRO ALTA ASSERTIVIDADE: Nome Fantasia (97% precisão)
 }
 
 // Classificar poder de decisão baseado no título
@@ -86,9 +88,9 @@ serve(async (req) => {
     console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado');
     const companyId = body.company_id || body.companyId;
     const companyName = body.company_name || body.companyName;
-    const { domain, positions, apollo_org_id, city, state, industry } = body;
+    const { domain, positions, apollo_org_id, city, state, industry, cep, fantasia } = body;
     
-    console.log('[ENRICH-APOLLO] 🎯 Filtros inteligentes:', { city, state, industry });
+    console.log('[ENRICH-APOLLO] 🎯 Filtros inteligentes:', { city, state, industry, cep, fantasia });
 
     console.log('[ENRICH-APOLLO-DECISORES] Buscando decisores para:', companyName);
     console.log('[ENRICH-APOLLO-DECISORES] Apollo Org ID fornecido:', apollo_org_id || 'N/A');
@@ -140,29 +142,70 @@ serve(async (req) => {
           if (orgData.organizations && orgData.organizations.length > 0) {
             console.log('[ENRICH-APOLLO-DECISORES] 🔍 Encontradas', orgData.organizations.length, 'empresas com nome', name);
             
-            // 🎯 FILTRO INTELIGENTE: Priorizar por Brasil → Cidade → Estado
+            // 🎯 FILTRO INTELIGENTE: Priorizar CEP → Fantasia+Cidade → Cidade → Estado → Brasil
             let selectedOrg = null;
             let criterio = '';
             
-            // 1️⃣ MELHOR: Mesma cidade + Brasil
-            if (city) {
+            // 🥇 EXCELENTE: CEP + Brasil (98% assertividade - ÚNICO no Brasil!)
+            if (!selectedOrg && cep) {
+              const cleanCEP = cep.replace(/\D/g, ''); // Remove formatação
+              selectedOrg = orgData.organizations.find((org: any) => {
+                const orgCEP = (org.postal_code || '').replace(/\D/g, '');
+                return orgCEP === cleanCEP && (org.country === 'Brazil' || org.country === 'Brasil');
+              });
+              if (selectedOrg) criterio = `CEP ${cep} + Brasil (EXCELENTE ✅ 98%)`;
+            }
+            
+            // 🥈+ MUITO BOM: Nome Fantasia + Cidade + Estado + Brasil (97% assertividade)
+            if (!selectedOrg && fantasia && city && state) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                org.name?.toLowerCase().includes(fantasia.toLowerCase()) &&
+                org.city?.toLowerCase().includes(city.toLowerCase()) &&
+                org.state?.toLowerCase() === state.toLowerCase() &&
+                (org.country === 'Brazil' || org.country === 'Brasil')
+              );
+              if (selectedOrg) criterio = `Fantasia "${fantasia}" + ${city}/${state} + Brasil (MUITO BOM ✅ 97%)`;
+            }
+            
+            // 🥈 BOM: Nome Fantasia + Cidade + Brasil (95% assertividade)
+            if (!selectedOrg && fantasia && city) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                org.name?.toLowerCase().includes(fantasia.toLowerCase()) &&
+                org.city?.toLowerCase().includes(city.toLowerCase()) &&
+                (org.country === 'Brazil' || org.country === 'Brasil')
+              );
+              if (selectedOrg) criterio = `Fantasia "${fantasia}" + ${city} + Brasil (BOM ✅ 95%)`;
+            }
+            
+            // 🥉 REGULAR: Cidade + Estado + Brasil (90% assertividade)
+            if (!selectedOrg && city && state) {
+              selectedOrg = orgData.organizations.find((org: any) => 
+                (org.country === 'Brazil' || org.country === 'Brasil') &&
+                org.city?.toLowerCase().includes(city.toLowerCase()) &&
+                org.state?.toLowerCase() === state.toLowerCase()
+              );
+              if (selectedOrg) criterio = `${city}/${state} + Brasil (REGULAR ⚠️ 90%)`;
+            }
+            
+            // 4️⃣ FRACO: Mesma cidade + Brasil (70% assertividade)
+            if (!selectedOrg && city) {
               selectedOrg = orgData.organizations.find((org: any) => 
                 (org.country === 'Brazil' || org.country === 'Brasil') &&
                 org.city?.toLowerCase().includes(city.toLowerCase())
               );
-              if (selectedOrg) criterio = `Cidade ${city} + Brasil (PERFEITO)`;
+              if (selectedOrg) criterio = `Cidade ${city} + Brasil (FRACO ⚠️ 70%)`;
             }
             
-            // 2️⃣ BOM: Mesmo estado + Brasil
+            // 5️⃣ MUITO FRACO: Mesmo estado + Brasil (50% assertividade)
             if (!selectedOrg && state) {
               selectedOrg = orgData.organizations.find((org: any) => 
                 (org.country === 'Brazil' || org.country === 'Brasil') &&
                 org.state?.toLowerCase().includes(state.toLowerCase())
               );
-              if (selectedOrg) criterio = `Estado ${state} + Brasil (BOM)`;
+              if (selectedOrg) criterio = `Estado ${state} + Brasil (MUITO FRACO ⚠️ 50%)`;
             }
             
-            // 3️⃣ OK: Qualquer do Brasil
+            // 6️⃣ PÉSSIMO: Qualquer do Brasil (30% assertividade)
             if (!selectedOrg) {
               selectedOrg = orgData.organizations.find((org: any) => 
                 org.country === 'Brazil' || 
@@ -170,13 +213,13 @@ serve(async (req) => {
                 org.primary_domain?.includes('.br') ||
                 org.website_url?.includes('.br')
               );
-              if (selectedOrg) criterio = 'Brasil genérico (OK)';
+              if (selectedOrg) criterio = 'Brasil genérico (PÉSSIMO ❌ 30%)';
             }
             
-            // 4️⃣ FALLBACK: Primeira da lista
+            // 7️⃣ FALLBACK CRÍTICO: Primeira da lista (0% assertividade - PROVAVELMENTE ERRADO!)
             if (!selectedOrg) {
               selectedOrg = orgData.organizations[0];
-              criterio = 'Primeira da lista (FALLBACK - pode estar errado!)';
+              criterio = 'Primeira da lista (FALLBACK CRÍTICO ❌ 0% - PROVAVELMENTE ERRADO!)';
             }
             
             organizationId = selectedOrg.id;

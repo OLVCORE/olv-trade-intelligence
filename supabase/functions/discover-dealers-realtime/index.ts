@@ -71,7 +71,7 @@ async function searchApollo(keyword: string, country: string, minVolume?: number
       'consulting', 'marketing', 'advertising',
       'retail', 'ecommerce', 'online store',
     ],
-  };
+  };image.png
 
   // FILTRO VOLUME MÍNIMO (se fornecido)
   if (minVolume) {

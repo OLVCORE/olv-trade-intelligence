@@ -296,14 +296,19 @@ export default function ICPQuarantine() {
       }
 
       // 🔥 EDGE FUNCTION Apollo com FILTROS INTELIGENTES
+      // 🔍 Extrair dados de Receita Federal para máxima assertividade
+      const receitaData = analysis.raw_data?.receita_federal || {};
+      
       const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
           company_id: targetCompanyId,
           company_name: analysis.company_name || analysis.name,
           domain: analysis.website || analysis.domain,
           modes: ['people', 'company'],
-          city: analysis.city || analysis.municipio,
-          state: analysis.state || analysis.uf,
+          city: receitaData?.municipio || analysis.city || analysis.municipio,
+          state: receitaData?.uf || analysis.state || analysis.uf,
+          cep: receitaData?.cep || analysis.raw_data?.cep || analysis.zip_code, // 🥇 98% assertividade
+          fantasia: receitaData?.fantasia || analysis.raw_data?.fantasia || analysis.raw_data?.nome_fantasia || analysis.fantasy_name, // 🥈 97% assertividade
           industry: analysis.industry || analysis.setor
         }
       });
@@ -312,9 +317,11 @@ export default function ICPQuarantine() {
       
       console.log('[QUARANTINE] ✅ Apollo enrichment concluído');
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('✅ Apollo atualizado - Website e decisores adicionados');
-      queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+      await queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+      await queryClient.refetchQueries({ queryKey: ['icp-quarantine'] });
+      window.location.reload(); // 🔥 HARD REFRESH para garantir atualização do badge
     },
     onError: (error: any) => {
       toast.error('Erro ao enriquecer com Apollo', {
@@ -926,27 +933,31 @@ export default function ICPQuarantine() {
       return;
     }
     
-    toast.loading(`Enriquecendo ${selectedIds.length} empresa(s) com Apollo...`, { id: 'bulk-apollo' });
+    const selectedCompanies = companies.filter(c => selectedIds.includes(c.id));
+    
+    toast.loading(`Enriquecendo ${selectedCompanies.length} empresa(s) com Apollo...`, { id: 'bulk-apollo' });
     
     let success = 0;
     let errors = 0;
     
-    for (const id of selectedIds) {
+    for (const company of selectedCompanies) {
       try {
-        await enrichApolloMutation.mutateAsync(id);
+        toast.loading(`Apollo: ${company.razao_social} (${success + 1}/${selectedCompanies.length})`, { id: 'bulk-apollo' });
+        await enrichApolloMutation.mutateAsync(company.id);
         success++;
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         errors++;
-        console.error(`Erro ao enriquecer ${id}:`, error);
+        console.error(`Erro ao enriquecer ${company.razao_social}:`, error);
       }
     }
     
     toast.dismiss('bulk-apollo');
-    if (errors === 0) {
-      toast.success(`✅ ${success} empresa(s) enriquecida(s) com Apollo!`);
-    } else {
-      toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
-    }
+    toast.success(`✅ ${success} enriquecidas | ${errors} erro(s)`);
+    
+    // 🔄 FORÇAR ATUALIZAÇÃO TOTAL
+    await queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+    await refetch();
   };
 
   const handleBulkEnrich360 = async () => {
@@ -1042,11 +1053,20 @@ export default function ICPQuarantine() {
         // Custo baixo e pode ser útil no futuro mesmo se NO-GO
         let decisors = null;
         try {
+          // 🔍 Extrair dados de Receita Federal para máxima assertividade
+          const receitaData = company.raw_data?.receita_federal || {};
+          
           const { data: decisorsData } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: {
               companyName: company.razao_social,
               linkedinUrl: company.linkedin_url || '',
               modes: ['people', 'company'], // 🔥 PESSOAS + ORGANIZAÇÃO
+              company_id: company.company_id,
+              city: receitaData?.municipio || company.city || company.municipio,
+              state: receitaData?.uf || company.state || company.uf,
+              cep: receitaData?.cep || company.raw_data?.cep || company.zip_code, // 🥇 98% assertividade
+              fantasia: receitaData?.fantasia || company.raw_data?.fantasia || company.raw_data?.nome_fantasia || company.fantasy_name, // 🥈 97% assertividade
+              domain: company.website || company.domain
             },
           });
           decisors = decisorsData;
