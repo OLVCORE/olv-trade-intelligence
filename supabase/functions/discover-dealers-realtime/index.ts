@@ -39,10 +39,53 @@ const PILATES_KEYWORDS = [
 ];
 
 // ============================================================================
+// HELPER: Determinar tipo B2B
+// ============================================================================
+
+function determineB2BType(company: any, includeTypes: string[]): string {
+  const name = (company.name || '').toLowerCase();
+  const desc = (company.short_description || '').toLowerCase();
+  const industry = (company.industry || '').toLowerCase();
+  const text = `${name} ${desc} ${industry}`;
+
+  // Verificar tipos em ordem de prioridade
+  if (includeTypes.some(t => t.toLowerCase().includes('wholesaler'))) {
+    if (text.includes('wholesale') || text.includes('wholesaler')) {
+      return 'wholesaler';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('distributor'))) {
+    if (text.includes('distributor') || text.includes('distribution')) {
+      return 'distributor';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('importer'))) {
+    if (text.includes('importer') || text.includes('import')) {
+      return 'importer';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('dealer'))) {
+    if (text.includes('dealer')) {
+      return 'dealer';
+    }
+  }
+
+  // Fallback: primeiro tipo da lista
+  return includeTypes[0]?.toLowerCase() || 'dealer';
+}
+
+// ============================================================================
 // CAMADA 1: APOLLO.IO (Dados estruturados)
 // ============================================================================
 
-async function searchApollo(keyword: string, country: string, minVolume?: number) {
+async function searchApollo(
+  keyword: string, 
+  country: string, 
+  minVolume?: number,
+  includeTypes: string[] = [],
+  excludeTypes: string[] = [],
+  includeRoles: string[] = []
+) {
   const apolloKey = Deno.env.get('APOLLO_API_KEY');
   if (!apolloKey) {
     console.log('[APOLLO] ⚠️ APOLLO_API_KEY missing - pulando Apollo');
@@ -51,27 +94,53 @@ async function searchApollo(keyword: string, country: string, minVolume?: number
 
   console.log(`[APOLLO] 🔍 Keyword: "${keyword}" | País: ${country} | Min Volume: ${minVolume ? `$${minVolume}` : 'N/A'}`);
 
+  // Construir keywords de inclusão baseadas em includeTypes
+  const includeKeywords: string[] = [keyword];
+  includeTypes.forEach(type => {
+    if (type.toLowerCase().includes('distributor')) {
+      includeKeywords.push(`${keyword} distributor`);
+    }
+    if (type.toLowerCase().includes('dealer')) {
+      includeKeywords.push(`${keyword} dealer`);
+    }
+    if (type.toLowerCase().includes('importer')) {
+      includeKeywords.push(`${keyword} importer`);
+    }
+    if (type.toLowerCase().includes('wholesaler')) {
+      includeKeywords.push(`${keyword} wholesale`);
+    }
+  });
+
+  // Construir exclusões baseadas em excludeTypes
+  const excludeKeywords: string[] = [
+    'blog', 'news', 'magazine', 'media', 'publisher',
+    'facebook.com', 'instagram.com', 'linkedin.com',
+    'youtube.com', 'twitter.com', 'tiktok.com',
+  ];
+  excludeTypes.forEach(type => {
+    const typeLower = type.toLowerCase();
+    if (typeLower.includes('gym') || typeLower.includes('studio')) {
+      excludeKeywords.push('pilates studio', 'yoga studio', 'fitness studio', 'gym', 'health club');
+    }
+    if (typeLower.includes('school')) {
+      excludeKeywords.push('instructor', 'teacher', 'personal trainer', 'coach', 'training', 'school');
+    }
+  });
+
   const payload: any = {
     page: 1,
     per_page: 50,
     organization_locations: [country],
-    // USAR SÓ A KEYWORD ESPECÍFICA (das 19 keywords Pilates acima)
-    q_organization_keyword_tags: [keyword], // Ex: "pilates equipment wholesale"
+    q_organization_keyword_tags: includeKeywords.slice(0, 5), // Limitar a 5 keywords
     organization_num_employees_ranges: ['21-50', '51-200', '201-500', '501-1000'],
-    // EXCLUSÕES FORTES: B2C, Studios, Outros setores
-    organization_not_keyword_tags: [
-      'pilates studio', 'yoga studio', 'fitness studio', 'gym', 'health club',
-      'instructor', 'teacher', 'personal trainer', 'coach', 'training',
-      'blog', 'news', 'magazine', 'media', 'publisher',
-      'restaurant', 'food', 'beverage', 'catering',
-      'construction', 'building', 'contractor',
-      'automotive', 'car dealer', 'vehicle',
-      'real estate', 'property', 'housing',
-      'software', 'saas', 'technology', 'IT services',
-      'consulting', 'marketing', 'advertising',
-      'retail', 'ecommerce', 'online store',
-    ],
-  };image.png
+    organization_not_keyword_tags: excludeKeywords,
+  };
+
+  // Adicionar busca por cargos se especificado
+  if (includeRoles.length > 0) {
+    payload.person_titles = includeRoles;
+    payload.person_seniorities = ['manager', 'director', 'vp', 'c_suite'];
+  }
 
   // FILTRO VOLUME MÍNIMO (se fornecido)
   if (minVolume) {
@@ -103,20 +172,32 @@ async function searchApollo(keyword: string, country: string, minVolume?: number
 
     console.log(`[APOLLO] ✅ ${orgs.length} empresas encontradas`);
 
-    return orgs.map((c: any) => ({
-      name: c.name,
-      website: c.website_url,
-      linkedin_url: c.linkedin_url,
-      country: c.country || country,
-      city: c.city,
-      state: c.state,
-      industry: c.industry,
-      employee_count: c.organization_num_employees,
-      description: c.short_description,
-      apollo_id: c.id,
-      apollo_link: `https://app.apollo.io/#/companies/${c.id}`,
-      source: 'apollo',
-    }));
+    return orgs
+      .filter((c: any) => {
+        // Filtrar empresas sem website ou com domínios bloqueados
+        if (!c.website_url) return false;
+        const domain = c.website_url.toLowerCase();
+        const blocked = ['facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com'];
+        return !blocked.some(b => domain.includes(b));
+      })
+      .map((c: any) => ({
+        name: c.name,
+        company_name: c.name,
+        website: c.website_url,
+        domain: c.website_url,
+        linkedin_url: c.linkedin_url,
+        country: c.country || country,
+        city: c.city,
+        state: c.state,
+        industry: c.industry,
+        employee_count: c.organization_num_employees,
+        description: c.short_description,
+        apollo_id: c.id,
+        apollo_link: `https://app.apollo.io/#/companies/${c.id}`,
+        source: 'apollo',
+        // Identificar tipo B2B baseado em keywords
+        b2b_type: determineB2BType(c, includeTypes),
+      }));
   } catch (error) {
     console.error('[APOLLO] ❌:', error);
     return [];
@@ -186,13 +267,25 @@ async function searchSerper(keyword: string, country: string) {
 
           if (response.ok) {
             const data = await response.json();
-            return (data.organic || []).map((r: any) => ({
-              name: r.title,
-              website: r.link,
-              description: r.snippet,
-              source: 'serper',
-              source_portal: extractPortal(r.link),
-            }));
+            return (data.organic || [])
+              .filter((r: any) => {
+                // Filtrar Facebook, Instagram, etc. já no Serper
+                const link = (r.link || '').toLowerCase();
+                const blocked = ['facebook.com', 'instagram.com', 'linkedin.com', 
+                                'youtube.com', 'faire.com', 'etsy.com'];
+                if (blocked.some(b => link.includes(b))) return false;
+                if (link.includes('/posts/') || link.includes('/videos/') || 
+                    link.includes('/groups/') || link.includes('/people/') ||
+                    link.includes('/p/')) return false;
+                return true;
+              })
+              .map((r: any) => ({
+                name: r.title,
+                website: r.link,
+                description: r.snippet,
+                source: 'serper',
+                source_portal: extractPortal(r.link),
+              }));
           }
         } catch (err) {
           console.error(`[SERPER] Query failed: ${query.substring(0, 50)}...`);
@@ -295,7 +388,17 @@ async function searchGoogleAPI(keyword: string, country: string) {
         const data = await response.json();
         const items = (data.items || [])
           .filter((item: any) => {
+            const link = (item.link || '').toLowerCase();
             const text = (item.title + ' ' + item.snippet).toLowerCase();
+            
+            // Bloquear Facebook, Instagram, etc.
+            const blocked = ['facebook.com', 'instagram.com', 'linkedin.com', 
+                            'youtube.com', 'faire.com', 'etsy.com'];
+            if (blocked.some(b => link.includes(b))) return false;
+            if (link.includes('/posts/') || link.includes('/videos/') || 
+                link.includes('/groups/') || link.includes('/people/') ||
+                link.includes('/p/')) return false;
+            
             const forbiddenCountries = ['china', 'chinese', 'india', 'taiwan', 'alibaba', 'made-in-china'];
             const target = country.toLowerCase();
             
@@ -391,13 +494,24 @@ serve(async (req) => {
   }
 
   try {
-    const { hsCode, country, keywords, minVolume } = await req.json();
+    const { 
+      hsCode, 
+      country, 
+      keywords = [], 
+      minVolume,
+      includeTypes = ['distributor', 'dealer', 'importer', 'wholesaler'],
+      excludeTypes = ['gym', 'studio', 'school'],
+      includeRoles = []
+    } = await req.json();
 
     console.log(`==============================================`);
-    console.log(`[REALTIME] 🚀 BUSCA ULTRA-ROBUSTA INICIADA`);
+    console.log(`[REALTIME] 🚀 BUSCA B2B FOCADA INICIADA`);
     console.log(`  HS Code: ${hsCode}`);
     console.log(`  País: ${country}`);
-    console.log(`  Keywords: ${keywords?.join(', ')}`);
+    console.log(`  Keywords customizadas: ${keywords?.join(', ') || 'Nenhuma'}`);
+    console.log(`  Tipos B2B (incluir): ${includeTypes.join(', ')}`);
+    console.log(`  Tipos B2C (excluir): ${excludeTypes.join(', ')}`);
+    console.log(`  Cargos alvo: ${includeRoles.join(', ') || 'Nenhum'}`);
     console.log(`  Volume Mínimo: ${minVolume ? `$${minVolume.toLocaleString()}` : 'N/A'}`);
     console.log(`==============================================`);
 
@@ -412,11 +526,24 @@ serve(async (req) => {
       portais: {} as Record<string, number>,
     };
 
-    // FASE 1: APOLLO (TODAS as 19 keywords Pilates específicas)
-    console.log(`\n[FASE 1] Apollo.io - Buscando com TODAS as ${PILATES_KEYWORDS.length} keywords Pilates...`);
+    // FASE 1: APOLLO (usar keywords customizadas do usuário)
+    // ⚠️ REMOVIDO: Fallback hardcoded para Pilates - agora usa APENAS keywords do usuário
+    const searchKeywords = keywords.length > 0 
+      ? keywords.slice(0, 5) // Limitar a 5 keywords customizadas
+      : []; // Sem fallback - usuário deve fornecer keywords
     
-    for (const keyword of PILATES_KEYWORDS) { // USAR TODAS as keywords (19)
-      const companies = await searchApollo(keyword, country, minVolume);
+    console.log(`\n[FASE 1] Apollo.io - Buscando com ${searchKeywords.length} keywords...`);
+    console.log(`  Keywords: ${searchKeywords.join(', ')}`);
+    
+    for (const keyword of searchKeywords) {
+      const companies = await searchApollo(
+        keyword, 
+        country, 
+        minVolume,
+        includeTypes,
+        excludeTypes,
+        includeRoles
+      );
       allDealers.push(...companies);
       stats.apollo += companies.length;
       
@@ -428,13 +555,17 @@ serve(async (req) => {
 
     console.log(`[APOLLO] ✅ Total: ${stats.apollo} empresas`);
 
-    // FASE 2: SERPER (30 portais B2B) - USAR KEYWORD PILATES PRINCIPAL
+    // FASE 2: SERPER (30 portais B2B) - USAR KEYWORD CUSTOMIZADA
     console.log(`\n[FASE 2] Serper - Buscando em 30 portais B2B...`);
     
     let serperAttempted = false;
     try {
-      // USAR PRIMEIRA KEYWORD PILATES (não custom do usuário!)
-      const mainKeyword = PILATES_KEYWORDS[0]; // "pilates equipment wholesale"
+      // USAR PRIMEIRA KEYWORD CUSTOMIZADA (sem fallback)
+      if (searchKeywords.length === 0) {
+        console.log('[SERPER] ⚠️ Sem keywords - pulando Serper');
+        serperAttempted = false;
+      } else {
+        const mainKeyword = searchKeywords[0];
       const serperResults = await searchSerper(mainKeyword, country);
       allDealers.push(...serperResults);
       stats.serper = serperResults.length;
@@ -445,12 +576,12 @@ serve(async (req) => {
       serperAttempted = false;
     }
 
-    // FASE 3: GOOGLE API (Fallback se Serper falhou) - USAR KEYWORD PILATES
-    if (!serperAttempted || stats.serper === 0) {
+    // FASE 3: GOOGLE API (Fallback se Serper falhou) - USAR KEYWORD CUSTOMIZADA
+    if ((!serperAttempted || stats.serper === 0) && searchKeywords.length > 0) {
       console.log(`\n[FASE 3] Google Custom Search API - Fallback...`);
       try {
-        // USAR PRIMEIRA KEYWORD PILATES (não custom do usuário!)
-        const mainKeyword = PILATES_KEYWORDS[0]; // "pilates equipment wholesale"
+        // USAR PRIMEIRA KEYWORD CUSTOMIZADA (sem fallback)
+        const mainKeyword = searchKeywords[0];
         const googleResults = await searchGoogleAPI(mainKeyword, country);
         allDealers.push(...googleResults);
         stats.google_api = googleResults.length;
@@ -462,14 +593,52 @@ serve(async (req) => {
 
     stats.total_bruto = allDealers.length;
 
+    // FILTRAR: Remover Facebook, Instagram, páginas genéricas, etc.
+    const BLOCKED_DOMAINS = [
+      'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com', 
+      'twitter.com', 'tiktok.com', 'pinterest.com', 'reddit.com',
+      'blogspot.com', 'wordpress.com', 'medium.com', 'tumblr.com',
+      'wikipedia.org', 'quora.com', 'yelp.com', 'tripadvisor.com',
+      'faire.com', 'etsy.com', 'amazon.com', 'ebay.com',
+    ];
+    
+    const filtered = allDealers.filter(c => {
+      if (!c.website) return false;
+      const domain = c.website.toLowerCase();
+      const name = (c.name || '').toLowerCase();
+      
+      // Bloquear domínios de redes sociais e blogs
+      if (BLOCKED_DOMAINS.some(blocked => domain.includes(blocked))) {
+        return false;
+      }
+      
+      // Bloquear URLs que são claramente posts/páginas genéricas
+      if (domain.includes('/posts/') || domain.includes('/videos/') || 
+          domain.includes('/groups/') || domain.includes('/pages/') ||
+          domain.includes('/people/') || domain.includes('/p/') ||
+          domain.includes('/product/') || domain.includes('/products/')) {
+        return false;
+      }
+      
+      // Bloquear nomes genéricos demais
+      const genericNames = ['germany', 'products', 'shop all', 'global distributors', 
+                           'about-us', 'home', 'title:', 'wholesale'];
+      if (genericNames.some(gen => name.includes(gen) && name.length < 30)) {
+        return false;
+      }
+      
+      return true;
+    });
+
     // DEDUPLICAÇÃO por website
     const unique = Array.from(
-      new Map(allDealers.filter(c => c.website).map(c => [c.website, c])).values()
+      new Map(filtered.filter(c => c.website).map(c => [c.website, c])).values()
     );
 
     stats.total_unico = unique.length;
 
-    console.log(`\n[DEDUP] ✅ ${stats.total_unico} empresas únicas (de ${stats.total_bruto})`);
+    console.log(`\n[FILTER] ✅ ${filtered.length} empresas após filtros (de ${stats.total_bruto})`);
+    console.log(`[DEDUP] ✅ ${stats.total_unico} empresas únicas`);
 
     // FASE 4: SISTEMA BLINDADO - GARANTIR RESULTADOS SEMPRE
     console.log(`\n[FASE 4] SISTEMA BLINDADO - Processando ${unique.length} empresas...`);

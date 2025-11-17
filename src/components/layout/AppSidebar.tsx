@@ -22,6 +22,7 @@ import {
   Zap,
   CheckCircle2,
   Globe,
+  Globe2,
   Users,
   Database,
   Crosshair,
@@ -151,6 +152,12 @@ const menuGroups: MenuGroup[] = [
         icon: Globe,
         url: "/export-dealers",
         description: "Descobrir distribuidores e importadores internacionais"
+      },
+      {
+        title: "Sala Global de Alvos",
+        icon: Globe2,
+        url: "/global-targets",
+        description: "Discovery internacional com HS Code, palavras-chave e países (sem marketplaces)"
       },
       {
         title: "Propostas Comerciais",

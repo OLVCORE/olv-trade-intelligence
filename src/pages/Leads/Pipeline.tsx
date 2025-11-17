@@ -153,7 +153,7 @@ export default function Pipeline() {
               <ArrowRight className="w-5 h-5 mr-2" />
               Capturar Leads
             </Button>
-            <Button onClick={() => navigate('/leads/quarantine')} variant="outline" size="lg">
+            <Button onClick={() => navigate('/leads/icp-quarantine')} variant="outline" size="lg">
               Ver Quarentena
             </Button>
           </div>

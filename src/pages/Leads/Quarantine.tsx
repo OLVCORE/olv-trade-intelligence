@@ -1,3 +1,17 @@
+/**
+ * @deprecated Este componente foi deprecado em 2025-11-15.
+ * 
+ * IMPORTANTE: Este componente foi substituído por ICPQuarantine.tsx
+ * 
+ * Motivo: Duplicação de funcionalidade. ICPQuarantine é mais completo e está em uso ativo.
+ * 
+ * Rota antiga: /leads/quarantine (removida)
+ * Rota nova: /leads/icp-quarantine (usar esta)
+ * 
+ * Este arquivo será removido em versões futuras.
+ * Todas as referências foram atualizadas para usar ICPQuarantine.
+ */
+
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+/** @deprecated Use ICPQuarantine component instead */
 export default function LeadsQuarantine() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();

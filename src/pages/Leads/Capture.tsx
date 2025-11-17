@@ -281,7 +281,7 @@ export default function LeadsCapture() {
         <CardContent>
           <div className="flex gap-3">
             <Button
-              onClick={() => navigate('/leads/quarantine')}
+              onClick={() => navigate('/leads/icp-quarantine')}
               variant="default"
             >
               <Users className="w-4 h-4 mr-2" />

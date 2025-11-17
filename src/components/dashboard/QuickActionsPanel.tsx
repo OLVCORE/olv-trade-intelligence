@@ -10,6 +10,7 @@ import {
   BarChart3,
   Zap,
   Settings,
+  Globe2,
 } from "lucide-react";
 
 export function QuickActionsPanel() {
@@ -23,6 +24,14 @@ export function QuickActionsPanel() {
       badge: null,
       onClick: () => navigate("/companies"),
       tooltip: "Acesse a base completa de empresas para explorar prospects e identificar novas oportunidades de negócio."
+    },
+    {
+      icon: Globe2,
+      label: "Sala Global",
+      description: "Discovery internacional",
+      badge: null,
+      onClick: () => navigate("/global-targets"),
+      tooltip: "Rodar discovery internacional com HS Code, palavras-chave e filtros anti-marketplace."
     },
     {
       icon: UserPlus,

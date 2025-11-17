@@ -92,9 +92,11 @@ const RegionalExpansionPage = lazy(() => import("./pages/insights/RegionalExpans
 const ChurnAlertPage = lazy(() => import("./pages/insights/ChurnAlertPage"));
 const CloudMigrationPage = lazy(() => import("./pages/insights/CloudMigrationPage"));
 const LeadsCapture = lazy(() => import("./pages/Leads/Capture"));
-const LeadsQuarantine = lazy(() => import("./pages/Leads/Quarantine"));
+// DEPRECATED: LeadsQuarantine removido - usar ICPQuarantinePage (/leads/icp-quarantine)
+// const LeadsQuarantine = lazy(() => import("./pages/Leads/Quarantine"));
 const ICPAnalysis = lazy(() => import("./pages/Leads/ICPAnalysis"));
 const Pipeline = lazy(() => import("./pages/Leads/Pipeline"));
+const GlobalTargetsPage = lazy(() => import("./pages/GlobalTargetsPage"));
 const Analytics = lazy(() => import("./pages/Leads/Analytics"));
 const LeadsPoolPage = lazy(() => import("./pages/LeadsPoolPage"));
 const LeadsQualifiedPage = lazy(() => import("./pages/LeadsQualifiedPage"));
@@ -759,6 +761,16 @@ const App = () => (
               }
             />
             <Route
+              path="/global-targets"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <GlobalTargetsPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/account-strategy"
               element={
                 <ProtectedRoute>
@@ -919,7 +931,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
+            {/* DEPRECATED: Rota /leads/quarantine removida - usar /leads/icp-quarantine */}
+            {/* <Route
               path="/leads/quarantine"
               element={
                 <ProtectedRoute>
@@ -928,7 +941,7 @@ const App = () => (
                   </AppLayout>
                 </ProtectedRoute>
               }
-            />
+            /> */}
             <Route
               path="/leads/icp-analysis"
               element={
