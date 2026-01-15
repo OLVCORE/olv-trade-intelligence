@@ -329,7 +329,7 @@ export function QuarantineReportModal({
             ref={contentRef}
             className="flex-1 overflow-y-auto p-6 space-y-6"
           >
-            <TOTVSCheckCard
+            <ProductAnalysisCard
               companyId={companyId}
               companyName={companyName}
               cnpj={cnpj}
