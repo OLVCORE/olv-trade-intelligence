@@ -67,6 +67,35 @@ export function useQuarantineCompanies(filters?: {
   return useQuery({
     queryKey: [...ICP_QUARANTINE_QUERY_KEY, filters],
     queryFn: async () => {
+      // ✅ Obter usuário autenticado para logs
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('[QUARENTENA] Erro ao obter usuário:', userError);
+        throw userError;
+      }
+
+      if (!user) {
+        console.warn('[QUARENTENA] Usuário não autenticado');
+        return [];
+      }
+
+      console.log('[QUARENTENA] 🔍 Buscando empresas para user_id:', user.id);
+
+      // 🔍 DIAGNÓSTICO: Verificar se há registros órfãos (sem user_id) no banco
+      // Isso ajuda a identificar falsos positivos no "already exists"
+      const { data: orphanCheck } = await supabase
+        .from('icp_analysis_results')
+        .select('id, razao_social, user_id, tenant_id, workspace_id')
+        .is('user_id', null)
+        .limit(5);
+      
+      if (orphanCheck && orphanCheck.length > 0) {
+        console.warn('[QUARENTENA] ⚠️ ATENÇÃO: Encontrados registros órfãos (sem user_id) no banco:', orphanCheck.length);
+        console.warn('[QUARENTENA] ⚠️ Estes registros podem causar falsos positivos no "already exists"');
+        console.warn('[QUARENTENA] ⚠️ Execute a migration 20260116000002_cleanup_quarantine_orphans.sql para limpar');
+      }
+
       let query = supabase
         .from('icp_analysis_results')
         .select('*')
@@ -83,7 +112,34 @@ export function useQuarantineCompanies(filters?: {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        console.error('[QUARENTENA] ❌ Erro na query:', error);
+        console.error('[QUARENTENA] ❌ Código do erro:', error.code);
+        console.error('[QUARENTENA] ❌ Mensagem completa:', error.message);
+        throw error;
+      }
+
+      console.log('[QUARENTENA] ✅ Query executada. Total retornado:', data?.length || 0);
+      
+      if (data && data.length > 0) {
+        console.log('[QUARENTENA] 📊 Primeiros registros:', data.slice(0, 3).map(r => ({
+          id: r.id,
+          razao_social: r.razao_social,
+          user_id: r.user_id,
+          tenant_id: r.tenant_id,
+          workspace_id: r.workspace_id,
+          cnpj: r.cnpj ? 'SIM' : 'NÃO (internacional)',
+          status: r.status
+        })));
+      } else {
+        console.warn('[QUARENTENA] ⚠️ NENHUM REGISTRO RETORNADO');
+        console.warn('[QUARENTENA] ⚠️ Possíveis causas:');
+        console.warn('[QUARENTENA] ⚠️ 1. RLS bloqueando (user_id não corresponde a auth.uid())');
+        console.warn('[QUARENTENA] ⚠️ 2. Registros foram inseridos sem user_id (órfãos)');
+        console.warn('[QUARENTENA] ⚠️ 3. Filtros muito restritivos');
+        console.warn('[QUARENTENA] ⚠️ SOLUÇÃO: Execute a migration 20260116000002_cleanup_quarantine_orphans.sql');
+      }
 
       // Retornar dados diretamente (sem JOIN com companies)
       return data || [];
@@ -113,28 +169,27 @@ export function useApproveQuarantineBatch() {
       if (!quarantineData || quarantineData.length === 0) throw new Error('Nenhuma empresa encontrada');
 
       // 2. Validar dados obrigatórios e separar empresas válidas
+      // ⚠️ EMPRESAS INTERNACIONAIS: CNPJ não é obrigatório (só para Brasil)
+      // Razão Social é obrigatória para todas as empresas
       const validCompanies = quarantineData.filter(q => 
-        q.cnpj && 
-        q.cnpj.trim() !== '' && 
         q.razao_social && 
         q.razao_social.trim() !== ''
       );
 
       const invalidCompanies = quarantineData.filter(q => 
-        !q.cnpj || 
-        q.cnpj.trim() === '' || 
         !q.razao_social || 
         q.razao_social.trim() === ''
       );
 
       if (validCompanies.length === 0) {
-        throw new Error('Nenhuma empresa possui dados válidos (CNPJ e Razão Social são obrigatórios)');
+        throw new Error('Nenhuma empresa possui dados válidos (Razão Social é obrigatória)');
       }
 
       // 3. Inserir no leads_pool apenas empresas válidas
+      // ⚠️ CNPJ pode ser NULL para empresas internacionais
       const leadsToInsert = validCompanies.map(q => ({
         company_id: q.company_id || null,
-        cnpj: q.cnpj!,
+        cnpj: q.cnpj || null, // ✅ Permite NULL para empresas internacionais
         razao_social: q.razao_social!,
         icp_score: q.icp_score || 0,
         temperatura: q.temperatura || 'cold',
@@ -166,7 +221,7 @@ export function useApproveQuarantineBatch() {
           .from('icp_analysis_results')
           .update({ 
             status: 'pendente',
-            motivo_descarte: 'Dados incompletos (CNPJ ou Razão Social ausentes)'
+            motivo_descarte: 'Dados incompletos (Razão Social ausente)'
           })
           .in('id', invalidIds);
       }
@@ -310,9 +365,10 @@ export function useAutoApprove() {
       const analysisIds = data.map(d => d.id);
 
       // Aprovar usando o batch (usando origem válida do constraint)
+      // ⚠️ CNPJ pode ser NULL para empresas internacionais
       const leadsToInsert = data.map(q => ({
         company_id: q.company_id,
-        cnpj: q.cnpj,
+        cnpj: q.cnpj || null, // ✅ Permite NULL para empresas internacionais
         razao_social: q.razao_social,
         icp_score: q.icp_score,
         temperatura: q.temperatura,

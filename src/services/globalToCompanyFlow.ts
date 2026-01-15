@@ -69,6 +69,17 @@ export async function transferGlobalToCompanies(
     throw new Error('Usuário não autenticado');
   }
 
+  // ✅ OBTER TENANT_ID E WORKSPACE_ID DO USUÁRIO
+  const { data: userData, error: userDataError } = await supabase
+    .from('users')
+    .select('tenant_id, default_workspace_id')
+    .eq('id', user.id)
+    .single();
+
+  if (userDataError || !userData?.tenant_id) {
+    throw new Error('Usuário sem tenant configurado');
+  }
+
   console.log(`🚀 [GLOBAL-FLOW] Transferindo ${globalCompanies.length} empresas...`);
 
   try {
@@ -181,11 +192,12 @@ export async function transferGlobalToCompanies(
           continue;
         }
 
-        // Verificar se já existe na quarentena
+        // ✅ Verificar se já existe na quarentena (FILTRANDO POR USER_ID para evitar falsos positivos)
         const { data: existingQuarantine } = await supabase
           .from('icp_analysis_results')
           .select('id')
           .eq('company_id', companyId)
+          .eq('user_id', user.id) // ✅ FILTRO CRÍTICO: Só verifica registros do usuário atual
           .maybeSingle();
 
         if (existingQuarantine) {
@@ -213,12 +225,17 @@ export async function transferGlobalToCompanies(
           uf: isInternational ? null : (fullCompany?.state || null), // Só se Brasil
           municipio: globalCompany.city || null,
           website: globalCompany.domain || fullCompany?.website || null,
-          segmento: globalCompany.industry || null,
+          setor: globalCompany.industry || null, // ✅ CORRIGIDO: usar 'setor' em vez de 'segmento'
           status: 'pendente',
           temperatura: 'warm', // Empresas globais são pré-qualificadas
           icp_score: Math.round(globalCompany.fit_score || 50), // Usar fit_score como base
-          source_type: 'global_discovery',
-          source_name: globalCompany.sources?.discovery?.engine || 'sala-global',
+          origem: 'global_discovery', // ✅ CORRIGIDO: usar 'origem' em vez de 'source_type'
+          
+          // ✅ CAMPOS MULTI-TENANT (OBRIGATÓRIOS PARA RLS)
+          user_id: user.id,
+          tenant_id: userData.tenant_id,
+          workspace_id: userData.default_workspace_id,
+          
           raw_data: {
             global_company_id: globalCompany.id,
             fit_score: globalCompany.fit_score,

@@ -45,6 +45,7 @@ import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCompanies, useDeleteCompany } from '@/hooks/useCompanies';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTenant } from '@/contexts/TenantContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -67,6 +68,7 @@ export default function CompaniesManagementPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { currentTenant, currentWorkspace } = useTenant();
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50); // 🔢 Tamanho da página configurável
   const [searchTerm, setSearchTerm] = useState('');
@@ -1379,18 +1381,31 @@ export default function CompaniesManagementPage() {
                     description: 'Todos os dados enriquecidos serão mantidos · Powered by OLV Internacional'
                   });
 
+                  // ✅ OBTER USUÁRIO AUTENTICADO E CONTEXTO MULTI-TENANT
+                  const { data: { user }, error: userError } = await supabase.auth.getUser();
+                  if (userError || !user) {
+                    toast.error('Erro de autenticação', { description: 'Usuário não autenticado' });
+                    return;
+                  }
+
+                  if (!currentTenant || !currentWorkspace) {
+                    toast.error('Erro de contexto', { description: 'Tenant ou Workspace não configurado' });
+                    return;
+                  }
+
                   let sent = 0;
                   let skipped = 0;
                   let errors = 0;
 
                   for (const company of companies) {
                       try {
-                        // Verifica se já existe no ICP
+                        // ✅ Verifica se já existe no ICP (FILTRANDO POR USER_ID para evitar falsos positivos)
                         const { data: existing, error: checkError } = await supabase
                           .from('icp_analysis_results')
-                          .select('id')
+                          .select('id, user_id, tenant_id, workspace_id')
                           .eq('company_id', company.id)
-                          .maybeSingle(); // 🔧 USAR maybeSingle() ao invés de single()
+                          .eq('user_id', user.id) // ✅ FILTRO CRÍTICO: Só verifica registros do usuário atual
+                          .maybeSingle();
 
                         if (checkError) {
                           console.error(`❌ Erro ao verificar empresa ${company.company_name}:`, checkError);
@@ -1398,24 +1413,44 @@ export default function CompaniesManagementPage() {
                         }
 
                         if (existing) {
-                          console.log(`✓ Empresa ${company.company_name} já está no ICP`);
+                          console.log(`✓ Empresa ${company.company_name} já está no ICP (ID: ${existing.id}, user_id: ${existing.user_id})`);
                           skipped++;
                           continue;
                         }
 
-                        // 🔧 BUSCAR DADOS COMPLETOS DA EMPRESA (com CNPJ)
+                        // 🔍 DIAGNÓSTICO: Verificar se há registro órfão (sem user_id) para esta empresa
+                        // Isso ajuda a identificar por que o toast de "já existe" aparece mas a empresa não aparece na quarentena
+                        const { data: orphanCheck } = await supabase
+                          .from('icp_analysis_results')
+                          .select('id, user_id, razao_social')
+                          .eq('company_id', company.id)
+                          .is('user_id', null)
+                          .limit(1);
+                        
+                        if (orphanCheck && orphanCheck.length > 0) {
+                          console.warn(`⚠️ [DIAGNÓSTICO] Empresa ${company.company_name} tem registro órfão (sem user_id) na quarentena. ID: ${orphanCheck[0].id}`);
+                          console.warn(`⚠️ [DIAGNÓSTICO] Este registro órfão pode estar causando falsos positivos. Execute a migration de limpeza.`);
+                          // ⚠️ NÃO CONTINUAR: O registro órfão não será visível devido à RLS, mas pode estar causando conflitos
+                          // Vamos tentar inserir mesmo assim, pois o registro órfão não será visível para o usuário atual
+                        }
+
+                        // 🔧 BUSCAR DADOS COMPLETOS DA EMPRESA
                         const { data: fullCompany } = await supabase
                           .from('companies')
                           .select('*')
                           .eq('id', company.id)
                           .single();
 
-                        if (!fullCompany?.cnpj) {
-                          console.warn(`⚠️ Empresa ${company.company_name} sem CNPJ - pulando integração`);
+                        if (!fullCompany) {
+                          console.warn(`⚠️ Empresa ${company.company_name} não encontrada - pulando integração`);
                           skipped++;
                           continue;
                         }
 
+                        // ⚠️ EMPRESAS INTERNACIONAIS: CNPJ é só para Brasil
+                        // Empresas internacionais podem ser integradas sem CNPJ
+                        const isInternational = !fullCompany.cnpj || fullCompany.country !== 'Brazil';
+                        
                         // 🔧 NORMALIZAR DADOS USANDO DADOS COMPLETOS DA EMPRESA
                         const receitaData = (fullCompany.raw_data as any)?.receita || {};
                         
@@ -1425,35 +1460,48 @@ export default function CompaniesManagementPage() {
                           .insert({
                             // ✅ OBRIGATÓRIOS (NOT NULL)
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj,
+                            cnpj: isInternational ? null : (fullCompany.cnpj || null), // Só CNPJ se for Brasil
                             razao_social: fullCompany.company_name || receitaData.razao_social || receitaData.nome || 'N/A',
                             
+                            // ✅ CAMPOS MULTI-TENANT (OBRIGATÓRIOS PARA RLS)
+                            user_id: user.id,
+                            tenant_id: currentTenant.id,
+                            workspace_id: currentWorkspace.id,
+                            
                             // ✅ OPCIONAIS (mas importantes)
-                            nome_fantasia: receitaData.nome_fantasia || receitaData.fantasia || null,
-                            uf: (fullCompany.location as any)?.state || receitaData.uf || null,
-                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || null,
+                            nome_fantasia: isInternational ? null : (receitaData.nome_fantasia || receitaData.fantasia || null), // Só se Brasil
+                            uf: isInternational ? null : ((fullCompany.location as any)?.state || receitaData.uf || null), // Só se Brasil
+                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || fullCompany.city || null,
                             porte: receitaData.porte || fullCompany.porte_estimado || null,
                             cnae_principal: receitaData.cnae_fiscal || receitaData.atividade_principal?.[0]?.code || null,
                             website: fullCompany.website || fullCompany.domain || null,
                             email: fullCompany.email || receitaData.email || null,
                             telefone: receitaData.ddd_telefone_1 || receitaData.telefone || null,
+                            setor: fullCompany.industry || null, // ✅ CORRIGIDO: usar 'setor' em vez de 'segmento'
                             
                             // ✅ RASTREABILIDADE
                             status: 'pendente',
-                            source_type: fullCompany.source_type || 'manual',
-                            source_name: fullCompany.source_name || 'Estoque',
-                            import_batch_id: fullCompany.import_batch_id,
+                            temperatura: isInternational ? 'warm' : 'cold', // Empresas internacionais são pré-qualificadas
+                            origem: fullCompany.source_type || 'manual', // ✅ CORRIGIDO: usar 'origem' em vez de 'source_type'
+                            // ✅ REMOVIDO: source_name e import_batch_id não existem na tabela (mover para raw_data se necessário)
                             
-                            // ✅ RAW DATA (mantém TUDO)
-                            raw_data: fullCompany.raw_data || {}
+                            // ✅ RAW DATA (mantém TUDO + flag internacional)
+                            raw_data: {
+                              ...(fullCompany.raw_data || {}),
+                              is_international: isInternational,
+                              country: fullCompany.country,
+                              needs_enrichment: true,
+                              auto_validated: false,
+                            }
                           });
 
                         if (insertError) {
                           console.error(`❌ Erro ao inserir ${company.company_name} no ICP:`, insertError);
+                          console.error('Detalhes do erro:', JSON.stringify(insertError, null, 2));
                           throw insertError;
                         }
                         
-                        console.log(`✅ ${company.company_name} integrada ao ICP!`);
+                        console.log(`✅ ${company.company_name} integrada ao ICP! (user_id: ${user.id}, tenant_id: ${currentTenant.id})`);
                         sent++;
                       } catch (e: any) {
                         console.error(`❌ Error integrating ${company.company_name} to ICP:`, e);
@@ -1648,6 +1696,18 @@ export default function CompaniesManagementPage() {
                       description: 'Todos os dados enriquecidos serão mantidos · Powered by OLV Internacional'
                     });
 
+                    // ✅ OBTER USUÁRIO AUTENTICADO E CONTEXTO MULTI-TENANT
+                    const { data: { user }, error: userError } = await supabase.auth.getUser();
+                    if (userError || !user) {
+                      toast.error('Erro de autenticação', { description: 'Usuário não autenticado' });
+                      return;
+                    }
+
+                    if (!currentTenant || !currentWorkspace) {
+                      toast.error('Erro de contexto', { description: 'Tenant ou Workspace não configurado' });
+                      return;
+                    }
+
                     const selectedComps = selectedCompanies.length > 0
                       ? companies.filter(c => selectedCompanies.includes(c.id))
                       : companies;
@@ -1663,7 +1723,7 @@ export default function CompaniesManagementPage() {
 
                     for (const company of selectedComps) {
                       try {
-                        // 🔧 BUSCAR DADOS COMPLETOS DA EMPRESA (necessário para ter CNPJ)
+                        // 🔧 BUSCAR DADOS COMPLETOS DA EMPRESA
                         const { data: fullCompany, error: fetchError } = await supabase
                           .from('companies')
                           .select('*')
@@ -1676,17 +1736,16 @@ export default function CompaniesManagementPage() {
                           continue;
                         }
 
-                        if (!fullCompany.cnpj) {
-                          console.warn(`⚠️ Empresa ${fullCompany.company_name} sem CNPJ - pulando`);
-                          skipped++;
-                          continue;
-                        }
+                        // ⚠️ EMPRESAS INTERNACIONAIS: CNPJ é só para Brasil
+                        // Empresas internacionais podem ser integradas sem CNPJ
+                        const isInternational = !fullCompany.cnpj || fullCompany.country !== 'Brazil';
 
-                        // Verifica se já existe no ICP
+                        // ✅ Verifica se já existe no ICP (FILTRANDO POR USER_ID para evitar falsos positivos)
                         const { data: existing, error: checkError } = await supabase
                           .from('icp_analysis_results')
-                          .select('id')
+                          .select('id, user_id, tenant_id, workspace_id')
                           .eq('company_id', fullCompany.id)
+                          .eq('user_id', user.id) // ✅ FILTRO CRÍTICO: Só verifica registros do usuário atual
                           .maybeSingle();
 
                         if (checkError) {
@@ -1695,9 +1754,21 @@ export default function CompaniesManagementPage() {
                         }
 
                         if (existing) {
-                          console.log(`✓ Empresa ${fullCompany.company_name} já está no ICP`);
+                          console.log(`✓ Empresa ${fullCompany.company_name} já está no ICP (ID: ${existing.id}, user_id: ${existing.user_id})`);
                           skipped++;
                           continue;
+                        }
+
+                        // 🔍 LOG DETALHADO: Verificar se há registros órfãos (sem user_id) para esta empresa
+                        const { data: orphanCheck } = await supabase
+                          .from('icp_analysis_results')
+                          .select('id, user_id')
+                          .eq('company_id', fullCompany.id)
+                          .is('user_id', null)
+                          .limit(1);
+                        
+                        if (orphanCheck && orphanCheck.length > 0) {
+                          console.warn(`⚠️ Empresa ${fullCompany.company_name} tem registro órfão (sem user_id) na quarentena. ID: ${orphanCheck[0].id}`);
                         }
 
                         // 🔧 NORMALIZAR DADOS USANDO DADOS COMPLETOS DA EMPRESA
@@ -1709,35 +1780,48 @@ export default function CompaniesManagementPage() {
                           .insert({
                             // ✅ OBRIGATÓRIOS (NOT NULL)
                             company_id: fullCompany.id,
-                            cnpj: fullCompany.cnpj,
+                            cnpj: isInternational ? null : (fullCompany.cnpj || null), // Só CNPJ se for Brasil
                             razao_social: fullCompany.company_name || receitaData.razao_social || receitaData.nome || 'N/A',
                             
+                            // ✅ CAMPOS MULTI-TENANT (OBRIGATÓRIOS PARA RLS)
+                            user_id: user.id,
+                            tenant_id: currentTenant.id,
+                            workspace_id: currentWorkspace.id,
+                            
                             // ✅ OPCIONAIS (mas importantes)
-                            nome_fantasia: receitaData.nome_fantasia || receitaData.fantasia || null,
-                            uf: (fullCompany.location as any)?.state || receitaData.uf || null,
-                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || null,
+                            nome_fantasia: isInternational ? null : (receitaData.nome_fantasia || receitaData.fantasia || null), // Só se Brasil
+                            uf: isInternational ? null : ((fullCompany.location as any)?.state || receitaData.uf || null), // Só se Brasil
+                            municipio: (fullCompany.location as any)?.city || receitaData.municipio || fullCompany.city || null,
                             porte: receitaData.porte || fullCompany.porte_estimado || null,
                             cnae_principal: receitaData.cnae_fiscal || receitaData.atividade_principal?.[0]?.code || null,
                             website: fullCompany.website || fullCompany.domain || null,
                             email: fullCompany.email || receitaData.email || null,
                             telefone: receitaData.ddd_telefone_1 || receitaData.telefone || null,
+                            setor: fullCompany.industry || null, // ✅ CORRIGIDO: usar 'setor' em vez de 'segmento'
                             
                             // ✅ RASTREABILIDADE
                             status: 'pendente',
-                            source_type: fullCompany.source_type || 'manual',
-                            source_name: fullCompany.source_name || 'Estoque',
-                            import_batch_id: fullCompany.import_batch_id,
+                            temperatura: isInternational ? 'warm' : 'cold', // Empresas internacionais são pré-qualificadas
+                            origem: fullCompany.source_type || 'manual', // ✅ CORRIGIDO: usar 'origem' em vez de 'source_type'
+                            // ✅ REMOVIDO: source_name e import_batch_id não existem na tabela (mover para raw_data se necessário)
                             
-                            // ✅ RAW DATA (mantém TUDO)
-                            raw_data: fullCompany.raw_data || {}
+                            // ✅ RAW DATA (mantém TUDO + flag internacional)
+                            raw_data: {
+                              ...(fullCompany.raw_data || {}),
+                              is_international: isInternational,
+                              country: fullCompany.country,
+                              needs_enrichment: true,
+                              auto_validated: false,
+                            }
                           });
 
                         if (insertError) {
                           console.error(`❌ Erro ao inserir ${fullCompany.company_name} no ICP:`, insertError);
+                          console.error('Detalhes do erro:', JSON.stringify(insertError, null, 2));
                           throw insertError;
                         }
                         
-                        console.log(`✅ ${fullCompany.company_name} integrada ao ICP!`);
+                        console.log(`✅ ${fullCompany.company_name} integrada ao ICP! (user_id: ${user.id}, tenant_id: ${currentTenant.id})`);
                         sent++;
                       } catch (e: any) {
                         console.error(`❌ Error integrating to ICP:`, e);
