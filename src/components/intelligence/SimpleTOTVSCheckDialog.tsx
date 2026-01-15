@@ -21,7 +21,7 @@ export function StrategicIntelligenceDialog({
   domain,
   open,
   onOpenChange,
-}: SimpleTOTVSCheckDialogProps) {
+}: StrategicIntelligenceDialogProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 

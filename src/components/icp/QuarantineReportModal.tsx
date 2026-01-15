@@ -78,7 +78,7 @@ export function QuarantineReportModal({
 
   const handleSaveToSystem = useCallback(async () => {
     if (!stcResult) {
-      toast.info('Execute a verificação TOTVS antes de salvar');
+      toast.info('Execute o Strategic Intelligence Check antes de salvar');
       return;
     }
     
@@ -293,7 +293,7 @@ export function QuarantineReportModal({
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-lg font-semibold truncate flex items-center gap-2">
-                  Relatório de Verificação TOTVS
+                  Dossiê Estratégico de Prospecção Internacional
                 </DialogTitle>
                 <DialogDescription className="text-sm mt-1 truncate">
                   {companyName}
