@@ -125,6 +125,18 @@ const GROWTH_SIGNALS_QUERIES = (companyName: string) => [
   `"${companyName}" "announces" expansion OR growth`
 ];
 
+// 👥 D&B DECISORES/LEADERSHIP - Queries específicas para extrair dados de decisores da D&B
+const DNB_LEADERSHIP_QUERIES = (companyName: string) => [
+  `site:dnb.com "${companyName}" executives OR leadership OR management`,
+  `site:dnb.com "${companyName}" CEO OR president OR founder OR owner`,
+  `site:dnb.com "${companyName}" board of directors OR directors`,
+  `site:dnb.com "${companyName}" decision makers OR key personnel`,
+  `site:dnb.com "${companyName}" company profile leadership`,
+  `site:dnb.com "${companyName}" officers OR principals OR partners`,
+  `site:dnb.com "${companyName}" ownership structure OR shareholders`,
+  `site:dnb.com "${companyName}" corporate structure OR management team`
+];
+
 // 🏪 PRODUCT FIT SIGNALS - Queries específicas para detectar dealers/distribuidores
 const PRODUCT_FIT_SIGNALS_QUERIES = (companyName: string, tenantProducts?: string[]) => {
   const baseQueries = [
@@ -508,6 +520,98 @@ function calculateLeadScore(
     explanation,
     timeline_to_close,
     recommendation
+  };
+}
+
+// 👥 EXTRAIR DADOS D&B DE DECISORES/LEADERSHIP
+function extractDNBLeadershipData(dnbEvidences: any[], companyName: string): {
+  executives: Array<{ name: string; title: string; source: string; url: string }>;
+  directors: Array<{ name: string; title: string; source: string; url: string }>;
+  owners: Array<{ name: string; role: string; source: string; url: string }>;
+  partners: Array<{ name: string; role: string; source: string; url: string }>;
+  total_found: number;
+  sources: string[];
+} {
+  const executives: Array<{ name: string; title: string; source: string; url: string }> = [];
+  const directors: Array<{ name: string; title: string; source: string; url: string }> = [];
+  const owners: Array<{ name: string; role: string; source: string; url: string }> = [];
+  const partners: Array<{ name: string; role: string; source: string; url: string }> = [];
+  const sources: string[] = [];
+
+  // Extrair dados das evidências D&B
+  for (const evidence of dnbEvidences) {
+    if (!evidence.url?.includes('dnb.com')) continue;
+    
+    sources.push(evidence.url);
+    const snippet = evidence.snippet || evidence.description || '';
+    
+    // Extrair nomes e títulos usando regex
+    // Padrões: "John Smith, CEO" ou "President: Jane Doe" ou "John Smith - Director"
+    const namePatterns = [
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+),?\s*(?:is|serves as|President|CEO|CFO|COO|CTO|Founder|Owner|Director|Manager|VP|Vice President)/gi,
+      /(President|CEO|CFO|COO|CTO|Founder|Owner|Director|Manager|VP|Vice President)[\s:]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+      /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*[-\s]+\s*(President|CEO|CFO|COO|CTO|Founder|Owner|Director|Manager|VP|Vice President)/gi
+    ];
+    
+    for (const pattern of namePatterns) {
+      const matches = snippet.matchAll(pattern);
+      for (const match of matches) {
+        let name = '';
+        let title = '';
+        
+        if (match[1] && match[2]) {
+          // Padrão: "Title: Name" ou "Name, Title"
+          if (/^(President|CEO|CFO|COO|CTO|Founder|Owner|Director|Manager|VP|Vice President)/i.test(match[1])) {
+            title = match[1].trim();
+            name = match[2].trim();
+          } else {
+            name = match[1].trim();
+            title = match[2].trim();
+          }
+        } else if (match[1]) {
+          // Apenas nome ou título
+          if (/^(President|CEO|CFO|COO|CTO|Founder|Owner|Director|Manager|VP|Vice President)/i.test(match[1])) {
+            title = match[1].trim();
+          } else {
+            name = match[1].trim();
+          }
+        }
+        
+        if (name && title && name.length > 3 && name.length < 50) {
+          // Classificar por título
+          const titleLower = title.toLowerCase();
+          
+          if (titleLower.includes('ceo') || titleLower.includes('president') || titleLower.includes('chief executive')) {
+            executives.push({ name, title, source: 'D&B', url: evidence.url });
+          } else if (titleLower.includes('director') || titleLower.includes('board')) {
+            directors.push({ name, title, source: 'D&B', url: evidence.url });
+          } else if (titleLower.includes('founder') || titleLower.includes('owner')) {
+            owners.push({ name, role: title, source: 'D&B', url: evidence.url });
+          } else if (titleLower.includes('partner')) {
+            partners.push({ name, role: title, source: 'D&B', url: evidence.url });
+          } else {
+            // Fallback: adicionar como executive
+            executives.push({ name, title, source: 'D&B', url: evidence.url });
+          }
+        }
+      }
+    }
+  }
+
+  // Remover duplicatas (mesmo nome)
+  const uniqueExecutives = Array.from(new Map(executives.map(e => [e.name, e])).values());
+  const uniqueDirectors = Array.from(new Map(directors.map(d => [d.name, d])).values());
+  const uniqueOwners = Array.from(new Map(owners.map(o => [o.name, o])).values());
+  const uniquePartners = Array.from(new Map(partners.map(p => [p.name, p])).values());
+  const uniqueSources = Array.from(new Set(sources));
+
+  return {
+    executives: uniqueExecutives,
+    directors: uniqueDirectors,
+    owners: uniqueOwners,
+    partners: uniquePartners,
+    total_found: uniqueExecutives.length + uniqueDirectors.length + uniqueOwners.length + uniquePartners.length,
+    sources: uniqueSources
   };
 }
 
@@ -1370,8 +1474,8 @@ serve(async (req) => {
     sourcesConsulted += 5;
     console.log(`[SCI] ✅ FASE 5: ${evidencias.filter(e => e.source_type === 'social_b2b').length} evidências de Product Fit Signals`);
 
-    // 🌍 FASE 6: BUSCA GENÉRICA COMPLEMENTAR (Fontes restantes - menor prioridade)
-    console.log('[SCI] 🌍 FASE 6: Busca genérica complementar em fontes restantes...');
+    // 🌍 FASE 7: BUSCA GENÉRICA COMPLEMENTAR (Fontes restantes - menor prioridade)
+    console.log('[SCI] 🌍 FASE 7: Busca genérica complementar em fontes restantes...');
     const evidenciasJobPortalsGeneric = await searchMultiplePortals({
       portals: GLOBAL_JOB_PORTALS.slice(3), // Job portals não usados nas fases anteriores
       companyName: company_name,
@@ -1499,7 +1603,10 @@ serve(async (req) => {
       // 6. Product Fit Analysis
       product_fit: productFit,
       
-      // 7. Status Final (COMPATIBILIDADE COM FORMATO ANTIGO)
+      // 7. D&B Leadership/Decisores Data (EXTRAÍDO DAS EVIDÊNCIAS D&B)
+      dnb_leadership: extractDNBLeadershipData(dnbEvidences, company_name),
+      
+      // 8. Status Final (COMPATIBILIDADE COM FORMATO ANTIGO)
       status: classification.status === 'hot' ? 'warm_prospect' : classification.status === 'warm' ? 'warm_prospect' : 'cold_lead',
       confidence: classification.confidence,
       recommendation: classification.recommendation,

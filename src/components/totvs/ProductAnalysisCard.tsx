@@ -93,6 +93,7 @@ export default function StrategicIntelligenceCard({
   });
   
   const [enabled, setEnabled] = useState(autoVerify);
+  const [loading, setLoading] = useState(false);
   const [filterMode, setFilterMode] = useState<'all' | 'triple'>('all');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [copiedTerms, setCopiedTerms] = useState<string | null>(null);
@@ -324,7 +325,9 @@ export default function StrategicIntelligenceCard({
   };
 
   // 🔥 CRITICAL: Desabilitar consulta se já tem relatório salvo (evita consumo de créditos)
-  const shouldFetchLive = enabled && !latestReport?.full_report;
+  // ⚠️ EXCEÇÃO: Se shouldForceRefresh está true, sempre buscar (botão Atualizar clicado)
+  const [shouldForceRefresh, setShouldForceRefresh] = React.useState(false);
+  const shouldFetchLive = enabled && (!latestReport?.full_report || shouldForceRefresh);
 
   const { data: liveData, isLoading: isLoadingLive, refetch } = useSimpleProductCheck({
     companyId,
@@ -525,35 +528,57 @@ export default function StrategicIntelligenceCard({
   }, [data, onResult]);
 
   const handleVerify = async () => {
+    if (!companyName && !cnpj) {
+      toast.error('Nome da empresa ou CNPJ é obrigatório');
+      return;
+    }
+
     // 🚨 SE JÁ TEM RELATÓRIO SALVO, PERGUNTAR SE QUER REPROCESSAR
-    if (hasSaved) {
+    if (latestReport?.full_report) {
       const confirmar = window.confirm(
         '⚠️ JÁ EXISTE UM RELATÓRIO SALVO!\n\n' +
-        'Ao verificar novamente, você consumirá créditos.\n\n' +
-        'Deseja realmente reprocessar a análise?'
+        'Ao atualizar, você consumirá créditos da API.\n\n' +
+        'Deseja realmente atualizar o relatório?'
       );
       if (!confirmar) return;
+    }
+
+    setLoading(true);
+    try {
+      // 🔥 FORÇAR NOVA BUSCA: Invalidar TUDO relacionado
+      const queryClient = useQueryClient();
+      queryClient.removeQueries({ queryKey: ['simple-product-check', companyId, companyName, cnpj] });
+      queryClient.removeQueries({ queryKey: ['latest-stc-report', companyId] });
+      queryClient.removeQueries({ queryKey: ['strategic-intelligence-check', companyId] });
       
-      // 🔥 DELETAR CACHE ANTIGO PARA FORÇAR NOVA BUSCA
-      if (companyId) {
-        try {
-          await supabase
-            .from('simple_totvs_checks')
-            .delete()
-            .eq('company_id', companyId);
-          console.log('[TOTVS] 🗑️ Cache deletado do Supabase');
-        } catch (error) {
-          console.error('[TOTVS] ❌ Erro ao deletar cache:', error);
-        }
+      // 🔥 REMOVER latestReport do estado para forçar busca fresca
+      if (latestReport?.id) {
+        console.log('[VERIFY] 🗑️ Removendo relatório salvo para forçar busca fresca...');
+        queryClient.setQueryData(['latest-stc-report', companyId], null);
       }
       
-      // 🔥 INVALIDAR CACHE DO REACT QUERY
-      await queryClient.invalidateQueries({ queryKey: ['simple-totvs-check', companyName] });
-      console.log('[TOTVS] 🗑️ Cache do React Query invalidado');
+      // 🔥 FORÇAR NOVA BUSCA ATIVANDO enabled
+      setShouldForceRefresh(true);
+      setEnabled(true);
+      
+      // 🔥 AGUARDAR REFETCH COMPLETO
+      await refetch();
+      
+      toast.success('✅ Relatório sendo atualizado...', {
+        description: 'Buscando dados atualizados em 47 fontes globais'
+      });
+      
+      // Resetar flag após 2 segundos
+      setTimeout(() => {
+        setShouldForceRefresh(false);
+        setLoading(false);
+      }, 2000);
+    } catch (error: any) {
+      console.error('[VERIFY] ❌ Erro ao atualizar:', error);
+      toast.error('Erro ao atualizar relatório', { description: error.message });
+      setLoading(false);
+      setShouldForceRefresh(false);
     }
-    
-    setEnabled(true);
-    refetch();
   };
 
   // 🔗 REGISTRY: Handler para salvar todas as abas em lote
