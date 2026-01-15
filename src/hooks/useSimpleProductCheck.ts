@@ -21,12 +21,22 @@ export const useSimpleProductCheck = ({
     queryFn: async () => {
       console.log('[HOOK] Chamando strategic-intelligence-check...');
 
+      // Buscar tenant_id e user_id para Product Fit Analysis
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user?.id)
+        .maybeSingle();
+      
       const { data, error } = await supabase.functions.invoke('strategic-intelligence-check', {
         body: {
           company_id: companyId,
           company_name: companyName,
           cnpj,
           domain,
+          tenant_id: userData?.tenant_id || null,
+          user_id: user?.id || null,
         },
       });
 

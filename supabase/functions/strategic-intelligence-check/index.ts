@@ -511,6 +511,154 @@ function calculateLeadScore(
   };
 }
 
+// 🏪 DEALER ANALYSIS (FASE 4: Detectar dealers/distribuidores/importers)
+function analyzeDealerType(
+  companyData: any,
+  companyName: string,
+  evidencias: any[]
+): {
+  is_dealer: boolean;
+  is_distributor: boolean;
+  is_importer: boolean;
+  business_model: string;
+  distribution_reach: string;
+  potential_value: number;
+  explanation: string;
+} {
+  const description = companyData.description || companyData.raw_data?.description || '';
+  const website = companyData.website || '';
+  const b2bType = companyData.b2b_type || companyData.raw_data?.type || '';
+  const country = companyData.country || 'unknown';
+  const employees = companyData.employees || companyData.employees_count || 0;
+  
+  const textToAnalyze = `${description} ${website} ${b2bType} ${companyName}`.toLowerCase();
+
+  // Keywords para detectar dealers/distribuidores
+  const dealerKeywords = ['dealer', 'retailer', 'reseller', 'retail outlet', 'retail store'];
+  const distributorKeywords = ['distributor', 'distribution', 'distribute', 'distributing', 'distribution network', 'distribution center'];
+  const importerKeywords = ['importer', 'import', 'importing', 'imports', 'international trade', 'import export', 'import-export'];
+  const wholesaleKeywords = ['wholesale', 'wholesaler', 'wholesaling', 'wholesale distributor', 'wholesale dealer'];
+  const manufacturerKeywords = ['manufacturer', 'manufacturing', 'factory', 'producer', 'producing', 'make', 'makes'];
+
+  // Detectar tipo de negócio
+  const isDealer = dealerKeywords.some(k => textToAnalyze.includes(k)) || 
+                   b2bType.toLowerCase().includes('dealer') ||
+                   b2bType.toLowerCase().includes('retailer');
+  
+  const isDistributor = distributorKeywords.some(k => textToAnalyze.includes(k)) ||
+                        wholesaleKeywords.some(k => textToAnalyze.includes(k)) ||
+                        b2bType.toLowerCase().includes('distributor') ||
+                        b2bType.toLowerCase().includes('wholesale');
+  
+  const isImporter = importerKeywords.some(k => textToAnalyze.includes(k)) ||
+                     b2bType.toLowerCase().includes('importer') ||
+                     b2bType.toLowerCase().includes('import');
+  
+  const isManufacturer = manufacturerKeywords.some(k => textToAnalyze.includes(k)) ||
+                         b2bType.toLowerCase().includes('manufacturer') ||
+                         b2bType.toLowerCase().includes('factory');
+
+  // Determinar modelo de negócio principal
+  let businessModel = 'unknown';
+  if (isImporter) {
+    businessModel = 'Importer';
+  } else if (isDistributor) {
+    businessModel = 'Distributor';
+  } else if (isDealer) {
+    businessModel = 'Dealer/Retailer';
+  } else if (isManufacturer) {
+    businessModel = 'Manufacturer';
+  }
+
+  // Determinar alcance de distribuição
+  let distributionReach = 'unknown';
+  const hasMultipleCountries = evidencias.some(e => 
+    e.description?.toLowerCase().includes('international') ||
+    e.description?.toLowerCase().includes('global') ||
+    e.description?.toLowerCase().includes('worldwide')
+  );
+
+  const hasMultipleStates = evidencias.some(e => 
+    e.description?.toLowerCase().includes('multiple locations') ||
+    e.description?.toLowerCase().includes('nationwide') ||
+    e.description?.toLowerCase().includes('across')
+  );
+
+  if (hasMultipleCountries || textToAnalyze.includes('international') || textToAnalyze.includes('global')) {
+    distributionReach = 'International';
+  } else if (hasMultipleStates || textToAnalyze.includes('nationwide') || textToAnalyze.includes('national')) {
+    distributionReach = 'National';
+  } else if (textToAnalyze.includes('regional') || country) {
+    distributionReach = 'Regional';
+  } else {
+    distributionReach = 'Local';
+  }
+
+  // Estimar potencial de deal (baseado em tamanho, tipo e distribuição)
+  let potentialValue = 0;
+  
+  if (isDealer || isDistributor || isImporter) {
+    // Base: $10,000 para pequenos dealers
+    potentialValue = 10000;
+    
+    // Ajustar por tamanho
+    if (employees >= 500) {
+      potentialValue *= 10; // $100,000 para grandes distribuidores
+    } else if (employees >= 100) {
+      potentialValue *= 5; // $50,000 para médios
+    } else if (employees >= 50) {
+      potentialValue *= 2; // $20,000 para pequenos-médios
+    }
+    
+    // Ajustar por alcance
+    if (distributionReach === 'International') {
+      potentialValue *= 3; // $300,000 para distribuidores internacionais
+    } else if (distributionReach === 'National') {
+      potentialValue *= 2; // $200,000 para nacionais
+    }
+    
+    // Bônus para importers (geralmente deals maiores)
+    if (isImporter) {
+      potentialValue *= 1.5; // 50% adicional para importers
+    }
+  }
+
+  // Gerar explicação
+  const explanations: string[] = [];
+  
+  if (isImporter) {
+    explanations.push('Company is an importer (detected import/importing keywords in description/business type)');
+  }
+  if (isDistributor) {
+    explanations.push('Company is a distributor (detected distribution/distributor keywords in description/business type)');
+  }
+  if (isDealer) {
+    explanations.push('Company is a dealer/retailer (detected dealer/retailer keywords in description/business type)');
+  }
+  
+  if (distributionReach !== 'unknown') {
+    explanations.push(`Distribution reach: ${distributionReach}`);
+  }
+  
+  if (potentialValue > 0) {
+    explanations.push(`Estimated deal potential: $${potentialValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/year`);
+  }
+  
+  const explanation = explanations.length > 0 
+    ? explanations.join('. ')
+    : 'Business model analysis: Unable to determine dealer/distributor/importer status from available data';
+
+  return {
+    is_dealer: isDealer,
+    is_distributor: isDistributor,
+    is_importer: isImporter,
+    business_model: businessModel,
+    distribution_reach: distributionReach,
+    potential_value: Math.round(potentialValue),
+    explanation
+  };
+}
+
 // 🎯 CÁLCULO DE SCORES (adaptado para SCI)
 function calculateCompanyHealthScore(evidencias: any[]): {
   overall_score: number;
@@ -531,16 +679,353 @@ function calculateCompanyHealthScore(evidencias: any[]): {
   };
 }
 
-// 📦 PRODUCT FIT ANALYSIS (integração com tenant_products)
+// 📦 PRODUCT FIT ANALYSIS REAL (FASE 3: Implementação Completa)
+
+// 1. Industry Alignment (0-30 pontos)
+function calculateIndustryFit(
+  companyIndustry: string | null | undefined,
+  productIndustry: string | null | undefined,
+  productCategories: string[]
+): { score: number; explanation: string } {
+  if (!companyIndustry || !productIndustry) {
+    return {
+      score: 0,
+      explanation: 'Industry information not available for comparison'
+    };
+  }
+
+  const companyIndustryLower = companyIndustry.toLowerCase();
+  const productIndustryLower = productIndustry.toLowerCase();
+
+  // Match exato: 30pts
+  if (companyIndustryLower === productIndustryLower) {
+    return {
+      score: 30,
+      explanation: `Perfect industry match: ${companyIndustry} = ${productIndustry}`
+    };
+  }
+
+  // Keywords comuns: verificar overlap
+  const companyKeywords = companyIndustryLower.split(/[\s,;|&]+/).filter(k => k.length > 3);
+  const productKeywords = productIndustryLower.split(/[\s,;|&]+/).filter(k => k.length > 3);
+  
+  const commonKeywords = companyKeywords.filter(k => productKeywords.includes(k));
+  
+  if (commonKeywords.length >= 2) {
+    return {
+      score: 25,
+      explanation: `Strong industry alignment: ${commonKeywords.length} common keywords (${commonKeywords.join(', ')})`
+    };
+  } else if (commonKeywords.length === 1) {
+    return {
+      score: 15,
+      explanation: `Moderate industry alignment: 1 common keyword (${commonKeywords[0]})`
+    };
+  }
+
+  // Verificar se categorias do produto mencionam indústria da empresa
+  const categoriesMatch = productCategories.some(cat => 
+    companyIndustryLower.includes(cat.toLowerCase()) || 
+    cat.toLowerCase().includes(companyIndustryLower)
+  );
+
+  if (categoriesMatch) {
+    return {
+      score: 10,
+      explanation: `Partial industry match: company industry matches product categories`
+    };
+  }
+
+  return {
+    score: 0,
+    explanation: `No industry alignment: ${companyIndustry} ≠ ${productIndustry}`
+  };
+}
+
+// 2. Company Size Fit (0-20 pontos)
+function calculateSizeFit(
+  companyEmployees: number | null | undefined,
+  productTargetSize: string | null | undefined
+): { score: number; explanation: string } {
+  if (!companyEmployees || companyEmployees === 0) {
+    return {
+      score: 0,
+      explanation: 'Company size information not available'
+    };
+  }
+
+  if (!productTargetSize) {
+    // Se produto não especifica tamanho, dar score médio
+    return {
+      score: 10,
+      explanation: 'Product has no size restrictions (universal fit)'
+    };
+  }
+
+  const sizeLower = productTargetSize.toLowerCase();
+  
+  // Definir ranges de tamanho
+  let minEmployees = 0;
+  let maxEmployees = Infinity;
+
+  if (sizeLower.includes('enterprise') || sizeLower.includes('large')) {
+    minEmployees = 250;
+    maxEmployees = Infinity;
+  } else if (sizeLower.includes('mid') || sizeLower.includes('medium')) {
+    minEmployees = 50;
+    maxEmployees = 500;
+  } else if (sizeLower.includes('small') || sizeLower.includes('sme')) {
+    minEmployees = 10;
+    maxEmployees = 100;
+  } else if (sizeLower.includes('startup') || sizeLower.includes('micro')) {
+    minEmployees = 1;
+    maxEmployees = 50;
+  }
+
+  if (companyEmployees >= minEmployees && companyEmployees <= maxEmployees) {
+    return {
+      score: 20,
+      explanation: `Perfect size fit: ${companyEmployees} employees matches target (${productTargetSize})`
+    };
+  } else if (companyEmployees >= minEmployees * 0.5 && companyEmployees <= maxEmployees * 1.5) {
+    return {
+      score: 10,
+      explanation: `Moderate size fit: ${companyEmployees} employees near target (${productTargetSize})`
+    };
+  }
+
+  return {
+    score: 0,
+    explanation: `Size mismatch: ${companyEmployees} employees does not match target (${productTargetSize})`
+  };
+}
+
+// 3. Product Category Match (0-30 pontos)
+function calculateCategoryMatch(
+  companyDescription: string | null | undefined,
+  companyWebsite: string | null | undefined,
+  productCategories: string[],
+  productName: string
+): { score: number; explanation: string } {
+  if (!companyDescription && !companyWebsite) {
+    return {
+      score: 0,
+      explanation: 'Company description and website not available for category matching'
+    };
+  }
+
+  const textToSearch = `${companyDescription || ''} ${companyWebsite || ''}`.toLowerCase();
+  const productNameLower = productName.toLowerCase();
+  
+  // Keywords relevantes para dealers/distribuidores
+  const dealerKeywords = ['distributor', 'dealer', 'importer', 'wholesale', 'retailer', 'reseller', 'supplier', 'reseller'];
+  const tradeKeywords = ['b2b', 'trade', 'import', 'export', 'supply chain', 'logistics', 'distribution'];
+  const productKeywords = [...productCategories.map(c => c.toLowerCase()), ...productNameLower.split(' ')];
+  
+  let matchScore = 0;
+  const matches: string[] = [];
+
+  // Verificar se empresa é dealer/distribuidor
+  const isDealer = dealerKeywords.some(keyword => textToSearch.includes(keyword));
+  const hasTrade = tradeKeywords.some(keyword => textToSearch.includes(keyword));
+
+  if (isDealer) {
+    matchScore += 15;
+    matches.push('dealer/distributor detected');
+  }
+
+  if (hasTrade) {
+    matchScore += 10;
+    matches.push('trade/B2B business detected');
+  }
+
+  // Verificar se categorias do produto aparecem na descrição
+  const categoryMatches = productCategories.filter(cat => 
+    textToSearch.includes(cat.toLowerCase())
+  );
+
+  if (categoryMatches.length > 0) {
+    matchScore += Math.min(15, categoryMatches.length * 5);
+    matches.push(`${categoryMatches.length} product category matches: ${categoryMatches.join(', ')}`);
+  }
+
+  // Verificar se nome do produto aparece
+  const productNameWords = productNameLower.split(' ').filter(w => w.length > 3);
+  const productNameMatch = productNameWords.some(word => textToSearch.includes(word));
+  
+  if (productNameMatch) {
+    matchScore += 5;
+    matches.push('product name keywords found');
+  }
+
+  const explanation = matches.length > 0 
+    ? `Category match: ${matches.join('; ')}`
+    : 'No category match found';
+
+  return {
+    score: Math.min(30, matchScore),
+    explanation
+  };
+}
+
+// 4. Geographic Fit (0-10 pontos)
+function calculateGeographicFit(
+  companyCountry: string | null | undefined,
+  companyState: string | null | undefined,
+  productRegions: string[] | null | undefined,
+  tenantRegions: string[] | null | undefined
+): { score: number; explanation: string } {
+  if (!companyCountry) {
+    return {
+      score: 0,
+      explanation: 'Company location not available'
+    };
+  }
+
+  // Se produto/tenant não especifica regiões, dar score médio
+  if ((!productRegions || productRegions.length === 0) && 
+      (!tenantRegions || tenantRegions.length === 0)) {
+    return {
+      score: 5,
+      explanation: 'Product available globally (no regional restrictions)'
+    };
+  }
+
+  const allRegions = [...(productRegions || []), ...(tenantRegions || [])];
+  const companyCountryLower = companyCountry.toLowerCase();
+
+  // Verificar match exato
+  const exactMatch = allRegions.some(region => 
+    region.toLowerCase() === companyCountryLower ||
+    region.toLowerCase().includes(companyCountryLower) ||
+    companyCountryLower.includes(region.toLowerCase())
+  );
+
+  if (exactMatch) {
+    return {
+      score: 10,
+      explanation: `Perfect geographic fit: ${companyCountry} in product/tenant regions`
+    };
+  }
+
+  // Verificar match parcial (continente)
+  const continents: Record<string, string[]> = {
+    'north america': ['united states', 'canada', 'mexico'],
+    'europe': ['united kingdom', 'germany', 'france', 'italy', 'spain'],
+    'asia': ['china', 'japan', 'india', 'south korea'],
+    'south america': ['brazil', 'argentina', 'chile'],
+    'oceania': ['australia', 'new zealand']
+  };
+
+  for (const [continent, countries] of Object.entries(continents)) {
+    if (countries.some(c => companyCountryLower.includes(c.toLowerCase()))) {
+      const continentInRegions = allRegions.some(r => 
+        r.toLowerCase().includes(continent) || continent.includes(r.toLowerCase())
+      );
+      if (continentInRegions) {
+        return {
+          score: 5,
+          explanation: `Moderate geographic fit: ${companyCountry} in same region/continent`
+        };
+      }
+    }
+  }
+
+  return {
+    score: 0,
+    explanation: `Geographic mismatch: ${companyCountry} not in product/tenant regions`
+  };
+}
+
+// 5. Business Model Fit (0-10 pontos)
+function calculateBusinessModelFit(
+  companyDescription: string | null | undefined,
+  companyB2bType: string | null | undefined,
+  productDistributionModel: string | null | undefined
+): { score: number; explanation: string } {
+  const textToSearch = `${companyDescription || ''} ${companyB2bType || ''}`.toLowerCase();
+  
+  // Se produto não especifica modelo de distribuição, dar score médio
+  if (!productDistributionModel) {
+    return {
+      score: 5,
+      explanation: 'Product has no specific distribution model (universal fit)'
+    };
+  }
+
+  const modelLower = productDistributionModel.toLowerCase();
+  
+  // Verificar se empresa é do tipo que produto precisa
+  const dealerKeywords = ['distributor', 'dealer', 'wholesale', 'reseller'];
+  const importerKeywords = ['importer', 'import', 'international trade'];
+  const manufacturerKeywords = ['manufacturer', 'producer', 'factory'];
+
+  let isDealer = dealerKeywords.some(k => textToSearch.includes(k));
+  let isImporter = importerKeywords.some(k => textToSearch.includes(k));
+  let isManufacturer = manufacturerKeywords.some(k => textToSearch.includes(k));
+
+  if (modelLower.includes('distributor') || modelLower.includes('dealer')) {
+    if (isDealer) {
+      return {
+        score: 10,
+        explanation: `Perfect business model fit: company is ${companyB2bType || 'dealer/distributor'} and product targets distributors`
+      };
+    } else if (isImporter) {
+      return {
+        score: 7,
+        explanation: `Good business model fit: company is importer, product can work with importers`
+      };
+    }
+  }
+
+  if (modelLower.includes('importer')) {
+    if (isImporter) {
+      return {
+        score: 10,
+        explanation: `Perfect business model fit: company is importer and product targets importers`
+      };
+    } else if (isDealer) {
+      return {
+        score: 7,
+        explanation: `Good business model fit: company is dealer, product can work with dealers`
+      };
+    }
+  }
+
+  if (modelLower.includes('manufacturer') || modelLower.includes('producer')) {
+    if (isManufacturer) {
+      return {
+        score: 10,
+        explanation: `Perfect business model fit: company is manufacturer and product targets manufacturers`
+      };
+    }
+  }
+
+  return {
+    score: 0,
+    explanation: `Business model mismatch: company type (${companyB2bType || 'unknown'}) does not match product distribution model (${productDistributionModel})`
+  };
+}
+
+// 📦 PRODUCT FIT ANALYSIS REAL (FASE 3)
 async function calculateProductFit(
   supabase: any,
   tenantId: string,
-  company: { industry?: string; size?: string; needs?: string[] }
+  companyId: string | null | undefined,
+  companyName: string
 ): Promise<{
   tenant_catalog_products: any[];
   matching_products: any[];
   fit_score: number;
+  breakdown: {
+    industry_fit: { score: number; explanation: string };
+    size_fit: { score: number; explanation: string };
+    category_match: { score: number; explanation: string };
+    geographic_fit: { score: number; explanation: string };
+    business_model_fit: { score: number; explanation: string };
+  };
   recommendations: string[];
+  explanation: string;
 }> {
   // Buscar produtos do tenant
   const { data: tenantProducts } = await supabase
@@ -555,30 +1040,181 @@ async function calculateProductFit(
       tenant_catalog_products: [],
       matching_products: [],
       fit_score: 0,
-      recommendations: ['Nenhum produto cadastrado no catálogo do tenant']
+      breakdown: {
+        industry_fit: { score: 0, explanation: 'No products to compare' },
+        size_fit: { score: 0, explanation: 'No products to compare' },
+        category_match: { score: 0, explanation: 'No products to compare' },
+        geographic_fit: { score: 0, explanation: 'No products to compare' },
+        business_model_fit: { score: 0, explanation: 'No products to compare' }
+      },
+      recommendations: ['Nenhum produto cadastrado no catálogo do tenant'],
+      explanation: 'No products available for Product Fit Analysis'
     };
   }
-  
-  // TODO: Implementar lógica de matching baseada em:
-  // - Industry alignment
-  // - Company size
-  // - Expressed needs
-  // - Product categories
-  
-  const matching_products = tenantProducts.map((product: any) => ({
-    product_id: product.id,
-    product_name: product.name,
-    match_score: 50, // Placeholder
-    fit_reasons: [],
-    potential_quantity: null,
-    estimated_value: null
-  }));
-  
+
+  // Buscar dados da empresa (se companyId fornecido)
+  let company: any = null;
+  if (companyId) {
+    const { data: companyData } = await supabase
+      .from('companies')
+      .select('industry, employees, employees_count, country, state, city, description, website, b2b_type, raw_data')
+      .eq('id', companyId)
+      .maybeSingle();
+    
+    company = companyData;
+  }
+
+  const companyIndustry = company?.industry || null;
+  const companyEmployees = company?.employees || company?.employees_count || null;
+  const companyCountry = company?.country || null;
+  const companyState = company?.state || null;
+  const companyDescription = company?.description || company?.raw_data?.description || null;
+  const companyWebsite = company?.website || null;
+  const companyB2bType = company?.b2b_type || company?.raw_data?.type || null;
+
+  // Calcular fit para cada produto
+  const matching_products = tenantProducts.map((product: any) => {
+    const productCategories = product.categories || product.category ? [product.category] : [];
+    const productRegions = product.regions || product.available_regions || null;
+    const productTargetSize = product.target_size || product.company_size || null;
+    const productDistributionModel = product.distribution_model || product.target_model || null;
+
+    // 1. Industry Fit
+    const industryFit = calculateIndustryFit(
+      companyIndustry,
+      product.industry || product.target_industry,
+      productCategories
+    );
+
+    // 2. Size Fit
+    const sizeFit = calculateSizeFit(
+      companyEmployees,
+      productTargetSize
+    );
+
+    // 3. Category Match
+    const categoryMatch = calculateCategoryMatch(
+      companyDescription,
+      companyWebsite,
+      productCategories,
+      product.name || product.product_name || ''
+    );
+
+    // 4. Geographic Fit (TODO: buscar tenant regions)
+    const geographicFit = calculateGeographicFit(
+      companyCountry,
+      companyState,
+      productRegions,
+      null // TODO: buscar tenant regions
+    );
+
+    // 5. Business Model Fit
+    const businessModelFit = calculateBusinessModelFit(
+      companyDescription,
+      companyB2bType,
+      productDistributionModel
+    );
+
+    // Calcular score total do produto
+    const productFitScore = 
+      industryFit.score +
+      sizeFit.score +
+      categoryMatch.score +
+      geographicFit.score +
+      businessModelFit.score;
+
+    return {
+      product_id: product.id,
+      product_name: product.name || product.product_name,
+      match_score: productFitScore,
+      fit_reasons: [
+        industryFit.score > 0 ? industryFit.explanation : null,
+        sizeFit.score > 0 ? sizeFit.explanation : null,
+        categoryMatch.score > 0 ? categoryMatch.explanation : null,
+        geographicFit.score > 0 ? geographicFit.explanation : null,
+        businessModelFit.score > 0 ? businessModelFit.explanation : null
+      ].filter(Boolean),
+      potential_quantity: null, // TODO: estimar baseado em tamanho da empresa
+      estimated_value: null, // TODO: calcular baseado em preço do produto
+      breakdown: {
+        industry_fit: industryFit,
+        size_fit: sizeFit,
+        category_match: categoryMatch,
+        geographic_fit: geographicFit,
+        business_model_fit: businessModelFit
+      }
+    };
+  });
+
+  // Ordenar produtos por match_score (melhor fit primeiro)
+  matching_products.sort((a, b) => b.match_score - a.match_score);
+
+  // Calcular fit score geral (média ponderada dos top 3 produtos)
+  const topProducts = matching_products.slice(0, 3);
+  const overallFitScore = topProducts.length > 0
+    ? Math.round(topProducts.reduce((sum, p) => sum + p.match_score, 0) / topProducts.length)
+    : 0;
+
+  // Calcular breakdown geral (média dos top 3 produtos)
+  const overallBreakdown = topProducts.length > 0 ? {
+    industry_fit: {
+      score: Math.round(topProducts.reduce((sum, p) => sum + p.breakdown.industry_fit.score, 0) / topProducts.length),
+      explanation: topProducts.map(p => p.breakdown.industry_fit.explanation).filter(Boolean).join('; ') || 'No industry match'
+    },
+    size_fit: {
+      score: Math.round(topProducts.reduce((sum, p) => sum + p.breakdown.size_fit.score, 0) / topProducts.length),
+      explanation: topProducts.map(p => p.breakdown.size_fit.explanation).filter(Boolean).join('; ') || 'No size match'
+    },
+    category_match: {
+      score: Math.round(topProducts.reduce((sum, p) => sum + p.breakdown.category_match.score, 0) / topProducts.length),
+      explanation: topProducts.map(p => p.breakdown.category_match.explanation).filter(Boolean).join('; ') || 'No category match'
+    },
+    geographic_fit: {
+      score: Math.round(topProducts.reduce((sum, p) => sum + p.breakdown.geographic_fit.score, 0) / topProducts.length),
+      explanation: topProducts.map(p => p.breakdown.geographic_fit.explanation).filter(Boolean).join('; ') || 'No geographic match'
+    },
+    business_model_fit: {
+      score: Math.round(topProducts.reduce((sum, p) => sum + p.breakdown.business_model_fit.score, 0) / topProducts.length),
+      explanation: topProducts.map(p => p.breakdown.business_model_fit.explanation).filter(Boolean).join('; ') || 'No business model match'
+    }
+  } : {
+    industry_fit: { score: 0, explanation: 'No products to compare' },
+    size_fit: { score: 0, explanation: 'No products to compare' },
+    category_match: { score: 0, explanation: 'No products to compare' },
+    geographic_fit: { score: 0, explanation: 'No products to compare' },
+    business_model_fit: { score: 0, explanation: 'No products to compare' }
+  };
+
+  // Gerar recomendações
+  const recommendations: string[] = [];
+  if (overallFitScore >= 70) {
+    recommendations.push(`Excellent product fit (${overallFitScore}%). Strong candidate for ${topProducts[0]?.product_name || 'tenant products'}.`);
+  } else if (overallFitScore >= 40) {
+    recommendations.push(`Moderate product fit (${overallFitScore}%). Consider ${topProducts[0]?.product_name || 'products'} with customized approach.`);
+  } else {
+    recommendations.push(`Low product fit (${overallFitScore}%). Review product portfolio or company profile.`);
+  }
+
+  if (topProducts.length > 0) {
+    recommendations.push(`Top match: ${topProducts[0].product_name} (${topProducts[0].match_score}% fit)`);
+  }
+
+  // Gerar explicação geral
+  const explanation = `Product Fit Score de ${overallFitScore}%: ` +
+    `(1) Industry: ${overallBreakdown.industry_fit.score}/30, ` +
+    `(2) Size: ${overallBreakdown.size_fit.score}/20, ` +
+    `(3) Category: ${overallBreakdown.category_match.score}/30, ` +
+    `(4) Geographic: ${overallBreakdown.geographic_fit.score}/10, ` +
+    `(5) Business Model: ${overallBreakdown.business_model_fit.score}/10. ` +
+    `${matching_products.length} produto(s) analisado(s).`;
+
   return {
     tenant_catalog_products: tenantProducts,
     matching_products,
-    fit_score: 50, // Placeholder
-    recommendations: []
+    fit_score: overallFitScore,
+    breakdown: overallBreakdown,
+    recommendations,
+    explanation
   };
 }
 
@@ -761,13 +1397,17 @@ serve(async (req) => {
       recommendations: [] as string[]
     };
 
-    if (tenant_id) {
-      console.log('[SCI] 📦 Calculando Product Fit Analysis com tenant_products...');
-      productFit = await calculateProductFit(supabase, tenant_id, {
-        industry: undefined, // TODO: obter da empresa
-        size: undefined,
-        needs: []
+    if (tenant_id && company_id) {
+      console.log('[SCI] 📦 Calculando Product Fit Analysis REAL com tenant_products...');
+      productFit = await calculateProductFit(supabase, tenant_id, company_id, company_name);
+      console.log('[SCI] ✅ Product Fit Analysis:', {
+        fit_score: productFit.fit_score,
+        products_analyzed: productFit.matching_products.length,
+        top_match: productFit.matching_products[0]?.product_name || 'N/A',
+        top_score: productFit.matching_products[0]?.match_score || 0
       });
+    } else if (tenant_id) {
+      console.warn('[SCI] ⚠️ Tenant ID fornecido mas company_id não disponível - Product Fit Analysis não pode ser calculado');
     }
 
     // 🔍 EXTRAIR SINAIS DAS EVIDÊNCIAS
