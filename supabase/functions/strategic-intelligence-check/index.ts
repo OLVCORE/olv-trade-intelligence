@@ -83,34 +83,67 @@ const GLOBAL_BI_SOURCES = [
 
 // Total: 8 + 10 + 11 + 8 + 3 + 3 + 4 = 47 fontes globais ✅
 
-// 🔍 QUERIES ADAPTADAS PARA MERCADO INTERNACIONAL (sem TOTVS)
-const COMPANY_HEALTH_QUERIES = (companyName: string) => [
-  `"${companyName}" opening new office`,
-  `"${companyName}" expanding to`,
-  `"${companyName}" hiring 50+ employees`,
-  `"${companyName}" bankruptcy OR closing`,
-  `"${companyName}" acquired OR merger`,
-  `"${companyName}" financial results`,
-  `"${companyName}" annual report`
-];
+// 🔍 QUERIES ESPECÍFICAS POR TIPO DE SINAL (FASE 2: Buscas Específicas)
 
+// 🌟 EXPANSION SIGNALS - Queries específicas para detectar expansão
 const EXPANSION_SIGNALS_QUERIES = (companyName: string) => [
-  `"${companyName}" funding round`,
-  `"${companyName}" strategic partnership`,
-  `"${companyName}" joint venture`,
-  `"${companyName}" new location`,
-  `"${companyName}" expansion announcement`,
-  `"${companyName}" investment received`
+  `"${companyName}" opening new office OR expanding to`,
+  `"${companyName}" acquired OR acquisition OR merger`,
+  `"${companyName}" funding round OR investment received`,
+  `"${companyName}" new location OR new branch`,
+  `"${companyName}" international expansion OR global expansion`,
+  `"${companyName}" strategic partnership OR joint venture`
 ];
 
-const PROCUREMENT_READINESS_QUERIES = (companyName: string) => [
-  `"${companyName}" budget approved for`,
-  `"${companyName}" RFP procurement`,
-  `"${companyName}" seeking supplier`,
-  `"${companyName}" need for equipment`,
-  `"${companyName}" looking for vendor`,
-  `"${companyName}" tender OR bid`
+// 🛒 PROCUREMENT SIGNALS - Queries específicas para detectar procurement
+const PROCUREMENT_SIGNALS_QUERIES = (companyName: string) => [
+  `"${companyName}" RFP OR "request for proposal" OR tender OR bid`,
+  `"${companyName}" seeking supplier OR looking for vendor`,
+  `"${companyName}" "purchasing manager" OR "procurement specialist" hiring`,
+  `"${companyName}" need for equipment OR seeking distributor`,
+  `"${companyName}" "supply chain" expansion OR "logistics" expansion`,
+  `"${companyName}" "budget approved" OR "procurement budget"`
 ];
+
+// 💼 HIRING SIGNALS - Queries específicas para detectar hiring
+const HIRING_SIGNALS_QUERIES = (companyName: string) => [
+  `"${companyName}" hiring 10+ OR "mass hiring" OR "hiring spree"`,
+  `"${companyName}" "supply chain director" OR "purchasing manager" OR "procurement" job`,
+  `"${companyName}" warehouse OR logistics OR distribution hiring`,
+  `"${companyName}" international sales OR export manager hiring`,
+  `"${companyName}" "hiring" ("50+" OR "100+") employees`,
+  `"${companyName}" "job openings" OR "career opportunities" expansion`
+];
+
+// 📈 GROWTH SIGNALS - Queries específicas para detectar crescimento
+const GROWTH_SIGNALS_QUERIES = (companyName: string) => [
+  `"${companyName}" revenue growth OR increased revenue`,
+  `"${companyName}" "new product line" OR product expansion`,
+  `"${companyName}" annual report OR financial results`,
+  `"${companyName}" "increased sales" OR market expansion`,
+  `"${companyName}" "quarterly results" growth`,
+  `"${companyName}" "announces" expansion OR growth`
+];
+
+// 🏪 PRODUCT FIT SIGNALS - Queries específicas para detectar dealers/distribuidores
+const PRODUCT_FIT_SIGNALS_QUERIES = (companyName: string, tenantProducts?: string[]) => {
+  const baseQueries = [
+    `"${companyName}" distributor OR dealer OR importer`,
+    `"${companyName}" "looking for" OR "seeking" OR "need for" products`,
+    `"${companyName}" B2B OR wholesale OR trade OR import OR export`,
+    `"${companyName}" "supply chain" OR "distribution network"`
+  ];
+  
+  // Se produtos do tenant foram fornecidos, adicionar queries específicas
+  if (tenantProducts && tenantProducts.length > 0) {
+    const productQueries = tenantProducts
+      .slice(0, 3) // Limitar a 3 produtos para não exceder limite de queries
+      .map(product => `"${companyName}" "${product}" OR "${product.toLowerCase()}"`);
+    baseQueries.push(...productQueries);
+  }
+  
+  return baseQueries;
+};
 
 // 🎯 PESOS DAS FONTES (ajustados para mercado internacional)
 const SOURCE_WEIGHTS = {
@@ -123,7 +156,7 @@ const SOURCE_WEIGHTS = {
   bi_sources: 90                // D&B, PitchBook, CB Insights (alta confiabilidade)
 };
 
-// 🔍 BUSCA EM MÚLTIPLOS PORTAIS (função auxiliar modular)
+// 🔍 BUSCA EM MÚLTIPLOS PORTAIS (função auxiliar modular - FASE 2: Buscas Específicas)
 async function searchMultiplePortals(params: {
   portals: string[];
   companyName: string;
@@ -139,22 +172,38 @@ async function searchMultiplePortals(params: {
     serperKey, 
     sourceType, 
     sourceWeight, 
-    dateRestrict = 'y5',
-    queryTemplate = `site:{portal} "{companyName}"`
+    dateRestrict = 'y1', // Padrão: últimos 12 meses (mais relevante)
+    queryTemplate = `site:{portal} "${companyName}"`
   } = params;
   
   const evidencias: any[] = [];
   let processedPortals = 0;
   
+  // Se queryTemplate não contém {portal}, é uma query específica (não precisa de site:)
+  const isSpecificQuery = !queryTemplate.includes('{portal}');
+  
   console.log(`[SCI-MULTI-PORTAL] 🔍 Buscando em ${portals.length} portais (${sourceType})...`);
   console.log(`[SCI-MULTI-PORTAL] 📅 Filtro de data: últimos ${dateRestrict.replace('y', '')} anos`);
+  console.log(`[SCI-MULTI-PORTAL] 🔍 Query específica: ${isSpecificQuery ? 'SIM' : 'NÃO'}`);
   
   for (const portal of portals) {
     try {
-      // Substituir template com portal e company name
-      const query = queryTemplate
-        .replace('{portal}', portal)
-        .replace('{companyName}', companyName);
+      let query: string;
+      
+      if (isSpecificQuery) {
+        // Query específica: adicionar site: apenas se query não tiver site: já
+        if (queryTemplate.includes('site:')) {
+          query = queryTemplate.replace('{companyName}', companyName);
+        } else {
+          // Adicionar site: ao início da query específica para focar no portal
+          query = `site:${portal} ${queryTemplate.replace('{companyName}', companyName)}`;
+        }
+      } else {
+        // Query genérica: substituir template
+        query = queryTemplate
+          .replace('{portal}', portal)
+          .replace('{companyName}', companyName);
+      }
       
       const response = await fetch('https://google.serper.dev/search', {
         method: 'POST',
@@ -164,10 +213,10 @@ async function searchMultiplePortals(params: {
         },
         body: JSON.stringify({
           q: query,
-          num: 10, // Top 10 por portal
+          num: 10, // Top 10 por portal/query
           gl: 'us', // Global (não mais 'br')
           hl: 'en', // Inglês (não mais 'pt-br')
-          tbs: `qdr:${dateRestrict}`, // Filtro de data
+          tbs: `qdr:${dateRestrict}`, // Filtro de data (mais restritivo)
         }),
       });
       
@@ -176,7 +225,7 @@ async function searchMultiplePortals(params: {
         const results = data.organic || [];
         processedPortals++;
         
-        console.log(`[SCI-MULTI-PORTAL] 📊 ${portal}: ${results.length} resultados`);
+        console.log(`[SCI-MULTI-PORTAL] 📊 ${portal}: ${results.length} resultados (query: ${query.substring(0, 80)}...)`);
         
         for (const result of results) {
           evidencias.push({
@@ -187,12 +236,16 @@ async function searchMultiplePortals(params: {
             source_type: sourceType,
             source_weight: sourceWeight,
             date: result.date || null,
-            position: result.position || null
+            position: result.position || null,
+            query_used: query // Adicionar query usada para debug
           });
         }
       } else {
         console.error(`[SCI-MULTI-PORTAL] ❌ Erro em ${portal}: ${response.status}`);
       }
+      
+      // Rate limiting: pequeno delay entre requisições
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`[SCI-MULTI-PORTAL] ❌ Erro ao buscar ${portal}:`, error);
     }
@@ -200,6 +253,262 @@ async function searchMultiplePortals(params: {
   
   console.log(`[SCI-MULTI-PORTAL] ✅ Processados ${processedPortals}/${portals.length} portais`);
   return evidencias;
+}
+
+// 🔍 EXTRAÇÃO DE SINAIS DAS EVIDÊNCIAS
+interface Signal {
+  type: string;
+  description: string;
+  source: string;
+  url: string;
+  relevance: 'high' | 'medium' | 'low';
+  date?: string;
+}
+
+interface SignalsDetected {
+  expansion: Signal[];
+  procurement: Signal[];
+  hiring: Signal[];
+  growth: Signal[];
+  product_fit: Signal[];
+}
+
+function extractSignalsFromEvidences(evidencias: any[], companyName: string): SignalsDetected {
+  const signals: SignalsDetected = {
+    expansion: [],
+    procurement: [],
+    hiring: [],
+    growth: [],
+    product_fit: []
+  };
+
+  // Keywords para detectar sinais de expansão
+  const expansionKeywords = [
+    'opening new office', 'expanding to', 'new location', 'new branch',
+    'acquired', 'acquisition', 'merger', 'funding round', 'investment received',
+    'international expansion', 'global expansion', 'strategic partnership', 'joint venture'
+  ];
+
+  // Keywords para detectar sinais de procurement
+  const procurementKeywords = [
+    'rfp', 'request for proposal', 'tender', 'bid', 'seeking supplier',
+    'looking for vendor', 'need for equipment', 'purchasing manager',
+    'procurement specialist', 'supply chain director', 'looking for distributor'
+  ];
+
+  // Keywords para detectar sinais de hiring
+  const hiringKeywords = [
+    'hiring 10+', 'mass hiring', 'hiring spree', 'warehouse hiring',
+    'logistics hiring', 'distribution hiring', 'international sales hiring',
+    'export manager hiring', 'supply chain manager hiring', 'procurement hiring'
+  ];
+
+  // Keywords para detectar sinais de crescimento
+  const growthKeywords = [
+    'revenue growth', 'increased revenue', 'expansion announcement',
+    'new product line', 'product expansion', 'annual report',
+    'financial results', 'increased sales', 'market expansion'
+  ];
+
+  // Keywords para detectar sinais de product fit (dealers/distributors)
+  const productFitKeywords = [
+    'distributor', 'dealer', 'importer', 'wholesale', 'b2b',
+    'looking for products', 'seeking products', 'need for products',
+    'trade', 'import', 'export', 'supply chain'
+  ];
+
+  for (const evidence of evidencias) {
+    const text = `${evidence.title || ''} ${evidence.snippet || ''}`.toLowerCase();
+    const url = evidence.link || evidence.url || '';
+    const source = evidence.source || evidence.source_type || 'unknown';
+
+    // Expansion signals
+    if (expansionKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+      signals.expansion.push({
+        type: 'expansion',
+        description: evidence.title || evidence.snippet?.substring(0, 150) || 'Expansion signal detected',
+        source,
+        url,
+        relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
+        date: evidence.date || null
+      });
+    }
+
+    // Procurement signals
+    if (procurementKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+      signals.procurement.push({
+        type: 'procurement',
+        description: evidence.title || evidence.snippet?.substring(0, 150) || 'Procurement signal detected',
+        source,
+        url,
+        relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
+        date: evidence.date || null
+      });
+    }
+
+    // Hiring signals
+    if (hiringKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+      signals.hiring.push({
+        type: 'hiring',
+        description: evidence.title || evidence.snippet?.substring(0, 150) || 'Hiring signal detected',
+        source,
+        url,
+        relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
+        date: evidence.date || null
+      });
+    }
+
+    // Growth signals
+    if (growthKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+      signals.growth.push({
+        type: 'growth',
+        description: evidence.title || evidence.snippet?.substring(0, 150) || 'Growth signal detected',
+        source,
+        url,
+        relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
+        date: evidence.date || null
+      });
+    }
+
+    // Product fit signals (dealers/distributors)
+    if (productFitKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+      signals.product_fit.push({
+        type: 'product_fit',
+        description: evidence.title || evidence.snippet?.substring(0, 150) || 'Product fit signal detected',
+        source,
+        url,
+        relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
+        date: evidence.date || null
+      });
+    }
+  }
+
+  return signals;
+}
+
+// 🎯 CÁLCULO DE SCORE BASEADO EM SINAIS
+function calculateLeadScore(
+  signals: SignalsDetected,
+  productFitScore: number
+): {
+  score: number;
+  status: 'hot' | 'warm' | 'cold';
+  confidence: 'high' | 'medium' | 'low';
+  explanation: string;
+  timeline_to_close: '30_days' | '60_days' | '90_days' | '120_days' | '180_days+';
+  recommendation: string;
+} {
+  let score = 0;
+  const reasons: string[] = [];
+
+  // 1. Expansion Signals (0-25 pontos)
+  const expansionHigh = signals.expansion.filter(s => s.relevance === 'high').length;
+  const expansionMedium = signals.expansion.filter(s => s.relevance === 'medium').length;
+  if (expansionHigh >= 2) {
+    score += 25;
+    reasons.push(`${expansionHigh} sinais fortes de expansão (novos escritórios, aquisições, funding)`);
+  } else if (expansionHigh >= 1 || expansionMedium >= 2) {
+    score += 15;
+    reasons.push(`${expansionHigh + expansionMedium} sinais de expansão`);
+  } else if (signals.expansion.length > 0) {
+    score += 5;
+    reasons.push(`${signals.expansion.length} menção(ões) de expansão`);
+  }
+
+  // 2. Procurement Signals (0-25 pontos)
+  const procurementHigh = signals.procurement.filter(s => s.relevance === 'high').length;
+  const procurementMedium = signals.procurement.filter(s => s.relevance === 'medium').length;
+  if (procurementHigh >= 2) {
+    score += 25;
+    reasons.push(`${procurementHigh} sinais fortes de procurement (RFP, busca por fornecedores)`);
+  } else if (procurementHigh >= 1 || procurementMedium >= 2) {
+    score += 15;
+    reasons.push(`${procurementHigh + procurementMedium} sinais de procurement`);
+  } else if (signals.procurement.length > 0) {
+    score += 5;
+    reasons.push(`${signals.procurement.length} menção(ões) de procurement`);
+  }
+
+  // 3. Hiring Signals (0-20 pontos)
+  const hiringHigh = signals.hiring.filter(s => s.relevance === 'high').length;
+  const hiringMedium = signals.hiring.filter(s => s.relevance === 'medium').length;
+  const totalHiring = signals.hiring.length;
+  if (totalHiring >= 5 || hiringHigh >= 2) {
+    score += 20;
+    reasons.push(`${totalHiring} vagas relevantes (contratações em massa)`);
+  } else if (totalHiring >= 3 || hiringHigh >= 1) {
+    score += 12;
+    reasons.push(`${totalHiring} vagas relevantes`);
+  } else if (totalHiring > 0) {
+    score += 5;
+    reasons.push(`${totalHiring} vaga(s) relevante(s)`);
+  }
+
+  // 4. Growth Signals (0-15 pontos)
+  const growthHigh = signals.growth.filter(s => s.relevance === 'high').length;
+  const growthMedium = signals.growth.filter(s => s.relevance === 'medium').length;
+  if (growthHigh >= 2) {
+    score += 15;
+    reasons.push(`${growthHigh} sinais fortes de crescimento`);
+  } else if (growthHigh >= 1 || growthMedium >= 2) {
+    score += 10;
+    reasons.push(`${growthHigh + growthMedium} sinais de crescimento`);
+  } else if (signals.growth.length > 0) {
+    score += 5;
+    reasons.push(`${signals.growth.length} menção(ões) de crescimento`);
+  }
+
+  // 5. Product Fit Score (0-15 pontos)
+  if (productFitScore >= 70) {
+    score += 15;
+    reasons.push(`Product Fit Score de ${productFitScore}% (alto alinhamento com catálogo)`);
+  } else if (productFitScore >= 40) {
+    score += 10;
+    reasons.push(`Product Fit Score de ${productFitScore}% (alinhamento moderado)`);
+  } else if (productFitScore > 0) {
+    score += 5;
+    reasons.push(`Product Fit Score de ${productFitScore}% (alinhamento baixo)`);
+  }
+
+  // Garantir score entre 0-100
+  score = Math.min(100, Math.max(0, score));
+
+  // Determinar status
+  let status: 'hot' | 'warm' | 'cold';
+  let confidence: 'high' | 'medium' | 'low';
+  let timeline_to_close: '30_days' | '60_days' | '90_days' | '120_days' | '180_days+';
+  let recommendation: string;
+
+  if (score >= 75) {
+    status = 'hot';
+    confidence = (expansionHigh >= 2 || procurementHigh >= 2) ? 'high' : 'medium';
+    timeline_to_close = '30_days';
+    recommendation = '🔥 ABORDAR HOJE - Oportunidade de alto valor com sinais claros de compra';
+  } else if (score >= 40) {
+    status = 'warm';
+    confidence = (signals.expansion.length + signals.procurement.length >= 3) ? 'medium' : 'low';
+    timeline_to_close = '60_days';
+    recommendation = '🟡 ABORDAR ESTA SEMANA - Oportunidade válida com abordagem estruturada';
+  } else {
+    status = 'cold';
+    confidence = 'low';
+    timeline_to_close = '90_days';
+    recommendation = '🔵 NUTRIÇÃO/SEGUIMENTO - Manter no radar, focar em educação e relacionamento';
+  }
+
+  // Gerar explicação
+  const explanation = reasons.length > 0
+    ? `Empresa classificada como ${status.toUpperCase()} devido a: ${reasons.join(', ')}. ${recommendation}`
+    : `Empresa classificada como ${status.toUpperCase()} devido à ausência de sinais de expansão, procurement ou hiring nos últimos 12 meses. ${recommendation}`;
+
+  return {
+    score,
+    status,
+    confidence,
+    explanation,
+    timeline_to_close,
+    recommendation
+  };
 }
 
 // 🎯 CÁLCULO DE SCORES (adaptado para SCI)
@@ -318,10 +627,117 @@ serve(async (req) => {
     let sourcesConsulted = 0;
     let totalQueries = 0;
 
-    // 🌍 FASE 1: JOB PORTALS GLOBAIS (8 fontes)
-    console.log('[SCI] 🌍 FASE 1: Buscando em Job Portals Globais...');
-    const evidenciasJobPortals = await searchMultiplePortals({
-      portals: GLOBAL_JOB_PORTALS,
+    // 📦 Buscar produtos do tenant para Product Fit Analysis
+    let tenantProducts: any[] = [];
+    if (tenant_id) {
+      const { data: products } = await supabase
+        .from('tenant_products')
+        .select('name, category')
+        .eq('tenant_id', tenant_id)
+        .eq('is_active', true)
+        .limit(10);
+      tenantProducts = products || [];
+    }
+
+    // 🔍 FASE 1: EXPANSION SIGNALS (Queries Específicas)
+    console.log('[SCI] 🔍 FASE 1: Buscando Expansion Signals...');
+    const expansionQueries = EXPANSION_SIGNALS_QUERIES(company_name);
+    for (const query of expansionQueries) {
+      const expansionEvidences = await searchMultiplePortals({
+        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_BI_SOURCES], // Priorizar Bloomberg, Reuters, D&B
+        companyName: company_name,
+        serperKey,
+        sourceType: 'news_premium',
+        sourceWeight: SOURCE_WEIGHTS.news_premium,
+        dateRestrict: 'y1', // Últimos 12 meses (mais relevante)
+        queryTemplate: query // Query específica de expansão
+      });
+      evidencias.push(...expansionEvidences);
+      totalQueries += expansionQueries.length * 5; // 5 fontes priorizadas por query
+    }
+    sourcesConsulted += 5; // Bloomberg, Reuters, FT, WSJ, D&B
+    console.log(`[SCI] ✅ FASE 1: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Expansion Signals`);
+
+    // 🛒 FASE 2: PROCUREMENT SIGNALS (Queries Específicas)
+    console.log('[SCI] 🛒 FASE 2: Buscando Procurement Signals...');
+    const procurementQueries = PROCUREMENT_SIGNALS_QUERIES(company_name);
+    for (const query of procurementQueries) {
+      const procurementEvidences = await searchMultiplePortals({
+        portals: [...GLOBAL_JOB_PORTALS.slice(0, 3), ...GLOBAL_NEWS_SOURCES.slice(0, 2)], // LinkedIn, Indeed, Bloomberg, Reuters
+        companyName: company_name,
+        serperKey,
+        sourceType: 'job_portals',
+        sourceWeight: SOURCE_WEIGHTS.job_portals,
+        dateRestrict: 'y1', // Últimos 12 meses
+        queryTemplate: query // Query específica de procurement
+      });
+      evidencias.push(...procurementEvidences);
+      totalQueries += procurementQueries.length * 5;
+    }
+    sourcesConsulted += 5;
+    console.log(`[SCI] ✅ FASE 2: ${evidencias.filter(e => e.source_type === 'job_portals').length} evidências de Procurement Signals`);
+
+    // 💼 FASE 3: HIRING SIGNALS (Queries Específicas)
+    console.log('[SCI] 💼 FASE 3: Buscando Hiring Signals...');
+    const hiringQueries = HIRING_SIGNALS_QUERIES(company_name);
+    for (const query of hiringQueries) {
+      const hiringEvidences = await searchMultiplePortals({
+        portals: GLOBAL_JOB_PORTALS, // Todos os job portals
+        companyName: company_name,
+        serperKey,
+        sourceType: 'job_portals',
+        sourceWeight: SOURCE_WEIGHTS.job_portals,
+        dateRestrict: 'y1', // Últimos 12 meses
+        queryTemplate: query // Query específica de hiring
+      });
+      evidencias.push(...hiringEvidences);
+      totalQueries += hiringQueries.length * GLOBAL_JOB_PORTALS.length;
+    }
+    sourcesConsulted += GLOBAL_JOB_PORTALS.length;
+    console.log(`[SCI] ✅ FASE 3: ${evidencias.filter(e => e.source_type === 'job_portals').length} evidências de Hiring Signals`);
+
+    // 📈 FASE 4: GROWTH SIGNALS (Queries Específicas)
+    console.log('[SCI] 📈 FASE 4: Buscando Growth Signals...');
+    const growthQueries = GROWTH_SIGNALS_QUERIES(company_name);
+    for (const query of growthQueries) {
+      const growthEvidences = await searchMultiplePortals({
+        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_OFFICIAL_SOURCES.slice(0, 3)], // Bloomberg, Reuters, FT, WSJ, SEC
+        companyName: company_name,
+        serperKey,
+        sourceType: 'news_premium',
+        sourceWeight: SOURCE_WEIGHTS.news_premium,
+        dateRestrict: 'y2', // Últimos 24 meses (resultados financeiros)
+        queryTemplate: query // Query específica de crescimento
+      });
+      evidencias.push(...growthEvidences);
+      totalQueries += growthQueries.length * 8;
+    }
+    sourcesConsulted += 8;
+    console.log(`[SCI] ✅ FASE 4: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Growth Signals`);
+
+    // 🏪 FASE 5: PRODUCT FIT SIGNALS (Queries Específicas)
+    console.log('[SCI] 🏪 FASE 5: Buscando Product Fit Signals...');
+    const productFitQueries = PRODUCT_FIT_SIGNALS_QUERIES(company_name, tenantProducts.map(p => p.name));
+    for (const query of productFitQueries) {
+      const productFitEvidences = await searchMultiplePortals({
+        portals: [...GLOBAL_SOCIAL_SOURCES, ...GLOBAL_BI_SOURCES.slice(0, 2)], // LinkedIn, Twitter, Crunchbase, D&B
+        companyName: company_name,
+        serperKey,
+        sourceType: 'social_b2b',
+        sourceWeight: SOURCE_WEIGHTS.social_b2b,
+        dateRestrict: 'y1', // Últimos 12 meses
+        queryTemplate: query // Query específica de product fit
+      });
+      evidencias.push(...productFitEvidences);
+      totalQueries += productFitQueries.length * 5;
+    }
+    sourcesConsulted += 5;
+    console.log(`[SCI] ✅ FASE 5: ${evidencias.filter(e => e.source_type === 'social_b2b').length} evidências de Product Fit Signals`);
+
+    // 🌍 FASE 6: BUSCA GENÉRICA COMPLEMENTAR (Fontes restantes - menor prioridade)
+    console.log('[SCI] 🌍 FASE 6: Busca genérica complementar em fontes restantes...');
+    const evidenciasJobPortalsGeneric = await searchMultiplePortals({
+      portals: GLOBAL_JOB_PORTALS.slice(3), // Job portals não usados nas fases anteriores
       companyName: company_name,
       serperKey,
       sourceType: 'job_portals',
@@ -329,106 +745,10 @@ serve(async (req) => {
       dateRestrict: 'y5',
       queryTemplate: `site:{portal} "{companyName}"`
     });
-    evidencias.push(...evidenciasJobPortals);
-    sourcesConsulted += GLOBAL_JOB_PORTALS.length;
-    totalQueries += GLOBAL_JOB_PORTALS.length;
-    console.log(`[SCI] ✅ FASE 1: ${evidenciasJobPortals.length} evidências de Job Portals`);
+    evidencias.push(...evidenciasJobPortalsGeneric);
+    sourcesConsulted += GLOBAL_JOB_PORTALS.slice(3).length;
+    totalQueries += GLOBAL_JOB_PORTALS.slice(3).length;
 
-    // 🌍 FASE 2: FONTES OFICIAIS INTERNACIONAIS (10 fontes)
-    console.log('[SCI] 🌍 FASE 2: Buscando em Fontes Oficiais Internacionais...');
-    const evidenciasOficiais = await searchMultiplePortals({
-      portals: GLOBAL_OFFICIAL_SOURCES,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'official_sources',
-      sourceWeight: SOURCE_WEIGHTS.official_sources,
-      dateRestrict: 'y6',
-      queryTemplate: `site:{portal} "{companyName}"`
-    });
-    evidencias.push(...evidenciasOficiais);
-    sourcesConsulted += GLOBAL_OFFICIAL_SOURCES.length;
-    totalQueries += GLOBAL_OFFICIAL_SOURCES.length;
-    console.log(`[SCI] ✅ FASE 2: ${evidenciasOficiais.length} evidências oficiais`);
-
-    // 🌍 FASE 3: NOTÍCIAS & FINANCEIRAS GLOBAIS (11 fontes)
-    console.log('[SCI] 🌍 FASE 3: Buscando em Notícias & Financeiras Globais...');
-    const evidenciasNews = await searchMultiplePortals({
-      portals: GLOBAL_NEWS_SOURCES,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'news_premium',
-      sourceWeight: SOURCE_WEIGHTS.news_premium,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}"`
-    });
-    evidencias.push(...evidenciasNews);
-    sourcesConsulted += GLOBAL_NEWS_SOURCES.length;
-    totalQueries += GLOBAL_NEWS_SOURCES.length;
-    console.log(`[SCI] ✅ FASE 3: ${evidenciasNews.length} evidências de notícias`);
-
-    // 🌍 FASE 4: PORTALS DE TECNOLOGIA GLOBAIS (8 fontes)
-    console.log('[SCI] 🌍 FASE 4: Buscando em Portais de Tecnologia Globais...');
-    const evidenciasTech = await searchMultiplePortals({
-      portals: GLOBAL_TECH_PORTALS,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'tech_portals',
-      sourceWeight: SOURCE_WEIGHTS.tech_portals,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}"`
-    });
-    evidencias.push(...evidenciasTech);
-    sourcesConsulted += GLOBAL_TECH_PORTALS.length;
-    totalQueries += GLOBAL_TECH_PORTALS.length;
-    console.log(`[SCI] ✅ FASE 4: ${evidenciasTech.length} evidências de portais tech`);
-
-    // 🌍 FASE 5: VÍDEO & CONTEÚDO GLOBAL (3 fontes)
-    console.log('[SCI] 🌍 FASE 5: Buscando em Vídeo & Conteúdo Global...');
-    const evidenciasVideo = await searchMultiplePortals({
-      portals: GLOBAL_VIDEO_SOURCES,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'video_content',
-      sourceWeight: SOURCE_WEIGHTS.video_content,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}"`
-    });
-    evidencias.push(...evidenciasVideo);
-    sourcesConsulted += GLOBAL_VIDEO_SOURCES.length;
-    totalQueries += GLOBAL_VIDEO_SOURCES.length;
-    console.log(`[SCI] ✅ FASE 5: ${evidenciasVideo.length} evidências de vídeo`);
-
-    // 🌍 FASE 6: REDES SOCIAIS B2B (3 fontes)
-    console.log('[SCI] 🌍 FASE 6: Buscando em Redes Sociais B2B...');
-    const evidenciasSocial = await searchMultiplePortals({
-      portals: GLOBAL_SOCIAL_SOURCES,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'social_b2b',
-      sourceWeight: SOURCE_WEIGHTS.social_b2b,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}"`
-    });
-    evidencias.push(...evidenciasSocial);
-    sourcesConsulted += GLOBAL_SOCIAL_SOURCES.length;
-    totalQueries += GLOBAL_SOCIAL_SOURCES.length;
-    console.log(`[SCI] ✅ FASE 6: ${evidenciasSocial.length} evidências de redes sociais`);
-
-    // 🌍 FASE 7: BUSINESS INTELLIGENCE & DATA (4 fontes - inclui D&B)
-    console.log('[SCI] 🌍 FASE 7: Buscando em Business Intelligence & Data (inclui D&B)...');
-    const evidenciasBI = await searchMultiplePortals({
-      portals: GLOBAL_BI_SOURCES,
-      companyName: company_name,
-      serperKey,
-      sourceType: 'bi_sources',
-      sourceWeight: SOURCE_WEIGHTS.bi_sources,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}" company profile OR business information`
-    });
-    evidencias.push(...evidenciasBI);
-    sourcesConsulted += GLOBAL_BI_SOURCES.length;
-    totalQueries += GLOBAL_BI_SOURCES.length;
-    console.log(`[SCI] ✅ FASE 7: ${evidenciasBI.length} evidências de BI (inclui D&B)`);
 
     // 📊 CÁLCULO DE SCORES
     const companyHealth = calculateCompanyHealthScore(evidencias);
@@ -450,6 +770,22 @@ serve(async (req) => {
       });
     }
 
+    // 🔍 EXTRAIR SINAIS DAS EVIDÊNCIAS
+    console.log('[SCI] 🔍 Extraindo sinais das evidências...');
+    const signals = extractSignalsFromEvidences(evidencias, company_name);
+    console.log('[SCI] ✅ Sinais extraídos:', {
+      expansion: signals.expansion.length,
+      procurement: signals.procurement.length,
+      hiring: signals.hiring.length,
+      growth: signals.growth.length,
+      product_fit: signals.product_fit.length
+    });
+
+    // 🎯 CALCULAR SCORE E CLASSIFICAÇÃO BASEADO EM SINAIS
+    console.log('[SCI] 🎯 Calculando score e classificação...');
+    const classification = calculateLeadScore(signals, productFit.fit_score);
+    console.log('[SCI] ✅ Classificação:', classification.status, 'Score:', classification.score);
+
     // ⏳ INTERNATIONAL TRADE (estrutura pronta - desabilitada até contrato MetaLife)
     const internationalTrade = {
       enabled: false,
@@ -460,53 +796,75 @@ serve(async (req) => {
       // trade_patterns: {...}
     };
 
-    // 🎯 STATUS FINAL (TODO: implementar lógica completa)
-    const status = evidencias.length > 0 ? 'warm_prospect' : 'cold_lead';
-    const confidence = Math.min(100, evidencias.length * 5); // Placeholder
-
+    // 🎯 ESTRUTURA DE RESPOSTA MELHORADA
     const resultado = {
-      // 1. Company Health Score
+      // 1. CLASSIFICAÇÃO PRINCIPAL (NOVO - FASE 1)
+      classification: {
+        status: classification.status,
+        score: classification.score,
+        confidence: classification.confidence,
+        explanation: classification.explanation,
+        signals_detected: {
+          expansion: signals.expansion,
+          procurement: signals.procurement,
+          hiring: signals.hiring,
+          growth: signals.growth,
+          product_fit: signals.product_fit
+        },
+        timeline_to_close: classification.timeline_to_close,
+        recommendation: classification.recommendation
+      },
+
+      // 2. Company Health Score
       company_health: companyHealth,
       
-      // 2. Expansion Signals (TODO: extrair das evidências)
+      // 3. Expansion Signals (EXTRAÍDO DAS EVIDÊNCIAS)
       expansion_signals: {
-        detected: false,
-        new_offices: [],
+        detected: signals.expansion.length > 0,
+        signals: signals.expansion,
+        new_offices: signals.expansion.filter(s => s.description.toLowerCase().includes('office') || s.description.toLowerCase().includes('location')).map(s => ({
+          description: s.description,
+          source: s.source,
+          url: s.url,
+          date: s.date
+        })),
         mass_hiring: {
-          detected: false,
-          positions: [],
-          volume: 0,
-          source: ''
+          detected: signals.hiring.length >= 5,
+          positions: signals.hiring.map(s => s.description),
+          volume: signals.hiring.length,
+          source: signals.hiring.map(s => s.source).join(', ')
         },
-        partnerships: [],
-        funding_rounds: [],
+        partnerships: signals.expansion.filter(s => s.description.toLowerCase().includes('partnership') || s.description.toLowerCase().includes('joint venture')),
+        funding_rounds: signals.expansion.filter(s => s.description.toLowerCase().includes('funding') || s.description.toLowerCase().includes('investment')),
         evidence: evidencias.filter(e => e.source_type === 'news_premium' || e.source_type === 'bi_sources')
       },
       
-      // 3. Procurement Readiness (TODO: extrair das evidências)
+      // 4. Procurement Readiness (EXTRAÍDO DAS EVIDÊNCIAS)
       procurement_readiness: {
+        detected: signals.procurement.length > 0,
         budget_signals: {
-          detected: false,
-          confidence: 'low' as 'high' | 'medium' | 'low',
-          evidence: []
+          detected: signals.procurement.length >= 2,
+          confidence: signals.procurement.filter(s => s.relevance === 'high').length >= 2 ? 'high' as const : 
+                      signals.procurement.length >= 2 ? 'medium' as const : 'low' as const,
+          evidence: signals.procurement
         },
-        rfp_opportunities: [],
-        expressed_needs: [],
-        evidence: evidencias.filter(e => e.source_type === 'job_portals')
+        rfp_opportunities: signals.procurement.filter(s => s.description.toLowerCase().includes('rfp') || s.description.toLowerCase().includes('tender') || s.description.toLowerCase().includes('bid')),
+        expressed_needs: signals.procurement.filter(s => s.description.toLowerCase().includes('need') || s.description.toLowerCase().includes('looking for') || s.description.toLowerCase().includes('seeking')),
+        evidence: signals.procurement
       },
       
-      // 4. International Trade (desabilitada)
+      // 5. International Trade (desabilitada)
       international_trade: internationalTrade,
       
-      // 5. Product Fit Analysis
+      // 6. Product Fit Analysis
       product_fit: productFit,
       
-      // Status Final
-      status,
-      confidence,
-      recommendation: `Company analyzed with ${evidencias.length} evidences from ${sourcesConsulted} global sources`,
+      // 7. Status Final (COMPATIBILIDADE COM FORMATO ANTIGO)
+      status: classification.status === 'hot' ? 'warm_prospect' : classification.status === 'warm' ? 'warm_prospect' : 'cold_lead',
+      confidence: classification.confidence,
+      recommendation: classification.recommendation,
       estimated_revenue_potential: 0, // TODO
-      timeline_to_close: '90_days' as '30_days' | '60_days' | '90_days' | '120_days' | '180_days+',
+      timeline_to_close: classification.timeline_to_close,
       
       // Metadata
       analyzed_at: new Date().toISOString(),
