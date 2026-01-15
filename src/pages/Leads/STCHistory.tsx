@@ -674,7 +674,7 @@ export default function STCHistory() {
       {showFullReport && selectedVerification && (
         <Dialog open={showFullReport} onOpenChange={setShowFullReport}>
           <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0">
-            <TOTVSCheckCard
+            <ProductAnalysisCard
               companyId={selectedVerification.company_id}
               companyName={selectedVerification.company_name}
               cnpj={selectedVerification.cnpj}

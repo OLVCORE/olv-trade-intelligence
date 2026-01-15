@@ -79,7 +79,7 @@ export default function TOTVSCheckReport() {
   const reportContent = (
     <>
       {resolvedCompanyId && (
-        <TOTVSCheckCard
+        <ProductAnalysisCard
           companyId={resolvedCompanyId}
           companyName={companyMeta?.name || "Empresa"}
           cnpj={companyMeta?.cnpj}
