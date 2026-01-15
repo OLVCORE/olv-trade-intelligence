@@ -73,7 +73,7 @@ interface TOTVSCheckCardProps {
   latestReport?: any;
 }
 
-export default function TOTVSCheckCard({
+export default function StrategicIntelligenceCard({
   companyId,
   companyName,
   cnpj,
@@ -98,7 +98,7 @@ export default function TOTVSCheckCard({
   const [copiedTerms, setCopiedTerms] = useState<string | null>(null);
   
   // 🚨 SISTEMA DE SALVAMENTO POR ABA
-  const [activeTab, setActiveTab] = useState('detection'); // 🔄 NOVA ORDEM: Começa em TOTVS Check!
+  const [activeTab, setActiveTab] = useState('detection'); // 🔄 NOVA ORDEM: Começa em Strategic Intelligence Check!
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
   const queryClient = useQueryClient();
@@ -456,7 +456,7 @@ export default function TOTVSCheckCard({
         console.log('[TOTVS-SAVE] 💾 Salvando aba TOTVS...');
         // Os dados já foram salvos pelo useSimpleTOTVSCheck, só confirmar
         setTotvsSaved(true);
-        toast.success('✅ TOTVS Check salvo!', {
+        toast.success('✅ Strategic Intelligence Check salvo!', {
           description: `Status: ${data.status?.toUpperCase()} | ${data.evidences?.length || 0} evidências`,
           duration: 3000,
         });
@@ -606,7 +606,7 @@ export default function TOTVSCheckCard({
         try {
           // Montar full_report com dados de todas as abas
           const fullReport = {
-            detection_report: data, // Dados do TOTVS Check (auto)
+            detection_report: data, // Dados do Strategic Intelligence Check (auto)
             decisors_report: tabDataRef.current.decisors,
             digital_report: tabDataRef.current.digital, // 🔥 Digital Intelligence (substitui keywords)
             products_report: tabDataRef.current.products,
@@ -892,7 +892,7 @@ export default function TOTVSCheckCard({
             )}
           </div>
           <div className="text-right text-sm text-muted-foreground">
-            <div>Relatório de 9 Abas</div>
+            <div>Dossiê Estratégico de Prospecção Internacional</div>
             <div className="text-xs">ID: {stcHistoryId?.substring(0, 8) || 'Gerando...'}</div>
           </div>
         </div>
@@ -914,7 +914,7 @@ export default function TOTVSCheckCard({
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
           <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg">
             <Search className="w-4 h-4" />
-            <span>TOTVS</span>
+            <span>Strategic Intelligence</span>
             <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
             {getStatuses().detection === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
@@ -1003,9 +1003,9 @@ export default function TOTVSCheckCard({
 
         {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → Competitors → Similar → Clients → 360° → Products → Executive */}
 
-        {/* ABA 1: TOTVS CHECK (GO/NO-GO) */}
+        {/* ABA 1: STRATEGIC INTELLIGENCE CHECK */}
         <TabsContent value="detection" className="mt-0 flex-1 overflow-hidden">
-          <UniversalTabWrapper tabName="TOTVS Check">
+          <UniversalTabWrapper tabName="Strategic Intelligence Check">
           {/* 🐛 DEBUG: Log state antes de renderizar */}
           {(() => {
             console.log('[TOTVS-TAB-RENDER] Condições:', {
@@ -1024,11 +1024,11 @@ export default function TOTVSCheckCard({
                 <Search className="w-10 h-10 text-primary" />
               </div>
               <h3 className="text-xl font-semibold mb-2">
-                Verificação TOTVS
+                Strategic Intelligence Check
               </h3>
               <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                Verifica se a empresa já é cliente TOTVS através de <strong>47 fontes premium</strong>:<br/>
-                📋 30 portais de vagas | 📰 26 notícias & tech | 🎥 6 vídeos & social | 🤝 1 parceiro
+                Análise estratégica comercial em <strong>47 fontes globais premium</strong>:<br/>
+                💼 8 Job Portals | 📄 10 Fontes Oficiais | 📰 11 Notícias Globais | 💻 8 Tech Portals | 🎥 3 Vídeos | 🌐 3 Social B2B | 📊 4 Business Intelligence (inclui D&B)
               </p>
               <Button onClick={handleVerify} size="lg" disabled={isLoading}>
                 {isLoading ? (
@@ -1058,7 +1058,7 @@ export default function TOTVSCheckCard({
                     {data.status === 'go' && <CheckCircle className="w-5 h-5 text-green-600" />}
                     {data.status === 'revisar' && <AlertTriangle className="w-5 h-5 text-yellow-600" />}
                     {data.status === 'no-go' && <XCircle className="w-5 h-5 text-red-600" />}
-                    Verificação TOTVS
+                    Strategic Intelligence Check
                   </h3>
               <div className="flex items-center gap-2 mt-1">
                 {data.from_cache ? (

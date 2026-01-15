@@ -235,10 +235,10 @@ const menuGroups: MenuGroup[] = [
         description: "Histórico de empresas descartadas"
       },
       {
-        title: "Histórico STC",
+        title: "Histórico SCI",
         icon: Target,
-        url: "/leads/stc-history",
-        description: "Verificações TOTVS realizadas"
+        url: "/leads/stc-history", // TODO: Atualizar rota para /leads/sci-history
+        description: "Strategic Commercial Intelligence - Relatórios realizados"
       },
     ]
   },
