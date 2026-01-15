@@ -1455,8 +1455,32 @@ serve(async (req) => {
     sourcesConsulted += 8;
     console.log(`[SCI] ✅ FASE 4: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Growth Signals`);
 
-    // 🏪 FASE 5: PRODUCT FIT SIGNALS (Queries Específicas)
-    console.log('[SCI] 🏪 FASE 5: Buscando Product Fit Signals...');
+    // 👥 FASE 5: D&B LEADERSHIP/DECISORES (Queries Específicas D&B)
+    console.log('[SCI] 👥 FASE 5: Buscando D&B Leadership/Decisores...');
+    const dnbLeadershipQueries = DNB_LEADERSHIP_QUERIES(company_name);
+    const dnbEvidences: any[] = [];
+    for (const query of dnbLeadershipQueries) {
+      const dnbLeadershipEvidences = await searchMultiplePortals({
+        portals: ['dnb.com'], // Apenas D&B para decisores
+        companyName: company_name,
+        serperKey,
+        sourceType: 'bi_sources',
+        sourceWeight: SOURCE_WEIGHTS.bi_sources,
+        dateRestrict: 'y5', // Buscar histórico mais amplo (dados corporativos mudam menos)
+        queryTemplate: query // Query específica D&B
+      });
+      dnbEvidences.push(...dnbLeadershipEvidences);
+      totalQueries += dnbLeadershipQueries.length;
+      
+      // Delay para respeitar rate limiting
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    evidencias.push(...dnbEvidences);
+    sourcesConsulted += 1; // D&B contabilizada
+    console.log(`[SCI] ✅ FASE 5: ${dnbEvidences.length} evidências D&B de Leadership/Decisores`);
+
+    // 🏪 FASE 6: PRODUCT FIT SIGNALS (Queries Específicas)
+    console.log('[SCI] 🏪 FASE 6: Buscando Product Fit Signals...');
     const productFitQueries = PRODUCT_FIT_SIGNALS_QUERIES(company_name, tenantProducts.map(p => p.name));
     for (const query of productFitQueries) {
       const productFitEvidences = await searchMultiplePortals({
@@ -1471,8 +1495,8 @@ serve(async (req) => {
       evidencias.push(...productFitEvidences);
       totalQueries += productFitQueries.length * 5;
     }
-    sourcesConsulted += 5;
-    console.log(`[SCI] ✅ FASE 5: ${evidencias.filter(e => e.source_type === 'social_b2b').length} evidências de Product Fit Signals`);
+    sourcesConsulted += 4; // LinkedIn, Twitter, Crunchbase, PitchBook (sem D&B, já usada)
+    console.log(`[SCI] ✅ FASE 6: ${evidencias.filter(e => e.source_type === 'social_b2b').length} evidências de Product Fit Signals`);
 
     // 🌍 FASE 7: BUSCA GENÉRICA COMPLEMENTAR (Fontes restantes - menor prioridade)
     console.log('[SCI] 🌍 FASE 7: Busca genérica complementar em fontes restantes...');

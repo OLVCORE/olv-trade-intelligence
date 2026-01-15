@@ -545,8 +545,7 @@ export default function StrategicIntelligenceCard({
 
     setLoading(true);
     try {
-      // 🔥 FORÇAR NOVA BUSCA: Invalidar TUDO relacionado
-      const queryClient = useQueryClient();
+      // 🔥 FORÇAR NOVA BUSCA: Invalidar TUDO relacionado (queryClient já está declarado no componente)
       queryClient.removeQueries({ queryKey: ['simple-product-check', companyId, companyName, cnpj] });
       queryClient.removeQueries({ queryKey: ['latest-stc-report', companyId] });
       queryClient.removeQueries({ queryKey: ['strategic-intelligence-check', companyId] });
