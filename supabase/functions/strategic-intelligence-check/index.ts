@@ -4,6 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
+  'Access-Control-Max-Age': '86400', // 24 horas
 };
 
 // 🌍 GRUPO 1: JOB PORTALS GLOBAIS (8 fontes)
@@ -239,8 +241,12 @@ async function searchMultiplePortals(params: {
         
         console.log(`[SCI-MULTI-PORTAL] 📊 ${portal}: ${results.length} resultados (query: ${query.substring(0, 80)}...)`);
         
+        if (results.length === 0) {
+          console.warn(`[SCI-MULTI-PORTAL] ⚠️ ${portal}: Nenhum resultado encontrado para "${query.substring(0, 80)}..."`);
+        }
+        
         for (const result of results) {
-          evidencias.push({
+          const evidence = {
             title: result.title || '',
             snippet: result.snippet || '',
             link: result.link || '',
@@ -250,7 +256,18 @@ async function searchMultiplePortals(params: {
             date: result.date || null,
             position: result.position || null,
             query_used: query // Adicionar query usada para debug
-          });
+          };
+          
+          // Log dos primeiros resultados para debug
+          if (evidencias.length < 3) {
+            console.log(`[SCI-MULTI-PORTAL] 🔍 Resultado exemplo:`, {
+              title: evidence.title.substring(0, 100),
+              snippet: evidence.snippet.substring(0, 150),
+              source: evidence.source
+            });
+          }
+          
+          evidencias.push(evidence);
         }
       } else {
         console.error(`[SCI-MULTI-PORTAL] ❌ Erro em ${portal}: ${response.status}`);
@@ -329,13 +346,30 @@ function extractSignalsFromEvidences(evidencias: any[], companyName: string): Si
     'trade', 'import', 'export', 'supply chain'
   ];
 
+  console.log(`[SCI-SIGNALS] 🔍 Processando ${evidencias.length} evidências para extrair sinais...`);
+  
+  let processedCount = 0;
+  let matchedCount = 0;
+  
   for (const evidence of evidencias) {
+    processedCount++;
     const text = `${evidence.title || ''} ${evidence.snippet || ''}`.toLowerCase();
     const url = evidence.link || evidence.url || '';
     const source = evidence.source || evidence.source_type || 'unknown';
+    
+    // Log dos primeiros resultados para debug
+    if (processedCount <= 3 && text.trim()) {
+      console.log(`[SCI-SIGNALS] 🔍 Evidência ${processedCount}:`, {
+        title: evidence.title?.substring(0, 100) || 'Sem título',
+        snippet: evidence.snippet?.substring(0, 150) || 'Sem snippet',
+        textLength: text.length
+      });
+    }
 
     // Expansion signals
-    if (expansionKeywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+    const matchedExpansion = expansionKeywords.find(keyword => text.includes(keyword.toLowerCase()));
+    if (matchedExpansion) {
+      matchedCount++;
       signals.expansion.push({
         type: 'expansion',
         description: evidence.title || evidence.snippet?.substring(0, 150) || 'Expansion signal detected',
@@ -344,6 +378,9 @@ function extractSignalsFromEvidences(evidencias: any[], companyName: string): Si
         relevance: evidence.source_weight >= 90 ? 'high' : (evidence.source_weight >= 70 ? 'medium' : 'low'),
         date: evidence.date || null
       });
+      if (matchedCount <= 5) {
+        console.log(`[SCI-SIGNALS] ✅ Expansion signal detectado (keyword: "${matchedExpansion}"):`, evidence.title?.substring(0, 80));
+      }
     }
 
     // Procurement signals
@@ -395,6 +432,16 @@ function extractSignalsFromEvidences(evidencias: any[], companyName: string): Si
     }
   }
 
+  console.log(`[SCI-SIGNALS] ✅ Extração concluída: ${matchedCount}/${processedCount} evidências corresponderam a keywords`);
+  console.log(`[SCI-SIGNALS] 📊 Sinais encontrados:`, {
+    expansion: signals.expansion.length,
+    procurement: signals.procurement.length,
+    hiring: signals.hiring.length,
+    growth: signals.growth.length,
+    product_fit: signals.product_fit.length,
+    total: signals.expansion.length + signals.procurement.length + signals.hiring.length + signals.growth.length + signals.product_fit.length
+  });
+  
   return signals;
 }
 
