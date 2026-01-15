@@ -5,7 +5,7 @@ import { Maximize2, Minimize2, Printer, UserPlus } from 'lucide-react';
 import ProductAnalysisCard from '@/components/totvs/ProductAnalysisCard';
 import { toast } from 'sonner';
 
-interface SimpleTOTVSCheckDialogProps {
+interface StrategicIntelligenceDialogProps {
   companyId?: string;
   companyName?: string;
   cnpj?: string;
@@ -14,7 +14,7 @@ interface SimpleTOTVSCheckDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function SimpleTOTVSCheckDialog({
+export function StrategicIntelligenceDialog({
   companyId,
   companyName,
   cnpj,
@@ -68,7 +68,7 @@ export function SimpleTOTVSCheckDialog({
           className="shadow-xl hover-scale"
         >
           <Maximize2 className="h-4 w-4 mr-2" />
-          {companyName || 'Verificação TOTVS'}
+          {companyName || 'Strategic Intelligence'}
         </Button>
       </div>
     );
@@ -81,8 +81,8 @@ export function SimpleTOTVSCheckDialog({
         <div className="container mx-auto p-6 space-y-6">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Verificação TOTVS - {companyName}</h1>
-              <p className="text-muted-foreground">Relatório completo de detecção TOTVS</p>
+              <h1 className="text-3xl font-bold">Dossiê Estratégico de Prospecção Internacional - {companyName}</h1>
+              <p className="text-muted-foreground">Strategic Commercial Intelligence Report</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -119,8 +119,8 @@ export function SimpleTOTVSCheckDialog({
     <DraggableDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Verificação TOTVS - ${companyName || 'Empresa'}`}
-      description="Análise de detecção TOTVS em 47 fontes premium (vagas, tech, vídeos, social)"
+      title={`Dossiê Estratégico de Prospecção Internacional - ${companyName || 'Empresa'}`}
+      description="Strategic Commercial Intelligence: Análise estratégica comercial em 47 fontes globais premium"
       className="max-w-4xl"
       maxWidth="max-h-[85vh]"
     >

@@ -392,9 +392,9 @@ export default function ICPQuarantine() {
         ? analysis.raw_analysis as Record<string, any>
         : {};
 
-      // Executar apenas Simple TOTVS Check (unificado)
+      // Executar Strategic Commercial Intelligence (SCI)
       const simpleDomain = sanitizeDomain(rawData.domain || analysis.website || null);
-      const { data, error } = await supabase.functions.invoke('simple-totvs-check', {
+      const { data, error } = await supabase.functions.invoke('strategic-intelligence-check', {
         body: {
           company_id: analysis.company_id || analysis.id,
           company_name: analysis.razao_social,
@@ -409,17 +409,17 @@ export default function ICPQuarantine() {
       await supabase
         .from('icp_analysis_results')
         .update({
-          is_cliente_totvs: data?.status === 'no-go',
-          totvs_check_date: new Date().toISOString(),
-          totvs_evidences: (data?.evidences_by_category ? Object.values(data.evidences_by_category).flat() : []) as any,
+          is_cliente_totvs: data?.status === 'no-go', // TODO: Adaptar para SCI status
+          totvs_check_date: new Date().toISOString(), // TODO: Renomear para sci_check_date
+          totvs_evidences: (data?.evidences ? data.evidences : []) as any, // TODO: Adaptar para SCI evidences
           raw_analysis: {
             ...rawData,
-            simple_totvs_check: data,
+            strategic_intelligence_check: data, // Renomeado de simple_totvs_check
           },
         })
         .eq('id', analysisId);
 
-      // Recalcular score após TOTVS check
+      // Recalcular score após Strategic Intelligence Check
       await supabase.rpc('calculate_icp_score_quarantine', {
         p_analysis_id: analysisId
       });
@@ -427,12 +427,16 @@ export default function ICPQuarantine() {
       return data;
     },
     onSuccess: (data) => {
-      const status = data?.found ? '⚠️ Cliente TOTVS detectado' : '✅ NÃO é cliente TOTVS';
-      toast.success(`TOTVS Check concluído - ${status}`);
+      const status = data?.status === 'hot_lead' ? '🔥 Hot Lead' : 
+                     data?.status === 'warm_prospect' ? '⚡ Warm Prospect' : 
+                     data?.status === 'cold_lead' ? '❄️ Cold Lead' : '📊 Analisado';
+      toast.success(`Strategic Intelligence Check concluído - ${status}`, {
+        description: `${data?.total_evidences || 0} evidências de ${data?.sources_checked || 0} fontes globais`
+      });
       queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
     },
     onError: (error: any) => {
-      toast.error('Erro no TOTVS Check', {
+      toast.error('Erro no Strategic Intelligence Check', {
         description: error.message,
       });
     },
@@ -1001,9 +1005,9 @@ export default function ICPQuarantine() {
       `🎯 PROCESSAMENTO TOTVS EM LOTE\n\n` +
       `Empresas selecionadas: ${selectedIds.length}\n\n` +
       `O que será processado:\n` +
-      `✅ TOTVS Check (GO/NO-GO)\n` +
-      `✅ Decisores (se GO)\n` +
-      `✅ Digital (se GO)\n` +
+      `✅ Strategic Intelligence Check\n` +
+      `✅ Decisores\n` +
+      `✅ Digital Intelligence\n` +
       `✅ Relatório completo salvo automaticamente\n\n` +
       `Custo estimado:\n` +
       `- Créditos: ~${selectedIds.length * 150}\n` +
@@ -1034,8 +1038,8 @@ export default function ICPQuarantine() {
         
         console.log(`[BATCH] 📊 Processando ${i + 1}/${selectedIds.length}: ${company.razao_social}`);
         
-        // 1. TOTVS Check
-        const { data: totvsResult, error: totvsError } = await supabase.functions.invoke('simple-totvs-check', {
+        // 1. Strategic Intelligence Check
+        const { data: totvsResult, error: totvsError } = await supabase.functions.invoke('strategic-intelligence-check', {
           body: {
             company_name: company.razao_social,
             cnpj: company.cnpj,
@@ -2129,7 +2133,7 @@ export default function ICPQuarantine() {
                   );
                 })()}
 
-                {/* Simple TOTVS Check removido do Preview: Preview deve exibir apenas o rosto/Resumo cadastral da empresa */}
+                {/* Strategic Intelligence Check removido do Preview: Preview deve exibir apenas o rosto/Resumo cadastral da empresa */}
 
                 {/* Competitor Intelligence */}
                 {(() => {

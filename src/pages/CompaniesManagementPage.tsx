@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EnrichmentStatusBadge } from '@/components/companies/EnrichmentStatusBadge';
-import { SimpleTOTVSCheckDialog } from '@/components/intelligence/SimpleTOTVSCheckDialog';
+import { StrategicIntelligenceDialog } from '@/components/intelligence/SimpleTOTVSCheckDialog';
 import { STCAgent } from '@/components/intelligence/STCAgent';
 import {
   Table,
@@ -2840,7 +2840,7 @@ export default function CompaniesManagementPage() {
         </div>
 
         {stcCompany && (
-          <SimpleTOTVSCheckDialog
+          <StrategicIntelligenceDialog
             open={stcDialogOpen}
             onOpenChange={setStcDialogOpen}
             companyId={stcCompany.id}

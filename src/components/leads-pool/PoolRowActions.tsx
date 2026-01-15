@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
-import { SimpleTOTVSCheckDialog } from '@/components/intelligence/SimpleTOTVSCheckDialog';
+import { StrategicIntelligenceDialog } from '@/components/intelligence/SimpleTOTVSCheckDialog';
 
 interface PoolRowActionsProps {
   lead: any;
@@ -71,7 +71,7 @@ export function PoolRowActions({
       </DropdownMenu>
       
       {showTOTVSCheck && (
-        <SimpleTOTVSCheckDialog
+        <StrategicIntelligenceDialog
           companyId={lead.id}
           companyName={lead.razao_social || "Empresa"}
           cnpj={lead.cnpj || undefined}
