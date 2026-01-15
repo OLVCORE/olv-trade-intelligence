@@ -285,7 +285,8 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const serperKey = Deno.env.get('SERPER_API_KEY');
+    // Tenta SERPER_API_KEY primeiro, depois VITE_SERPER_API_KEY como fallback
+    const serperKey = Deno.env.get('SERPER_API_KEY') || Deno.env.get('VITE_SERPER_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     const body = await req.json();

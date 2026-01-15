@@ -306,8 +306,8 @@ export default function StrategicIntelligenceCard({
       terms.push(...variations);
     }
     
-    // Adicionar "TOTVS"
-    terms.push('TOTVS');
+    // Adicionar termos de busca internacional (sem TOTVS)
+    // Removido: 'TOTVS' - não é mais relevante para mercado internacional
     
     // Adicionar produtos detectados
     if (products && products.length > 0) {
@@ -744,10 +744,41 @@ export default function StrategicIntelligenceCard({
   // ✅ SEMPRE MOSTRAR AS 8 ABAS (mesmo sem STC)
   // Se não tem dados do STC, mostrar apenas as outras abas funcionando
 
-  // 🔥 EXTRAÇÃO ROBUSTA DE EVIDÊNCIAS (tenta múltiplos caminhos)
-  const evidences = data?.evidences || data?.data?.evidences || [];
-  const tripleMatches = evidences.filter((e: any) => e.match_type === 'triple');
-  const doubleMatches = evidences.filter((e: any) => e.match_type === 'double');
+  // 🔥 EXTRAÇÃO ROBUSTA DE EVIDÊNCIAS (adaptado para novo formato SCI)
+  // Novo formato: evidences direto do SCI (sem data wrapper)
+  // Formato antigo: data.evidences ou data.data.evidences
+  const rawEvidences = data?.evidences || data?.data?.evidences || [];
+  
+  // Adaptar estrutura antiga para nova (se necessário)
+  // Novo formato SCI: evidences têm source_type, source_weight, snippet, link
+  // Formato antigo: evidences têm match_type, detected_products, etc.
+  const evidences = rawEvidences.map((e: any) => {
+    // Se já está no formato novo (tem source_type), usar como está
+    if (e.source_type) {
+      return {
+        ...e,
+        title: e.title || '',
+        snippet: e.snippet || e.content || '',
+        link: e.link || e.url || '',
+        // Adicionar campos compatíveis
+        match_type: e.source_weight >= 90 ? 'triple' : (e.source_weight >= 70 ? 'double' : 'single'),
+        weight: e.source_weight || 0,
+        source_name: e.source || e.source_type,
+        url: e.link || e.url,
+        content: e.snippet || e.content
+      };
+    }
+    // Se está no formato antigo, manter como está
+    return e;
+  });
+  
+  // Separar por tipo de match (compatível com novo e antigo formato)
+  const tripleMatches = evidences.filter((e: any) => 
+    e.match_type === 'triple' || (e.source_weight && e.source_weight >= 90)
+  );
+  const doubleMatches = evidences.filter((e: any) => 
+    e.match_type === 'double' || (e.source_weight && e.source_weight >= 70 && e.source_weight < 90)
+  );
   
   const filteredEvidences = filterMode === 'triple' ? tripleMatches : evidences;
   
@@ -1077,7 +1108,7 @@ export default function StrategicIntelligenceCard({
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {data.methodology?.execution_time}
+                  {data.execution_time || data.methodology?.execution_time || 'N/A'}
                 </span>
               </div>
             </div>
@@ -1089,52 +1120,52 @@ export default function StrategicIntelligenceCard({
 
           {/* 📊 MÉTRICAS VISUAIS (DESTAQUE CORPORATIVO) */}
           <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* CARD 1: STATUS GO/NO-GO */}
+            {/* CARD 1: STATUS (Adaptado para SCI) */}
             <Card className="p-4 border-2 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-muted-foreground">Status</span>
-                {data.status === 'go' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
-                {data.status === 'revisar' && <AlertTriangle className="w-5 h-5 text-amber-500" />}
-                {data.status === 'no-go' && <XCircle className="w-5 h-5 text-rose-500" />}
+                {(data.status === 'warm_prospect' || data.status === 'go') && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                {(data.status === 'cold_lead' || data.status === 'revisar') && <AlertTriangle className="w-5 h-5 text-amber-500" />}
+                {(data.status === 'unknown' || data.status === 'no-go') && <XCircle className="w-5 h-5 text-rose-500" />}
               </div>
               <Badge 
                 variant={
-                  data.status === 'go' ? 'default' :
-                  data.status === 'revisar' ? 'secondary' :
+                  (data.status === 'warm_prospect' || data.status === 'go') ? 'default' :
+                  (data.status === 'cold_lead' || data.status === 'revisar') ? 'secondary' :
                   'destructive'
                 }
                 className="text-sm px-3 py-1 w-full justify-center"
               >
-                {data.status === 'go' && 'GO - Não Cliente'}
-                {data.status === 'revisar' && 'REVISAR'}
-                {data.status === 'no-go' && 'NO-GO - Cliente'}
+                {(data.status === 'warm_prospect' || data.status === 'go') && '🔥 Warm Prospect'}
+                {(data.status === 'cold_lead' || data.status === 'revisar') && '❄️ Cold Lead'}
+                {(data.status === 'unknown' || data.status === 'no-go') && '❓ Unknown'}
               </Badge>
             </Card>
 
-            {/* CARD 2: MATCHES (TRIPLE/DOUBLE/SINGLE) */}
+            {/* CARD 2: EVIDÊNCIAS POR CATEGORIA (Adaptado para SCI) */}
             <Card className="p-4 border-2 shadow-sm">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-muted-foreground">Matches Detectados</span>
+                <span className="text-xs font-medium text-muted-foreground">Evidências Detectadas</span>
                 <Target className="w-5 h-5 text-primary" />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-emerald-500">
-                    {data.triple_matches || data.data?.tripleMatches || 0}
+                    {tripleMatches.length}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">Triple</div>
+                  <div className="text-[10px] text-muted-foreground">Alta Relevância</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-500">
-                    {data.double_matches || data.data?.doubleMatches || 0}
+                    {doubleMatches.length}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">Double</div>
+                  <div className="text-[10px] text-muted-foreground">Média Relevância</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-slate-500">
-                    {data.single_matches || data.data?.singleMatches || 0}
+                    {evidences.length - tripleMatches.length - doubleMatches.length}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">Single</div>
+                  <div className="text-[10px] text-muted-foreground">Total</div>
                 </div>
               </div>
             </Card>
@@ -1149,7 +1180,7 @@ export default function StrategicIntelligenceCard({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Fontes:</span>
                   <span className="text-lg font-bold text-primary">
-                    {data.methodology?.searched_sources || data.sources_consulted || data.data?.sourcesConsulted || '17+'}
+                    {data.sources_checked || data.methodology?.searched_sources || data.sources_consulted || data.data?.sourcesConsulted || '47+'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -1161,7 +1192,7 @@ export default function StrategicIntelligenceCard({
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Score:</span>
                   <span className="text-sm font-bold">
-                    {data.total_weight || data.total_score || data.data?.totalScore || 0} pts
+                    {data.total_evidences || evidences.length || 0} evidências
                   </span>
                 </div>
               </div>
@@ -1178,7 +1209,7 @@ export default function StrategicIntelligenceCard({
                   onClick={() => setFilterMode('all')}
                 >
                   <Filter className="w-4 h-4 mr-2" />
-                  Triple + Double
+                  Alta + Média Relevância
                 </Button>
                 <Button
                   variant={filterMode === 'triple' ? 'default' : 'outline'}
@@ -1186,17 +1217,17 @@ export default function StrategicIntelligenceCard({
                   onClick={() => setFilterMode('triple')}
                 >
                   <Target className="w-4 h-4 mr-2" />
-                  Apenas Triple
+                  Apenas Alta Relevância
                 </Button>
               </div>
               <div className="text-sm text-muted-foreground flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <Circle className="w-3 h-3 fill-green-600 text-green-600" />
-                  {tripleMatches.length} Triple
+                  {tripleMatches.length} Alta Relevância
                 </span>
                 <span className="flex items-center gap-1">
                   <Circle className="w-3 h-3 fill-blue-600 text-blue-600" />
-                  {doubleMatches.length} Double
+                  {doubleMatches.length} Média Relevância
                 </span>
               </div>
             </div>
@@ -1209,29 +1240,37 @@ export default function StrategicIntelligenceCard({
                 const evidenceId = `${evidence.source}-${index}`;
                 const allTerms = [
                   companyName || '',
-                  'TOTVS',
                   ...(evidence.detected_products || []),
-                  ...(evidence.intent_keywords || [])
+                  ...(evidence.intent_keywords || []),
+                  ...(evidence.source_type ? [evidence.source_type] : [])
                 ].filter(Boolean).join(' | ');
                 
                 return (
                   <div key={index} className="border rounded-lg p-4 hover:bg-accent/50 transition-colors">
                     <div className="flex justify-between items-start mb-3">
-                      <Badge variant={evidence.match_type === 'triple' ? 'default' : 'secondary'} className="text-sm flex items-center gap-1">
-                        {evidence.match_type === 'triple' ? (
+                      <Badge 
+                        variant={
+                          (evidence.match_type === 'triple' || (evidence.source_weight && evidence.source_weight >= 90)) 
+                            ? 'default' 
+                            : 'secondary'
+                        } 
+                        className="text-sm flex items-center gap-1"
+                      >
+                        {(evidence.match_type === 'triple' || (evidence.source_weight && evidence.source_weight >= 90)) ? (
                           <>
                             <Target className="w-3 h-3" />
-                            TRIPLE MATCH
+                            ALTA RELEVÂNCIA
                           </>
                         ) : (
                           <>
                             <Search className="w-3 h-3" />
-                            DOUBLE MATCH
+                            MÉDIA RELEVÂNCIA
                           </>
                         )}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {evidence.source_name || evidence.source} ({evidence.weight} pts)
+                        {evidence.source_name || evidence.source || evidence.source_type} 
+                        {evidence.weight || evidence.source_weight ? ` (${evidence.weight || evidence.source_weight} pts)` : ''}
                       </Badge>
                     </div>
                     
@@ -1260,7 +1299,7 @@ export default function StrategicIntelligenceCard({
                     <p 
                       className="text-sm text-muted-foreground mb-3"
                       dangerouslySetInnerHTML={{ 
-                        __html: highlightTerms(evidence.content, evidence.detected_products) 
+                        __html: highlightTerms(evidence.snippet || evidence.content || '', evidence.detected_products) 
                       }}
                     />
                     
@@ -1283,7 +1322,7 @@ export default function StrategicIntelligenceCard({
                         size="sm"
                         variant="outline"
                         className="text-xs h-7"
-                        onClick={() => copyToClipboard(evidence.url, evidenceId, 'url')}
+                        onClick={() => copyToClipboard(evidence.link || evidence.url || '', evidenceId, 'url')}
                       >
                         {copiedUrl === evidenceId ? (
                           <>
@@ -1324,7 +1363,7 @@ export default function StrategicIntelligenceCard({
                         asChild
                       >
                         <a
-                          href={evidence.url}
+                          href={evidence.link || evidence.url}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
@@ -1341,10 +1380,10 @@ export default function StrategicIntelligenceCard({
             <div className="text-center py-6">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">
-                Nenhuma evidência de uso de TOTVS encontrada
+                Nenhuma evidência encontrada nas fontes globais consultadas
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {data.methodology?.searched_sources} fontes consultadas
+                {data.sources_checked || data.methodology?.searched_sources || data.sources_consulted || '47'} fontes globais consultadas
               </p>
             </div>
           )}
@@ -1352,8 +1391,9 @@ export default function StrategicIntelligenceCard({
               {/* METODOLOGIA */}
               <div className="mt-4 pt-4 border-t">
                 <p className="text-xs text-muted-foreground">
-                  Fontes consultadas: {data.methodology?.searched_sources} | 
-                  Queries executadas: {data.methodology?.total_queries}
+                  Fontes consultadas: {data.sources_checked || data.methodology?.searched_sources || data.sources_consulted || '47'} fontes globais | 
+                  Evidências encontradas: {data.total_evidences || evidences.length || 0} | 
+                  Tempo de execução: {data.execution_time || data.methodology?.execution_time || 'N/A'}
                 </p>
               </div>
             </>
