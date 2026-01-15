@@ -326,7 +326,7 @@ export default function StrategicIntelligenceCard({
 
   // 🔥 CRITICAL: Desabilitar consulta se já tem relatório salvo (evita consumo de créditos)
   // ⚠️ EXCEÇÃO: Se shouldForceRefresh está true, sempre buscar (botão Atualizar clicado)
-  const [shouldForceRefresh, setShouldForceRefresh] = React.useState(false);
+  const [shouldForceRefresh, setShouldForceRefresh] = useState(false);
   const shouldFetchLive = enabled && (!latestReport?.full_report || shouldForceRefresh);
 
   const { data: liveData, isLoading: isLoadingLive, refetch } = useSimpleProductCheck({
