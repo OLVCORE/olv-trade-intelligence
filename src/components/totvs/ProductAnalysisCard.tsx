@@ -912,10 +912,14 @@ export default function StrategicIntelligenceCard({
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-[calc(100vh-300px)]">
         <TabsList className="sticky top-0 z-50 grid w-full grid-cols-9 mb-6 h-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-1 rounded-lg shadow-lg border-b-2 border-primary/20">
           {/* 🔄 NOVA ORDEM: TOTVS → Decisores → Digital → ... → Executive */}
-          <TabsTrigger value="detection" className="flex items-center justify-center gap-2 text-sm py-3 px-4 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg">
-            <Search className="w-4 h-4" />
-            <span>Strategic Intelligence</span>
-            <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
+          <TabsTrigger value="detection" className="flex flex-col items-center justify-center gap-1 text-xs py-3 px-2 bg-primary/10 font-semibold relative data-[state=active]:bg-blue-100 data-[state=active]:text-blue-900 data-[state=active]:shadow-lg">
+            <div className="flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              <TabIndicator status={latestReport?.full_report?.__status?.detection?.status || 'draft'} />
+            </div>
+            <span className="leading-tight text-center">
+              Strategic<br />Intelligence
+            </span>
             {getStatuses().detection === 'completed' && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-lg animate-pulse" />
             )}
