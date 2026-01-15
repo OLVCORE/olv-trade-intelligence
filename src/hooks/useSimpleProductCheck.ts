@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SimpleProductCheckParams {
@@ -16,6 +16,8 @@ export const useSimpleProductCheck = ({
   domain,
   enabled = false,
 }: SimpleProductCheckParams) => {
+  const queryClient = useQueryClient();
+  
   return useQuery({
     queryKey: ['simple-product-check', companyId, companyName, cnpj],
     queryFn: async () => {
@@ -81,20 +83,61 @@ export const useSimpleProductCheck = ({
             }
           };
           
-          const { data: insertedData, error: insertError } = await supabase
+          // 🔍 Verificar se já existe um relatório para esta empresa
+          const { data: existingReport } = await supabase
             .from('stc_verification_history')
-            .insert(reportData)
             .select('id')
-            .single();
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
           
-          if (insertError) {
-            if (insertError.code === 'PGRST116' || insertError.message?.includes('does not exist')) {
-              console.warn('[SCI] ⚠️ Tabela stc_verification_history não existe. Execute a migration: 20260117000000_ensure_stc_verification_history.sql');
+          let savedReportId: string | null = null;
+          
+          if (existingReport?.id) {
+            // ✅ ATUALIZAR relatório existente (evita duplicatas)
+            const { data: updatedData, error: updateError } = await supabase
+              .from('stc_verification_history')
+              .update({
+                ...reportData,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingReport.id)
+              .select('id')
+              .single();
+            
+            if (updateError) {
+              console.error('[SCI] ❌ Erro ao atualizar histórico:', updateError);
             } else {
-              console.error('[SCI] ❌ Erro ao salvar histórico:', insertError);
+              savedReportId = updatedData?.id || existingReport.id;
+              console.log('[SCI] ✅ Relatório SCI ATUALIZADO no histórico. ID:', savedReportId);
             }
           } else {
-            console.log('[SCI] ✅ Relatório SCI salvo no histórico. ID:', insertedData?.id);
+            // ➕ CRIAR novo relatório (primeira vez)
+            const { data: insertedData, error: insertError } = await supabase
+              .from('stc_verification_history')
+              .insert(reportData)
+              .select('id')
+              .single();
+            
+            if (insertError) {
+              if (insertError.code === 'PGRST116' || insertError.message?.includes('does not exist')) {
+                console.warn('[SCI] ⚠️ Tabela stc_verification_history não existe. Execute a migration: 20260117000000_ensure_stc_verification_history.sql');
+              } else {
+                console.error('[SCI] ❌ Erro ao salvar histórico:', insertError);
+              }
+            } else {
+              savedReportId = insertedData?.id || null;
+              console.log('[SCI] ✅ Relatório SCI CRIADO no histórico. ID:', savedReportId);
+            }
+          }
+          
+          // 🔥 CRÍTICO: Invalidar cache do React Query para forçar recarregamento
+          if (savedReportId) {
+            queryClient.invalidateQueries({ queryKey: ['stc-latest', companyId, companyName] });
+            queryClient.invalidateQueries({ queryKey: ['stc-history', companyId, companyName] });
+            queryClient.invalidateQueries({ queryKey: ['report-history', companyName, companyId] });
+            console.log('[SCI] 🔄 Cache do React Query invalidado para recarregar latestReport');
           }
         } catch (historyError: any) {
           console.error('[SCI] ❌ Erro ao salvar histórico (não crítico):', historyError);
