@@ -333,7 +333,7 @@ export default function IndividualAnalysis() {
           </Alert>
 
           <div className="space-y-6">
-            <TOTVSCheckCard 
+            <ProductAnalysisCard 
               companyId={company.id}
               companyName={company.name}
               cnpj={company.cnpj}

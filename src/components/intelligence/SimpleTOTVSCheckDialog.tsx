@@ -46,7 +46,7 @@ export function SimpleTOTVSCheckDialog({
   };
 
   const reportContent = (
-    <TOTVSCheckCard
+    <ProductAnalysisCard
       companyId={companyId}
       companyName={companyName}
       cnpj={cnpj}

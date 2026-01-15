@@ -274,7 +274,7 @@ export default function CompetitiveIntelligencePage() {
               </Alert>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <TOTVSCheckCard
+                <ProductAnalysisCard
                   companyId={company.id}
                   companyName={company.name}
                   cnpj={company.cnpj}
