@@ -1215,9 +1215,6 @@ export default function StrategicIntelligenceCard({
                 </div>
               )}
             </div>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Atualizar
-            </Button>
           </div>
 
           {/* 📊 MÉTRICAS VISUAIS (DESTAQUE CORPORATIVO) */}
