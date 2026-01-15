@@ -1384,7 +1384,7 @@ serve(async (req) => {
     const expansionQueries = EXPANSION_SIGNALS_QUERIES(company_name);
     for (const query of expansionQueries) {
       const expansionEvidences = await searchMultiplePortals({
-        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_BI_SOURCES], // Priorizar Bloomberg, Reuters, D&B
+        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_BI_SOURCES], // Priorizar Bloomberg, Reuters, FT, WSJ, TechCrunch + D&B, PitchBook, CB Insights, AngelList
         companyName: company_name,
         serperKey,
         sourceType: 'news_premium',
@@ -1393,9 +1393,9 @@ serve(async (req) => {
         queryTemplate: query // Query específica de expansão
       });
       evidencias.push(...expansionEvidences);
-      totalQueries += expansionQueries.length * 5; // 5 fontes priorizadas por query
+      totalQueries += expansionQueries.length * (5 + GLOBAL_BI_SOURCES.length); // 5 news + 4 BI = 9 fontes por query
     }
-    sourcesConsulted += 5; // Bloomberg, Reuters, FT, WSJ, D&B
+    sourcesConsulted += 5 + GLOBAL_BI_SOURCES.length; // Bloomberg, Reuters, FT, WSJ, TechCrunch + D&B, PitchBook, CB Insights, AngelList
     console.log(`[SCI] ✅ FASE 1: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Expansion Signals`);
 
     // 🛒 FASE 2: PROCUREMENT SIGNALS (Queries Específicas)

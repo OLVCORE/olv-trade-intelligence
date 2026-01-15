@@ -1166,11 +1166,55 @@ export default function StrategicIntelligenceCard({
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {data.execution_time || data.methodology?.execution_time || 'N/A'}
+                  Última verificação: {data.analyzed_at ? new Date(data.analyzed_at).toLocaleString('pt-BR') : 'N/A'}
                 </span>
+                {(data.queries_executed || data.estimated_serper_credits) && (
+                  <Badge variant="secondary" className="text-xs ml-2">
+                    💳 {data.queries_executed || data.estimated_serper_credits} créditos Serper
+                  </Badge>
+                )}
               </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleVerify}
+                disabled={isLoading || isLoadingLive}
+              >
+                {isLoading || isLoadingLive ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Atualizando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Atualizar
+                  </>
+                )}
+              </Button>
+              
+              {/* 🔥 FEEDBACK VISUAL DURANTE ATUALIZAÇÃO */}
+              {(isLoading || isLoadingLive) && (
+                <div className="absolute top-0 left-0 right-0 z-50">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50" />
+                        <div className="absolute inset-0 w-4 h-4 bg-yellow-400 rounded-full animate-ping opacity-75" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
+                          🔄 Atualizando relatório...
+                        </p>
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                          Buscando dados atualizados em 47 fontes globais (20-40s)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            <Button variant="outline" size="sm" onClick={handleVerify}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
             </Button>
