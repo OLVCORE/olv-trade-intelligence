@@ -1642,7 +1642,24 @@ serve(async (req) => {
       sources_checked: sourcesConsulted,
       total_evidences: evidencias.length,
       evidences: evidencias,
-      execution_time: `${Date.now() - startTime}ms`
+      execution_time: `${Date.now() - startTime}ms`,
+      queries_executed: totalQueries, // 🔥 CONSUMO DE CRÉDITOS SERPER
+      estimated_serper_credits: totalQueries, // 1 query = 1 crédito Serper
+      phases_completed: 7, // Total de fases executadas
+      methodology: {
+        total_queries: totalQueries,
+        searched_sources: sourcesConsulted,
+        execution_time: `${Date.now() - startTime}ms`,
+        phases: {
+          phase_1_expansion: expansionQueries.length * 5,
+          phase_2_procurement: procurementQueries.length * 5,
+          phase_3_hiring: hiringQueries.length * GLOBAL_JOB_PORTALS.length,
+          phase_4_growth: growthQueries.length * 8,
+          phase_5_dnb_leadership: dnbLeadershipQueries.length,
+          phase_6_product_fit: productFitQueries.length * 4,
+          phase_7_generic: GLOBAL_JOB_PORTALS.slice(3).length
+        }
+      }
     };
 
     console.log(`[SCI] ✅ Análise concluída: ${evidencias.length} evidências de ${sourcesConsulted} fontes globais`);

@@ -1077,7 +1077,8 @@ export default function StrategicIntelligenceCard({
           })()}
           
           {/* SE NÃO TEM DADOS DO STC, MOSTRAR BOTÃO VERIFICAR */}
-          {!data || !enabled ? (
+          {/* ⚠️ Se shouldForceRefresh está true, sempre mostrar loading mesmo com data */}
+          {!data || (!enabled && !shouldForceRefresh) ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
                 <Search className="w-10 h-10 text-primary" />
@@ -1089,8 +1090,8 @@ export default function StrategicIntelligenceCard({
                 Análise estratégica comercial em <strong>47 fontes globais premium</strong>:<br/>
                 💼 8 Job Portals | 📄 10 Fontes Oficiais | 📰 11 Notícias Globais | 💻 8 Tech Portals | 🎥 3 Vídeos | 🌐 3 Social B2B | 📊 4 Business Intelligence (inclui D&B)
               </p>
-              <Button onClick={handleVerify} size="lg" disabled={isLoading}>
-                {isLoading ? (
+              <Button onClick={handleVerify} size="lg" disabled={isLoading || isLoadingLive}>
+                {isLoading || isLoadingLive ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                     Verificando...
@@ -1102,10 +1103,43 @@ export default function StrategicIntelligenceCard({
                   </>
                 )}
               </Button>
-              {isLoading && (
-                <p className="text-xs text-muted-foreground mt-4">
-                  Buscando evidências em múltiplas fontes... (20-30s)
-                </p>
+              
+              {/* 🔥 FEEDBACK VISUAL EM TEMPO REAL */}
+              {(isLoading || isLoadingLive) && (
+                <div className="mt-6 space-y-4">
+                  {/* AMPULHETA/LUZ AMARELA PISCANTE */}
+                  <div className="flex items-center justify-center gap-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="relative">
+                      <div className="w-6 h-6 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50" />
+                      <div className="absolute inset-0 w-6 h-6 bg-yellow-400 rounded-full animate-ping opacity-75" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">
+                        🔍 Busca em andamento...
+                      </p>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                        Consultando 47 fontes globais premium (20-40s)
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* PROGRESSO DAS FASES */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Progresso da análise</span>
+                      <span className="font-semibold">Processando...</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-500 h-2 rounded-full transition-all duration-500 animate-pulse"
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <p className="text-xs text-center text-muted-foreground">
+                      ⚡ Cada relatório consome ~185 créditos Serper
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
