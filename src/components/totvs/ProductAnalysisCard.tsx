@@ -1090,19 +1090,21 @@ export default function StrategicIntelligenceCard({
                 Análise estratégica comercial em <strong>47 fontes globais premium</strong>:<br/>
                 💼 8 Job Portals | 📄 10 Fontes Oficiais | 📰 11 Notícias Globais | 💻 8 Tech Portals | 🎥 3 Vídeos | 🌐 3 Social B2B | 📊 4 Business Intelligence (inclui D&B)
               </p>
-              <Button onClick={handleVerify} size="lg" disabled={isLoading || isLoadingLive}>
-                {isLoading || isLoadingLive ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Verificando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Verificar Agora
-                  </>
-                )}
-              </Button>
+              <div className="space-y-3">
+                <Button onClick={handleVerify} size="lg" disabled={true} variant="outline">
+                  <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
+                  Verificação Temporariamente Desabilitada
+                </Button>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-sm">
+                  <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                    ⚠️ SCI Temporariamente Desabilitado
+                  </p>
+                  <p className="text-amber-800 dark:text-amber-200">
+                    Problemas técnicos sendo corrigidos (timeout, CORS, consumo excessivo de créditos). 
+                    A busca estava consumindo 400+ créditos Serper sem retornar resultados.
+                  </p>
+                </div>
+              </div>
               
               {/* 🔥 FEEDBACK VISUAL EM TEMPO REAL */}
               {(isLoading || isLoadingLive) && (
@@ -1174,24 +1176,21 @@ export default function StrategicIntelligenceCard({
                   </Badge>
                 )}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleVerify}
-                disabled={isLoading || isLoadingLive}
-              >
-                {isLoading || isLoadingLive ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Atualizando...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Atualizar
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleVerify}
+                  disabled={true}
+                  title="Temporariamente desabilitado - problemas técnicos sendo corrigidos"
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
+                  Desabilitado
+                </Button>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2 text-xs text-amber-800 dark:text-amber-200">
+                  ⚠️ SCI temporariamente desabilitado (timeout, CORS, consumo excessivo)
+                </div>
+              </div>
               
               {/* 🔥 FEEDBACK VISUAL DURANTE ATUALIZAÇÃO */}
               {(isLoading || isLoadingLive) && (
