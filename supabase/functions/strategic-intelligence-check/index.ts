@@ -1,11 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+// 🔧 CORS: Headers em lowercase (padrão Deno/Supabase Edge Functions)
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
-  'Access-Control-Max-Age': '86400', // 24 horas
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS, GET',
+  'access-control-max-age': '86400',
 };
 
 // 🌍 GRUPO 1: JOB PORTALS GLOBAIS (8 fontes)
@@ -1371,8 +1372,9 @@ async function calculateProductFit(
 
 // 🚀 FUNÇÃO PRINCIPAL
 serve(async (req) => {
+  // 🔧 CORS: OPTIONS preflight (status 204 sem body)
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   const startTime = Date.now();
@@ -1391,7 +1393,7 @@ serve(async (req) => {
     if (!company_name) {
       return new Response(
         JSON.stringify({ error: 'company_name é obrigatório', status: 'error' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...corsHeaders, 'content-type': 'application/json' } }
       );
     }
 
@@ -1402,7 +1404,7 @@ serve(async (req) => {
           error: 'SERPER_API_KEY não configurada',
           status: 'error'
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } }
       );
     }
 
@@ -1713,7 +1715,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(resultado),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'content-type': 'application/json' } }
     );
 
   } catch (error: any) {
@@ -1723,7 +1725,7 @@ serve(async (req) => {
         error: error.message || 'Erro desconhecido',
         status: 'error'
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } }
     );
   }
 });
