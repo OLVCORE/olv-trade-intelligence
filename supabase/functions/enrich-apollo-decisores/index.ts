@@ -239,7 +239,9 @@ serve(async (req) => {
       }
       
       if (!organizationId) {
-        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ Organização não encontrada pelo nome');
+        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ Organização não encontrada pelo nome:', companyName);
+        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ Continuando com domain ou q_keywords como fallback...');
+        // ✅ NÃO retornar erro aqui - tentar com domain ou q_keywords
       }
     } else if (apollo_org_id) {
       console.log('[ENRICH-APOLLO-DECISORES] ✅ Usando Apollo Org ID fornecido:', apollo_org_id);
@@ -275,22 +277,62 @@ serve(async (req) => {
     }
     
     // PASSO 3: Buscar TODAS as pessoas da empresa (não filtrar por cargo)
+    // ✅ VALIDAR: Precisamos de organizationId OU domain válido
+    if (!organizationId && !domain && !companyName) {
+      console.warn('[ENRICH-APOLLO] ⚠️ Nenhum parâmetro válido para buscar pessoas (organizationId, domain ou companyName)');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Nenhum parâmetro válido para buscar pessoas. Forneça organizationId, domain ou companyName.',
+          decisores: [],
+          decisores_salvos: 0
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const searchPayload: any = {
       page: 1,
       per_page: 100
-      // NÃO filtrar por person_titles - queremos TODOS os 24 decisores!
+      // NÃO filtrar por person_titles - queremos TODOS os decisores!
     };
+
+    // ✅ EXTRAIR DOMÍNIO LIMPO (remover protocolo, paths, parâmetros)
+    let cleanDomain: string | null = null;
+    if (domain) {
+      try {
+        // Se for URL completa, extrair apenas o domínio
+        if (domain.includes('://') || domain.includes('/')) {
+          const urlObj = new URL(domain.startsWith('http') ? domain : `https://${domain}`);
+          cleanDomain = urlObj.hostname.replace('www.', '').toLowerCase();
+        } else {
+          cleanDomain = domain.replace('www.', '').toLowerCase();
+        }
+        console.log('[ENRICH-APOLLO] 🌐 Domínio limpo:', cleanDomain, '(original:', domain, ')');
+      } catch (e) {
+        console.warn('[ENRICH-APOLLO] ⚠️ Erro ao extrair domínio de:', domain);
+        cleanDomain = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].split('?')[0].toLowerCase();
+      }
+    }
 
     // Priorizar: organization_id > domain > q_keywords (fallback)
     if (organizationId) {
       searchPayload.organization_ids = [organizationId];
-    } else if (domain) {
-      searchPayload.q_organization_domains = domain;
-    } else {
-      searchPayload.q_keywords = companyName;
+      console.log('[ENRICH-APOLLO] 🎯 Usando organization_ids:', organizationId);
+    } else if (cleanDomain) {
+      searchPayload.q_organization_domains = cleanDomain;
+      console.log('[ENRICH-APOLLO] 🌐 Usando q_organization_domains:', cleanDomain);
+    } else if (companyName) {
+      // ✅ VALIDAR: q_keywords requer pelo menos 2 caracteres e não pode ser muito genérico
+      const cleanName = companyName.trim();
+      if (cleanName.length < 2) {
+        throw new Error('Nome da empresa muito curto para busca na Apollo');
+      }
+      searchPayload.q_keywords = cleanName;
+      console.log('[ENRICH-APOLLO] 🔍 Usando q_keywords (fallback):', cleanName);
     }
 
-    console.log('[ENRICH-APOLLO] Payload pessoas:', JSON.stringify(searchPayload));
+    console.log('[ENRICH-APOLLO] 📦 Payload pessoas:', JSON.stringify(searchPayload));
 
     const apolloResponse = await fetch(
       'https://api.apollo.io/v1/mixed_people/search',
@@ -306,8 +348,30 @@ serve(async (req) => {
 
     if (!apolloResponse.ok) {
       const errorText = await apolloResponse.text();
-      console.error('[ENRICH-APOLLO] Apollo API error:', errorText);
-      throw new Error(`Apollo API falhou: ${apolloResponse.status}`);
+      let errorMessage = `Apollo API falhou: ${apolloResponse.status}`;
+      
+      try {
+        const errorJson = JSON.stringify(errorText);
+        if (errorJson) {
+          errorMessage += ` - ${errorJson}`;
+        }
+      } catch (e) {
+        // Ignorar erro de parsing
+      }
+      
+      console.error('[ENRICH-APOLLO] ❌ Apollo API error:', {
+        status: apolloResponse.status,
+        statusText: apolloResponse.statusText,
+        errorText: errorText.substring(0, 500),
+        payload: searchPayload
+      });
+      
+      // ✅ 422 = Unprocessable Entity (parâmetros inválidos) - retornar erro mais útil
+      if (apolloResponse.status === 422) {
+        errorMessage = `Apollo rejeitou os parâmetros. Verifique: ${!organizationId ? 'organizationId não encontrado; ' : ''}${!cleanDomain ? 'domain inválido; ' : ''}${!companyName ? 'companyName ausente' : ''}`.trim();
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const apolloData = await apolloResponse.json();
@@ -510,15 +574,29 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[ENRICH-APOLLO] Erro:', error);
+    console.error('[ENRICH-APOLLO] ❌ Erro crítico:', error);
+    console.error('[ENRICH-APOLLO] ❌ Stack:', error.stack);
+    console.error('[ENRICH-APOLLO] ❌ Error details:', JSON.stringify(error, null, 2));
+    
+    // ✅ Determinar status HTTP apropriado baseado no erro
+    let statusCode = 500;
+    let errorMessage = error.message || 'Erro ao buscar decisores no Apollo';
+    
+    // ✅ Se for erro 422 da Apollo, retornar como 400 (Bad Request) com mensagem mais clara
+    if (errorMessage.includes('422') || errorMessage.includes('Apollo API falhou: 422')) {
+      statusCode = 400;
+      errorMessage = 'Apollo rejeitou os parâmetros. Verifique se o nome da empresa ou domínio são válidos. Se o erro persistir, forneça um Apollo Organization ID manual.';
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Erro ao buscar decisores no Apollo'
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: statusCode,
       }
     );
   }

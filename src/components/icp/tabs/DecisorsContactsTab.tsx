@@ -67,7 +67,7 @@ export function DecisorsContactsTab({
       // 1️⃣ Buscar dados da empresa (Apollo Organization - FONTE DOS CAMPOS!)
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
-        .select('raw_data, industry, name')
+        .select('raw_data, industry, company_name')
         .eq('id', companyId)
         .single();
       
