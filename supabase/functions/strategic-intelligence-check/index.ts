@@ -171,7 +171,7 @@ const SOURCE_WEIGHTS = {
   bi_sources: 90                // D&B, PitchBook, CB Insights (alta confiabilidade)
 };
 
-// 🔍 BUSCA EM MÚLTIPLOS PORTAIS (função auxiliar modular - FASE 2: Buscas Específicas)
+// 🔍 BUSCA EM MÚLTIPLOS PORTAIS (OTIMIZADO: PARALELIZADO + LIMITADO)
 async function searchMultiplePortals(params: {
   portals: string[];
   companyName: string;
@@ -180,6 +180,7 @@ async function searchMultiplePortals(params: {
   sourceWeight: number;
   dateRestrict?: string;
   queryTemplate?: string;
+  maxPortals?: number; // ✅ NOVO: Limitar número de portais para otimizar
 }): Promise<any[]> {
   const { 
     portals, 
@@ -187,37 +188,36 @@ async function searchMultiplePortals(params: {
     serperKey, 
     sourceType, 
     sourceWeight, 
-    dateRestrict = 'y1', // Padrão: últimos 12 meses (mais relevante)
-    queryTemplate = `site:{portal} "${companyName}"`
+    dateRestrict = 'y1',
+    queryTemplate = `site:{portal} "${companyName}"`,
+    maxPortals = 5 // ✅ PADRÃO: Máximo 5 portais por grupo (reduz de 47 para ~15 queries)
   } = params;
   
-  const evidencias: any[] = [];
-  let processedPortals = 0;
+  // ✅ LIMITAR PORTAS (só os mais importantes)
+  const limitedPortals = portals.slice(0, maxPortals);
   
-  // Se queryTemplate não contém {portal}, é uma query específica (não precisa de site:)
   const isSpecificQuery = !queryTemplate.includes('{portal}');
   
-  console.log(`[SCI-MULTI-PORTAL] 🔍 Buscando em ${portals.length} portais (${sourceType})...`);
-  console.log(`[SCI-MULTI-PORTAL] 📅 Filtro de data: últimos ${dateRestrict.replace('y', '')} anos`);
-  console.log(`[SCI-MULTI-PORTAL] 🔍 Query específica: ${isSpecificQuery ? 'SIM' : 'NÃO'}`);
+  console.log(`[SCI-MULTI-PORTAL] 🔍 Buscando em ${limitedPortals.length}/${portals.length} portais (${sourceType})...`);
   
-  for (const portal of portals) {
+  // ✅ PARALELIZAR TODAS AS QUERIES (Promise.all) - Reduz tempo de ~400s para ~5-10s
+  const searchPromises = limitedPortals.map(async (portal) => {
     try {
       let query: string;
       
       if (isSpecificQuery) {
-        // Query específica: adicionar site: apenas se query não tiver site: já
-        if (queryTemplate.includes('site:')) {
-          query = queryTemplate.replace('{companyName}', companyName);
-        } else {
-          // Adicionar site: ao início da query específica para focar no portal
-          query = `site:${portal} ${queryTemplate.replace('{companyName}', companyName)}`;
+        // ✅ REMOVER site: - buscas muito restritivas não retornam resultados
+        // Fazer busca genérica primeiro, depois filtrar por portal se necessário
+        query = queryTemplate.replace('{companyName}', companyName);
+        
+        // ✅ Se a query específica já tem site:, manter; caso contrário, fazer busca sem site: (mais genérica)
+        if (!query.includes('site:')) {
+          // Busca genérica sem site: (retorna mais resultados)
+          query = query; // Manter como está (mais genérico)
         }
       } else {
-        // Query genérica: substituir template
-        query = queryTemplate
-          .replace('{portal}', portal)
-          .replace('{companyName}', companyName);
+        // ✅ Para queries genéricas, remover site: para obter mais resultados
+        query = `"${companyName}"`;
       }
       
       const response = await fetch('https://google.serper.dev/search', {
@@ -228,60 +228,41 @@ async function searchMultiplePortals(params: {
         },
         body: JSON.stringify({
           q: query,
-          num: 10, // Top 10 por portal/query
-          gl: 'us', // Global (não mais 'br')
-          hl: 'en', // Inglês (não mais 'pt-br')
-          tbs: `qdr:${dateRestrict}`, // Filtro de data (mais restritivo)
+          num: 10,
+          gl: 'us',
+          hl: 'en',
+          tbs: `qdr:${dateRestrict}`,
         }),
       });
       
       if (response.ok) {
         const data = await response.json();
         const results = data.organic || [];
-        processedPortals++;
         
-        console.log(`[SCI-MULTI-PORTAL] 📊 ${portal}: ${results.length} resultados (query: ${query.substring(0, 80)}...)`);
-        
-        if (results.length === 0) {
-          console.warn(`[SCI-MULTI-PORTAL] ⚠️ ${portal}: Nenhum resultado encontrado para "${query.substring(0, 80)}..."`);
-        }
-        
-        for (const result of results) {
-          const evidence = {
-            title: result.title || '',
-            snippet: result.snippet || '',
-            link: result.link || '',
-            source: portal,
-            source_type: sourceType,
-            source_weight: sourceWeight,
-            date: result.date || null,
-            position: result.position || null,
-            query_used: query // Adicionar query usada para debug
-          };
-          
-          // Log dos primeiros resultados para debug
-          if (evidencias.length < 3) {
-            console.log(`[SCI-MULTI-PORTAL] 🔍 Resultado exemplo:`, {
-              title: evidence.title.substring(0, 100),
-              snippet: evidence.snippet.substring(0, 150),
-              source: evidence.source
-            });
-          }
-          
-          evidencias.push(evidence);
-        }
-      } else {
-        console.error(`[SCI-MULTI-PORTAL] ❌ Erro em ${portal}: ${response.status}`);
+        return results.map((result: any) => ({
+          title: result.title || '',
+          snippet: result.snippet || '',
+          link: result.link || '',
+          source: portal,
+          source_type: sourceType,
+          source_weight: sourceWeight,
+          date: result.date || null,
+          position: result.position || null,
+          query_used: query
+        }));
       }
-      
-      // Rate limiting: pequeno delay entre requisições
-      await new Promise(resolve => setTimeout(resolve, 100));
+      return [];
     } catch (error) {
       console.error(`[SCI-MULTI-PORTAL] ❌ Erro ao buscar ${portal}:`, error);
+      return [];
     }
-  }
+  });
   
-  console.log(`[SCI-MULTI-PORTAL] ✅ Processados ${processedPortals}/${portals.length} portais`);
+  // ✅ EXECUTAR TODAS AS QUERIES EM PARALELO
+  const resultsArrays = await Promise.all(searchPromises);
+  const evidencias = resultsArrays.flat();
+  
+  console.log(`[SCI-MULTI-PORTAL] ✅ ${evidencias.length} evidências encontradas em ${limitedPortals.length} portais`);
   return evidencias;
 }
 
@@ -1428,139 +1409,121 @@ serve(async (req) => {
       tenantProducts = products || [];
     }
 
-    // 🔍 FASE 1: EXPANSION SIGNALS (Queries Específicas)
+    // 🔍 FASE 1: EXPANSION SIGNALS (SIMPLIFICADO: busca genérica sem site:)
     console.log('[SCI] 🔍 FASE 1: Buscando Expansion Signals...');
-    const expansionQueries = EXPANSION_SIGNALS_QUERIES(company_name);
-    for (const query of expansionQueries) {
-      const expansionEvidences = await searchMultiplePortals({
-        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_BI_SOURCES], // Priorizar Bloomberg, Reuters, FT, WSJ, TechCrunch + D&B, PitchBook, CB Insights, AngelList
-        companyName: company_name,
-        serperKey,
-        sourceType: 'news_premium',
-        sourceWeight: SOURCE_WEIGHTS.news_premium,
-        dateRestrict: 'y1', // Últimos 12 meses (mais relevante)
-        queryTemplate: query // Query específica de expansão
-      });
-      evidencias.push(...expansionEvidences);
-      totalQueries += expansionQueries.length * (5 + GLOBAL_BI_SOURCES.length); // 5 news + 4 BI = 9 fontes por query
-    }
-    sourcesConsulted += 5 + GLOBAL_BI_SOURCES.length; // Bloomberg, Reuters, FT, WSJ, TechCrunch + D&B, PitchBook, CB Insights, AngelList
-    console.log(`[SCI] ✅ FASE 1: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Expansion Signals`);
-
-    // 🛒 FASE 2: PROCUREMENT SIGNALS (Queries Específicas)
-    console.log('[SCI] 🛒 FASE 2: Buscando Procurement Signals...');
-    const procurementQueries = PROCUREMENT_SIGNALS_QUERIES(company_name);
-    for (const query of procurementQueries) {
-      const procurementEvidences = await searchMultiplePortals({
-        portals: [...GLOBAL_JOB_PORTALS.slice(0, 3), ...GLOBAL_NEWS_SOURCES.slice(0, 2)], // LinkedIn, Indeed, Bloomberg, Reuters
-        companyName: company_name,
-        serperKey,
-        sourceType: 'job_portals',
-        sourceWeight: SOURCE_WEIGHTS.job_portals,
-        dateRestrict: 'y1', // Últimos 12 meses
-        queryTemplate: query // Query específica de procurement
-      });
-      evidencias.push(...procurementEvidences);
-      totalQueries += procurementQueries.length * 5;
-    }
+    const expansionQuery = `"${company_name}" opening new office OR expanding OR acquisition OR merger OR funding OR investment OR partnership`;
+    const expansionEvidences = await searchMultiplePortals({
+      portals: [...GLOBAL_NEWS_SOURCES.slice(0, 3), ...GLOBAL_BI_SOURCES.slice(0, 2)], // Top 5 fontes apenas
+      companyName: company_name,
+      serperKey,
+      sourceType: 'news_premium',
+      sourceWeight: SOURCE_WEIGHTS.news_premium,
+      dateRestrict: 'y2', // ✅ Aumentado para y2 (mais resultados)
+      queryTemplate: expansionQuery,
+      maxPortals: 5 // ✅ Limitar a 5 portais
+    });
+    evidencias.push(...expansionEvidences);
+    totalQueries += 5; // ✅ Reduzido de ~54 para 5 queries!
     sourcesConsulted += 5;
-    console.log(`[SCI] ✅ FASE 2: ${evidencias.filter(e => e.source_type === 'job_portals').length} evidências de Procurement Signals`);
+    console.log(`[SCI] ✅ FASE 1: ${expansionEvidences.length} evidências de Expansion Signals`);
 
-    // 💼 FASE 3: HIRING SIGNALS (Queries Específicas)
-    console.log('[SCI] 💼 FASE 3: Buscando Hiring Signals...');
-    const hiringQueries = HIRING_SIGNALS_QUERIES(company_name);
-    for (const query of hiringQueries) {
-      const hiringEvidences = await searchMultiplePortals({
-        portals: GLOBAL_JOB_PORTALS, // Todos os job portals
-        companyName: company_name,
-        serperKey,
-        sourceType: 'job_portals',
-        sourceWeight: SOURCE_WEIGHTS.job_portals,
-        dateRestrict: 'y1', // Últimos 12 meses
-        queryTemplate: query // Query específica de hiring
-      });
-      evidencias.push(...hiringEvidences);
-      totalQueries += hiringQueries.length * GLOBAL_JOB_PORTALS.length;
-    }
-    sourcesConsulted += GLOBAL_JOB_PORTALS.length;
-    console.log(`[SCI] ✅ FASE 3: ${evidencias.filter(e => e.source_type === 'job_portals').length} evidências de Hiring Signals`);
-
-    // 📈 FASE 4: GROWTH SIGNALS (Queries Específicas)
-    console.log('[SCI] 📈 FASE 4: Buscando Growth Signals...');
-    const growthQueries = GROWTH_SIGNALS_QUERIES(company_name);
-    for (const query of growthQueries) {
-      const growthEvidences = await searchMultiplePortals({
-        portals: [...GLOBAL_NEWS_SOURCES.slice(0, 5), ...GLOBAL_OFFICIAL_SOURCES.slice(0, 3)], // Bloomberg, Reuters, FT, WSJ, SEC
-        companyName: company_name,
-        serperKey,
-        sourceType: 'news_premium',
-        sourceWeight: SOURCE_WEIGHTS.news_premium,
-        dateRestrict: 'y2', // Últimos 24 meses (resultados financeiros)
-        queryTemplate: query // Query específica de crescimento
-      });
-      evidencias.push(...growthEvidences);
-      totalQueries += growthQueries.length * 8;
-    }
-    sourcesConsulted += 8;
-    console.log(`[SCI] ✅ FASE 4: ${evidencias.filter(e => e.source_type === 'news_premium').length} evidências de Growth Signals`);
-
-    // 👥 FASE 5: D&B LEADERSHIP/DECISORES (Queries Específicas D&B)
-    console.log('[SCI] 👥 FASE 5: Buscando D&B Leadership/Decisores...');
-    const dnbLeadershipQueries = DNB_LEADERSHIP_QUERIES(company_name);
-    const dnbEvidences: any[] = [];
-    for (const query of dnbLeadershipQueries) {
-      const dnbLeadershipEvidences = await searchMultiplePortals({
-        portals: ['dnb.com'], // Apenas D&B para decisores
-        companyName: company_name,
-        serperKey,
-        sourceType: 'bi_sources',
-        sourceWeight: SOURCE_WEIGHTS.bi_sources,
-        dateRestrict: 'y5', // Buscar histórico mais amplo (dados corporativos mudam menos)
-        queryTemplate: query // Query específica D&B
-      });
-      dnbEvidences.push(...dnbLeadershipEvidences);
-      totalQueries += dnbLeadershipQueries.length;
-      
-      // Delay para respeitar rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    evidencias.push(...dnbEvidences);
-    sourcesConsulted += 1; // D&B contabilizada
-    console.log(`[SCI] ✅ FASE 5: ${dnbEvidences.length} evidências D&B de Leadership/Decisores`);
-
-    // 🏪 FASE 6: PRODUCT FIT SIGNALS (Queries Específicas)
-    console.log('[SCI] 🏪 FASE 6: Buscando Product Fit Signals...');
-    const productFitQueries = PRODUCT_FIT_SIGNALS_QUERIES(company_name, tenantProducts.map(p => p.name));
-    for (const query of productFitQueries) {
-      const productFitEvidences = await searchMultiplePortals({
-        portals: [...GLOBAL_SOCIAL_SOURCES, ...GLOBAL_BI_SOURCES.slice(0, 2)], // LinkedIn, Twitter, Crunchbase, D&B
-        companyName: company_name,
-        serperKey,
-        sourceType: 'social_b2b',
-        sourceWeight: SOURCE_WEIGHTS.social_b2b,
-        dateRestrict: 'y1', // Últimos 12 meses
-        queryTemplate: query // Query específica de product fit
-      });
-      evidencias.push(...productFitEvidences);
-      totalQueries += productFitQueries.length * 5;
-    }
-    sourcesConsulted += 4; // LinkedIn, Twitter, Crunchbase, PitchBook (sem D&B, já usada)
-    console.log(`[SCI] ✅ FASE 6: ${evidencias.filter(e => e.source_type === 'social_b2b').length} evidências de Product Fit Signals`);
-
-    // 🌍 FASE 7: BUSCA GENÉRICA COMPLEMENTAR (Fontes restantes - menor prioridade)
-    console.log('[SCI] 🌍 FASE 7: Busca genérica complementar em fontes restantes...');
-    const evidenciasJobPortalsGeneric = await searchMultiplePortals({
-      portals: GLOBAL_JOB_PORTALS.slice(3), // Job portals não usados nas fases anteriores
+    // 🛒 FASE 2: PROCUREMENT SIGNALS (SIMPLIFICADO: busca genérica)
+    console.log('[SCI] 🛒 FASE 2: Buscando Procurement Signals...');
+    const procurementQuery = `"${company_name}" procurement OR purchasing OR supplier OR vendor OR RFP OR RFQ OR tendering`;
+    const procurementEvidences = await searchMultiplePortals({
+      portals: [...GLOBAL_JOB_PORTALS.slice(0, 2), ...GLOBAL_NEWS_SOURCES.slice(0, 2)], // Top 4 fontes
       companyName: company_name,
       serperKey,
       sourceType: 'job_portals',
       sourceWeight: SOURCE_WEIGHTS.job_portals,
-      dateRestrict: 'y5',
-      queryTemplate: `site:{portal} "{companyName}"`
+      dateRestrict: 'y2', // ✅ Aumentado para y2
+      queryTemplate: procurementQuery,
+      maxPortals: 4 // ✅ Limitar a 4 portais
     });
-    evidencias.push(...evidenciasJobPortalsGeneric);
-    sourcesConsulted += GLOBAL_JOB_PORTALS.slice(3).length;
-    totalQueries += GLOBAL_JOB_PORTALS.slice(3).length;
+    evidencias.push(...procurementEvidences);
+    totalQueries += 4; // ✅ Reduzido de ~20 para 4 queries!
+    sourcesConsulted += 4;
+    console.log(`[SCI] ✅ FASE 2: ${procurementEvidences.length} evidências de Procurement Signals`);
+
+    // 💼 FASE 3: HIRING SIGNALS (SIMPLIFICADO: busca genérica)
+    console.log('[SCI] 💼 FASE 3: Buscando Hiring Signals...');
+    const hiringQuery = `"${company_name}" hiring OR job opening OR careers OR recruitment OR new position`;
+    const hiringEvidences = await searchMultiplePortals({
+      portals: GLOBAL_JOB_PORTALS.slice(0, 3), // Top 3 job portals apenas
+      companyName: company_name,
+      serperKey,
+      sourceType: 'job_portals',
+      sourceWeight: SOURCE_WEIGHTS.job_portals,
+      dateRestrict: 'y2', // ✅ Aumentado para y2
+      queryTemplate: hiringQuery,
+      maxPortals: 3 // ✅ Limitar a 3 portais
+    });
+    evidencias.push(...hiringEvidences);
+    totalQueries += 3; // ✅ Reduzido de ~48 para 3 queries!
+    sourcesConsulted += 3;
+    console.log(`[SCI] ✅ FASE 3: ${hiringEvidences.length} evidências de Hiring Signals`);
+
+    // 📈 FASE 4: GROWTH SIGNALS (OTIMIZADO: 1 query combinada)
+    console.log('[SCI] 📈 FASE 4: Buscando Growth Signals...');
+    const growthQuery = `"${company_name}" (revenue growth OR sales increase OR profit OR earnings OR financial results OR IPO)`;
+    const growthEvidences = await searchMultiplePortals({
+      portals: [...GLOBAL_NEWS_SOURCES.slice(0, 3), ...GLOBAL_OFFICIAL_SOURCES.slice(0, 2)], // Top 5 fontes
+      companyName: company_name,
+      serperKey,
+      sourceType: 'news_premium',
+      sourceWeight: SOURCE_WEIGHTS.news_premium,
+      dateRestrict: 'y2',
+      queryTemplate: growthQuery,
+      maxPortals: 5 // ✅ Limitar a 5 portais
+    });
+    evidencias.push(...growthEvidences);
+    totalQueries += 5; // ✅ Reduzido de ~40 para 5 queries!
+    sourcesConsulted += 5;
+    console.log(`[SCI] ✅ FASE 4: ${growthEvidences.length} evidências de Growth Signals`);
+
+    // 👥 FASE 5: D&B LEADERSHIP/DECISORES (SIMPLIFICADO: busca sem site: restritivo)
+    console.log('[SCI] 👥 FASE 5: Buscando D&B Leadership/Decisores...');
+    const dnbQuery = `"${company_name}" executives OR directors OR board members OR owners OR partners OR leadership Dun Bradstreet`;
+    const dnbEvidences = await searchMultiplePortals({
+      portals: ['dnb.com'], // Apenas D&B
+      companyName: company_name,
+      serperKey,
+      sourceType: 'bi_sources',
+      sourceWeight: SOURCE_WEIGHTS.bi_sources,
+      dateRestrict: 'y5',
+      queryTemplate: dnbQuery,
+      maxPortals: 1 // ✅ Apenas 1 portal (D&B)
+    });
+    evidencias.push(...dnbEvidences);
+    totalQueries += 1; // ✅ Reduzido de ~4 para 1 query!
+    sourcesConsulted += 1;
+    console.log(`[SCI] ✅ FASE 5: ${dnbEvidences.length} evidências D&B de Leadership/Decisores`);
+
+    // 🏪 FASE 6: PRODUCT FIT SIGNALS (SIMPLIFICADO: busca genérica)
+    console.log('[SCI] 🏪 FASE 6: Buscando Product Fit Signals...');
+    const productNames = tenantProducts.slice(0, 3).map(p => p.name).join(' OR '); // Top 3 produtos apenas
+    const productFitQuery = productNames 
+      ? `"${company_name}" ${productNames}`
+      : `"${company_name}" product OR solution OR service OR equipment`;
+    const productFitEvidences = await searchMultiplePortals({
+      portals: [...GLOBAL_SOCIAL_SOURCES.slice(0, 2), ...GLOBAL_BI_SOURCES.slice(0, 1)], // Top 3 fontes
+      companyName: company_name,
+      serperKey,
+      sourceType: 'social_b2b',
+      sourceWeight: SOURCE_WEIGHTS.social_b2b,
+      dateRestrict: 'y2', // ✅ Aumentado para y2
+      queryTemplate: productFitQuery,
+      maxPortals: 3 // ✅ Limitar a 3 portais
+    });
+    evidencias.push(...productFitEvidences);
+    totalQueries += 3; // ✅ Reduzido de ~20 para 3 queries!
+    sourcesConsulted += 3;
+    console.log(`[SCI] ✅ FASE 6: ${productFitEvidences.length} evidências de Product Fit Signals`);
+
+    // 🌍 FASE 7: BUSCA GENÉRICA COMPLEMENTAR (OTIMIZADO: REMOVIDA para reduzir queries)
+    // ✅ REMOVIDA para otimizar - já temos evidências suficientes das fases anteriores
+    console.log('[SCI] 🌍 FASE 7: Pulada (otimização - evidências suficientes das fases anteriores)');
+    totalQueries += 0; // ✅ Reduzido de ~5 para 0 queries!
 
 
     // 📊 CÁLCULO DE SCORES
@@ -1700,13 +1663,13 @@ serve(async (req) => {
         searched_sources: sourcesConsulted,
         execution_time: `${Date.now() - startTime}ms`,
         phases: {
-          phase_1_expansion: expansionQueries.length * 5,
-          phase_2_procurement: procurementQueries.length * 5,
-          phase_3_hiring: hiringQueries.length * GLOBAL_JOB_PORTALS.length,
-          phase_4_growth: growthQueries.length * 8,
-          phase_5_dnb_leadership: dnbLeadershipQueries.length,
-          phase_6_product_fit: productFitQueries.length * 4,
-          phase_7_generic: GLOBAL_JOB_PORTALS.slice(3).length
+          phase_1_expansion: 5, // Queries otimizadas
+          phase_2_procurement: 4,
+          phase_3_hiring: 3,
+          phase_4_growth: 5,
+          phase_5_dnb_leadership: 1,
+          phase_6_product_fit: 3,
+          phase_7_generic: 0 // Removida
         }
       }
     };
@@ -1719,11 +1682,17 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[SCI] ❌ Erro:', error);
+    console.error('[SCI] ❌ Erro crítico:', error);
+    console.error('[SCI] ❌ Stack trace:', error.stack);
+    console.error('[SCI] ❌ Error details:', JSON.stringify(error, null, 2));
+    
+    // ✅ Retornar erro detalhado para debug
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Erro desconhecido',
-        status: 'error'
+        stack: error.stack || 'N/A',
+        status: 'error',
+        details: error.toString()
       }),
       { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } }
     );

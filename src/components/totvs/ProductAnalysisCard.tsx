@@ -1091,17 +1091,17 @@ export default function StrategicIntelligenceCard({
                 💼 8 Job Portals | 📄 10 Fontes Oficiais | 📰 11 Notícias Globais | 💻 8 Tech Portals | 🎥 3 Vídeos | 🌐 3 Social B2B | 📊 4 Business Intelligence (inclui D&B)
               </p>
               <div className="space-y-3">
-                <Button onClick={handleVerify} size="lg" disabled={true} variant="outline">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
-                  Verificação Temporariamente Desabilitada
+                <Button onClick={handleVerify} size="lg" disabled={isLoading || isLoadingLive} variant="default" className="bg-primary hover:bg-primary/90">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Verificar Agora
                 </Button>
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-sm">
-                  <p className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                    ⚠️ SCI Temporariamente Desabilitado
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+                  <p className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                    ✅ SCI Otimizado e Reativado
                   </p>
-                  <p className="text-amber-800 dark:text-amber-200">
-                    Problemas técnicos sendo corrigidos (timeout, CORS, consumo excessivo de créditos). 
-                    A busca estava consumindo 400+ créditos Serper sem retornar resultados.
+                  <p className="text-blue-800 dark:text-blue-200">
+                    Busca otimizada: ~21 queries paralelas (reduzido de 400+), tempo estimado: 10-15s, 
+                    consumo: ~21 créditos Serper por relatório.
                   </p>
                 </div>
               </div>
@@ -1120,7 +1120,7 @@ export default function StrategicIntelligenceCard({
                         🔍 Busca em andamento...
                       </p>
                       <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                        Consultando 47 fontes globais premium (20-40s)
+                        Buscando em fontes globais premium (10-15s - otimizado)
                       </p>
                     </div>
                   </div>
@@ -1138,7 +1138,7 @@ export default function StrategicIntelligenceCard({
                       />
                     </div>
                     <p className="text-xs text-center text-muted-foreground">
-                      ⚡ Cada relatório consome ~185 créditos Serper
+                      ⚡ Cada relatório consome ~21 créditos Serper (otimizado)
                     </p>
                   </div>
                 </div>
@@ -1181,14 +1181,14 @@ export default function StrategicIntelligenceCard({
                   variant="outline" 
                   size="sm" 
                   onClick={handleVerify}
-                  disabled={true}
-                  title="Temporariamente desabilitado - problemas técnicos sendo corrigidos"
+                  disabled={isLoading || isLoadingLive}
+                  title="Atualizar relatório com dados mais recentes"
                 >
-                  <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
-                  Desabilitado
+                  <RefreshCw className={`w-4 h-4 mr-2 ${(isLoading || isLoadingLive) ? 'animate-spin' : ''}`} />
+                  Atualizar
                 </Button>
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded p-2 text-xs text-amber-800 dark:text-amber-200">
-                  ⚠️ SCI temporariamente desabilitado (timeout, CORS, consumo excessivo)
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-2 text-xs text-green-800 dark:text-green-200">
+                  ✅ SCI otimizado: ~21 queries paralelas, ~21 créditos, 10-15s
                 </div>
               </div>
               

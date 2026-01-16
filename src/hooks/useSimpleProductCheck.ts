@@ -21,12 +21,7 @@ export const useSimpleProductCheck = ({
   return useQuery({
     queryKey: ['simple-product-check', companyId, companyName, cnpj],
     queryFn: async () => {
-      // ⚠️ TEMPORARIAMENTE DESABILITADO - Problemas com timeout e CORS
-      // A busca está consumindo 400+ créditos Serper e não retorna dados
-      // TODO: Corrigir timeout (504), CORS e otimizar número de queries antes de reativar
-      throw new Error('SCI temporariamente desabilitado. Problemas técnicos sendo corrigidos (timeout 504, CORS, consumo excessivo de créditos).');
-      
-      console.log('[HOOK] Chamando strategic-intelligence-check...');
+      console.log('[HOOK] ✅ SCI REATIVADO - Chamando strategic-intelligence-check (OTIMIZADO)...');
 
       // Buscar tenant_id e user_id para Product Fit Analysis
       const { data: { user } } = await supabase.auth.getUser();
