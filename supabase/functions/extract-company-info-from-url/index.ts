@@ -36,14 +36,18 @@ interface CompanyInfo {
 serve(async (req) => {
   // ✅ CORRIGIR CORS: Responder OPTIONS com 200 OK + body null (padrão CORS)
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
+    console.log('[EXTRACT-COMPANY-INFO] 🔵 OPTIONS preflight request recebido');
+    const response = new Response(null, { 
       headers: {
-        ...corsHeaders,
+        'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
         'Access-Control-Max-Age': '86400',
       }, 
       status: 200 
     });
+    console.log('[EXTRACT-COMPANY-INFO] ✅ OPTIONS response enviado com status 200');
+    return response;
   }
 
   try {
@@ -99,8 +103,12 @@ serve(async (req) => {
     ];
     
     // ✅ BLOQUEAR MARKETPLACES ESPECÍFICOS (verificação adicional)
-    if (domain.includes('alibaba.com') || domain.includes('made-in-china.com') ||
-        domain.includes('aliexpress.com') || domain.includes('ebay.') ||
+    // ⚠️ CRÍTICO: Facebook e eBay devem ser bloqueados IMEDIATAMENTE
+    // 🚫 BLOQUEAR TODAS AS VARIAÇÕES DO EBAY (ebay.com, ebay.co.uk, ebay.de, ebay.es, etc.)
+    const isEbay = domain.includes('ebay.');
+    if (domain.includes('facebook.com') || domain.includes('fb.com') ||
+        domain.includes('alibaba.com') || domain.includes('made-in-china.com') ||
+        domain.includes('aliexpress.com') || isEbay ||
         domain.includes('globalsources.com') || domain.includes('dhgate.com') ||
         domain.includes('kompass.com') || domain.includes('europages.com')) {
       console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: Marketplace/Portal bloqueado - ${domain}`);
@@ -109,6 +117,37 @@ serve(async (req) => {
           error: 'URL bloqueada: Marketplace/Portal não permitido',
           blocked_reason: 'marketplace_or_portal',
           domain: domain
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // 🚫 BLOQUEAR URLs ESPECÍFICAS DO FACEBOOK (páginas, posts, grupos)
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.com')) {
+      // Permitir apenas se for uma página de empresa real (facebook.com/nome-empresa)
+      // Bloquear: /posts/, /videos/, /groups/, /pages/, /people/, /p/
+      if (urlLower.includes('/posts/') || urlLower.includes('/videos/') || 
+          urlLower.includes('/groups/') || urlLower.includes('/pages/') ||
+          urlLower.includes('/people/') || urlLower.includes('/p/') ||
+          urlLower.includes('/watch/') || urlLower.includes('/events/')) {
+        console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: URL do Facebook bloqueada - ${url}`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'URL bloqueada: Página do Facebook não permitida (posts, vídeos, grupos)',
+            blocked_reason: 'facebook_content',
+            url: url
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      // Bloquear TODAS as URLs do Facebook (incluindo páginas de empresa)
+      // Facebook não é uma fonte confiável para dados de empresa
+      console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: Facebook bloqueado completamente - ${url}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'URL bloqueada: Facebook não é permitido como fonte de dados de empresa',
+          blocked_reason: 'facebook_blocked',
+          url: url
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -128,15 +167,22 @@ serve(async (req) => {
     }
     
     // 🚫 BLOQUEAR URLs DE POSTS/VIDEOS/PRODUTOS (marketplaces/e-commerce)
-    if (urlLower.includes('/posts/') || urlLower.includes('/videos/') || 
-        urlLower.includes('/groups/') || urlLower.includes('/pages/') ||
-        urlLower.includes('/people/') || urlLower.includes('/p/') ||
-        urlLower.includes('/product/') || urlLower.includes('/products/') ||
-        urlLower.includes('/showroom/') || urlLower.includes('/factory/') ||
-        urlLower.includes('/hot-china-products/') || urlLower.includes('/itm/') ||
-        urlLower.includes('/item/') || urlLower.includes('/listing/') ||
-        urlLower.includes('/buy/') || urlLower.includes('/sell/') ||
-        urlLower.includes('/company/') && urlLower.includes('linkedin.com')) { // Bloquear páginas de empresa do LinkedIn (portais acadêmicos)
+    // ⚠️ AJUSTADO: Bloquear apenas se for marketplace conhecido (ebay, alibaba, etc.)
+    // Não bloquear URLs de websites reais que podem ter /product/ ou /factory/ no path
+    const isBlockedMarketplace = domain.includes('ebay.') || 
+                                  domain.includes('alibaba.com') || 
+                                  domain.includes('made-in-china.com') ||
+                                  domain.includes('amazon.com') ||
+                                  domain.includes('etsy.com');
+    
+    if (isBlockedMarketplace && (
+        urlLower.includes('/itm/') || 
+        urlLower.includes('/item/') || 
+        urlLower.includes('/listing/') ||
+        urlLower.includes('/product/') ||
+        urlLower.includes('/p/') ||
+        urlLower.includes('/hot-china-products/')
+    )) {
       console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: URL de produto/post/marketplace - ${url}`);
       return new Response(
         JSON.stringify({ 
@@ -148,22 +194,27 @@ serve(async (req) => {
       );
     }
     
-    // 🚫 BLOQUEAR "MADE IN CHINA" E PRODUTOS CHINESES
-    const blockedKeywords = [
-      'made in china', 'made-in-china', 'chinese', 'china manufacturer',
-      'wholesale china', 'factory china', 'shenzhen', 'guangzhou factory'
-    ];
-    if (blockedKeywords.some(keyword => nameLower.includes(keyword) || urlLower.includes(keyword))) {
-      console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: Produto "Made in China" - ${url}`);
+    // Bloquear posts/videos/groups de redes sociais (já bloqueadas acima, mas garantir)
+    if ((urlLower.includes('facebook.com') || urlLower.includes('linkedin.com')) && (
+        urlLower.includes('/posts/') || urlLower.includes('/videos/') || 
+        urlLower.includes('/groups/') || urlLower.includes('/pages/') ||
+        urlLower.includes('/people/') || urlLower.includes('/p/')
+    )) {
+      console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: URL de post/vídeo/grupo - ${url}`);
       return new Response(
         JSON.stringify({ 
-          error: 'URL bloqueada: Produtos "Made in China" não permitidos',
-          blocked_reason: 'made_in_china',
+          error: 'URL bloqueada: Post/vídeo/grupo não permitido',
+          blocked_reason: 'social_content',
           url: url
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // 🚫 BLOQUEAR "MADE IN CHINA" APENAS SE FOR MARKETPLACE (não bloquear websites reais)
+    // ⚠️ REMOVIDO: Bloqueio de "Made in China" está bloqueando URLs legítimas de empresas chinesas
+    // Apenas bloquear se for claramente um marketplace (made-in-china.com, alibaba.com, etc.)
+    // Esses já estão bloqueados na lista BLOCKED_DOMAINS acima
     
     // 🚫 BLOQUEAR PORTALS ACADÊMICOS/PUBLICAÇÕES (IEEE, etc.)
     const blockedAcademic = [
@@ -203,9 +254,27 @@ serve(async (req) => {
     }
     
     // 🚫 BLOQUEAR NOMES GENÉRICOS (produtos, não empresas)
-    const genericNames = ['wholesale', 'shop all', 'global distributors', 'products',
-                          'title:', 'buy', 'sell', 'shop', 'store', 'online'];
-    if (genericNames.some(gen => nameLower.includes(gen) && nameLower.length < 50 && !nameLower.includes('company') && !nameLower.includes('inc'))) {
+    // ⚠️ Apenas bloquear se for CLARAMENTE um produto genérico, não uma empresa real
+    const genericProductPatterns = [
+      /^shop\s+all$/i,           // "Shop All" (página de produtos)
+      /^products?$/i,             // "Products" ou "Product" (página genérica)
+      /^buy\s+now$/i,             // "Buy Now" (botão de compra)
+      /^sell\s+online$/i,         // "Sell Online" (genérico)
+      /^wholesale\s+products?$/i, // "Wholesale Products" (catálogo genérico)
+      /^title:\s*/i,              // "Title: ..." (metadados)
+    ];
+    
+    // ✅ NÃO bloquear se contém indicadores de empresa real
+    const companyIndicators = ['company', 'inc', 'ltd', 'llc', 'corp', 'group', 'enterprises', 'industries', 'systems', 'solutions', 'services'];
+    const hasCompanyIndicator = companyIndicators.some(ind => nameLower.includes(ind));
+    
+    // ✅ NÃO bloquear se o nome tem mais de 2 palavras (provavelmente é uma empresa)
+    const wordCount = (company_name || '').trim().split(/\s+/).length;
+    
+    // ✅ Apenas bloquear se for um padrão genérico E não tiver indicadores de empresa E tiver menos de 3 palavras
+    if (genericProductPatterns.some(pattern => pattern.test(company_name || '')) && 
+        !hasCompanyIndicator && 
+        wordCount < 3) {
       console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: Nome genérico (produto) - ${company_name}`);
       return new Response(
         JSON.stringify({ 
@@ -278,11 +347,11 @@ serve(async (req) => {
     // ========================================================================
     // 1️⃣ EXTRAIR DOMÍNIO PARA NOME BASE
     // ========================================================================
-    let domain = '';
     let companyNameKeyword = '';
     try {
       const urlObj = new URL(url);
-      domain = urlObj.hostname.replace('www.', '');
+      // ✅ Reutilizar variável domain já declarada (linha 83), apenas atualizar valor se necessário
+      const extractedDomain = urlObj.hostname.replace('www.', '');
       
       // ✅ USAR NOME FORNECIDO (prioridade) OU extrair do domínio
       if (company_name && company_name.trim().length > 3) {
@@ -291,13 +360,13 @@ serve(async (req) => {
         console.log(`[EXTRACT-COMPANY-INFO] ✅ Usando nome fornecido: "${companyNameKeyword}"`);
       } else {
         // Ex: pilatesmatters.com → "Pilates Matters"
-        const domainParts = domain.split('.');
+        const domainParts = extractedDomain.split('.');
         const mainDomain = domainParts[0];
         result.company_name = mainDomain
           .split(/[-_]/)
           .map(part => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' ');
-        companyNameKeyword = result.company_name || domain;
+        companyNameKeyword = result.company_name || extractedDomain;
         console.log(`[EXTRACT-COMPANY-INFO] ✅ Nome base do domínio: ${result.company_name}`);
       }
     } catch (e) {
@@ -420,7 +489,7 @@ serve(async (req) => {
                       // PORTALS DE E-COMMERCE (BLOQUEADOS!)
                       'kompass.com', 'europages.com', 'thomasnet.com',
                       // REDES SOCIAIS E BLOGS (BLOQUEADOS!)
-                      'facebook.com/pages', 'facebook.com/posts', 'facebook.com/groups',
+                      'facebook.com', 'fb.com', 'facebook.com/pages', 'facebook.com/posts', 'facebook.com/groups',
                       'linkedin.com/company', 'linkedin.com/posts', 'linkedin.com/pulse',
                       'blog', 'news', 'article', 'magazine', 'journal', 'publication',
                       // E-COMMERCE GENÉRICO (BLOQUEADOS!)
@@ -431,6 +500,10 @@ serve(async (req) => {
                       'ieee', 'transactions', 'publications', 'publisher',
                       // EBAY/AMAZON (BLOQUEADOS!)
                       'ebay.com/itm', 'amazon.com/product', 'amazon.com/dp',
+                      // ARTIGOS/LISTAS (BLOQUEADOS!)
+                      'top 100', 'top 50', 'top 10', 'best manufacturers', 'best suppliers',
+                      'manufacturers in', 'suppliers in', 'distributors in',
+                      '(2025)', '(2024)', '(2023)', // Anos em parênteses (geralmente artigos)
                     ];
                     const isBlocked = blockedPatterns.some(pattern => 
                       link.includes(pattern) || 
@@ -438,23 +511,44 @@ serve(async (req) => {
                       title.includes(pattern)
                     );
                     
-                    if (hasContext && !isBlocked) {
+                    // 🚫 VALIDAR TÍTULO DO RESULTADO SERPER (bloquear artigos/listas)
+                    const titleLower = (item.title || '').toLowerCase();
+                    const isArticleTitle = /^top\s+\d+/i.test(item.title || '') ||
+                                          /\(20\d{2}\)$/i.test(item.title || '') ||
+                                          /manufacturers\s+in\s+\w+\s*\(20\d{2}\)/i.test(item.title || '') ||
+                                          /^(the|a)\s+(best|top|complete|ultimate)/i.test(item.title || '') ||
+                                          /^buy|sell|shop|store|wholesale/i.test(item.title || '');
+                    
+                    if (hasContext && !isBlocked && !isArticleTitle) {
                       result.country = country;
                       console.log(`[EXTRACT-COMPANY-INFO] ✅ País encontrado via Serper: ${country} (fonte: ${item.link})`);
                       
                       // Atualizar nome se encontrado melhor no Serper (remover sufixos)
+                      // ⚠️ VALIDAÇÃO RIGOROSA: bloquear nomes que parecem artigos/produtos
                       if (item.title && item.title.length > 3 && item.title.length < 100) {
-                        const cleanTitle = item.title
+                        let cleanTitle = item.title
                           .replace(/\s*[-|]\s*.*$/, '') // Remover "| Company Name" ou "- Description"
                           .replace(/^(Wholesale|Buy|Shop|Online|Store|Sale)\s+/i, '')
                           .replace(/\s+(Wholesale|Sale|Store|Online|Shop)$/i, '')
                           .trim();
-                        if (cleanTitle.length > 3 && cleanTitle.length < 80) {
+                        
+                        // 🚫 VALIDAÇÃO ADICIONAL: bloquear nomes que parecem artigos
+                        const isArticleName = /^top\s+\d+/i.test(cleanTitle) ||
+                                             /\(20\d{2}\)$/i.test(cleanTitle) ||
+                                             /manufacturers\s+in/i.test(cleanTitle) ||
+                                             /^(the|a)\s+(best|top|complete)/i.test(cleanTitle) ||
+                                             /direct\s+sales|factory\s+direct|your\s+best/i.test(cleanTitle);
+                        
+                        if (cleanTitle.length > 3 && cleanTitle.length < 80 && !isArticleName) {
                           result.company_name = cleanTitle;
                           console.log(`[EXTRACT-COMPANY-INFO] ✅ Nome atualizado via Serper: "${result.company_name}"`);
+                        } else {
+                          console.log(`[EXTRACT-COMPANY-INFO] ⚠️ Nome do Serper rejeitado (parece artigo/produto): "${cleanTitle}"`);
                         }
                       }
                       break;
+                    } else if (isArticleTitle || isBlocked) {
+                      console.log(`[EXTRACT-COMPANY-INFO] ⚠️ Resultado Serper bloqueado: ${item.link} (artigo/marketplace)`);
                     }
                   }
                 }
@@ -547,6 +641,48 @@ serve(async (req) => {
               result.company_name = footerName;
               console.log(`[EXTRACT-COMPANY-INFO] ✅ Nome do footer: ${result.company_name}`);
             }
+          }
+        }
+
+        // ====================================================================
+        // 2.1.1 VALIDAÇÃO RIGOROSA DO NOME DA EMPRESA EXTRAÍDO
+        // ====================================================================
+        // ⚠️ BLOQUEAR nomes que parecem ser artigos, produtos, livros, listas
+        if (result.company_name) {
+          const extractedName = result.company_name.toLowerCase();
+          const extractedNameOriginal = result.company_name;
+          
+          // 🚫 BLOQUEAR PADRÕES DE ARTIGOS/PUBLICAÇÕES
+          const articlePatterns = [
+            /^top\s+\d+/i, // "Top 100", "Top 50", etc.
+            /\(20\d{2}\)$/i, // "(2025)", "(2024)", etc. no final
+            /^the\s+(?:best|top|complete|ultimate|guide\s+to)/i, // "The Best", "The Top", etc.
+            /^[A-Z][^:]*:\s*[A-Z]/i, // Títulos de livro: "Title: Subtitle"
+            /part\s+[ivx]+:/i, // "Part II:", "Part III:", etc.
+            /^(exercises|training|manual|guide|tutorial|how to)/i, // Guias, manuais
+            /(?:manufacturers|suppliers|distributors)\s+in\s+\w+\s*\(20\d{2}\)/i, // "Manufacturers in Canada (2025)"
+            /^(buy|sell|shop|store|wholesale|retail)\s+/i, // Produtos, não empresas
+            /direct\s+sales|factory\s+direct|your\s+best\s+choice/i, // Slogans/produtos
+            /^factory\s+direct\s+sales/i, // "Factory direct sales..."
+            /good\s+quality\s+and\s+low/i, // Frases de produto
+          ];
+          
+          const isArticleOrProduct = articlePatterns.some(pattern => pattern.test(extractedNameOriginal));
+          
+          // 🚫 BLOQUEAR NOMES MUITO LONGOS (geralmente são títulos de artigos/páginas)
+          const isTooLong = extractedNameOriginal.length > 80;
+          
+          // 🚫 BLOQUEAR NOMES COM EMOJIS (geralmente são posts/páginas, não empresas)
+          const hasEmojis = /[\u{1F300}-\u{1F9FF}]/u.test(extractedNameOriginal);
+          
+          // 🚫 BLOQUEAR NOMES QUE SÃO TÍTULOS DE LISTAS
+          const isListTitle = /^(top|best|complete|ultimate)\s+\d+\s+/i.test(extractedNameOriginal);
+          
+          if (isArticleOrProduct || isTooLong || hasEmojis || isListTitle) {
+            console.error(`[EXTRACT-COMPANY-INFO] 🚫 REJEITADO: Nome extraído parece ser artigo/produto/livro - "${extractedNameOriginal}"`);
+            result.company_name = null; // Limpar nome inválido
+          } else {
+            console.log(`[EXTRACT-COMPANY-INFO] ✅ Nome validado: "${extractedNameOriginal}"`);
           }
         }
 

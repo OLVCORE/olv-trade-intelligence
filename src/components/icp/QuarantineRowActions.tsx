@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { QuarantineReportModal } from '@/components/icp/QuarantineReportModal';
 import { DiscardCompanyModal } from '@/components/icp/DiscardCompanyModal';
+import { syncEnrichmentToAllTables } from '@/lib/utils/enrichmentSync';
 
 interface QuarantineRowActionsProps {
   company: any;
@@ -66,6 +67,11 @@ export function QuarantineRowActions({
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const navigate = useNavigate();
+
+  // ✅ Extrair raw_data do company (mesmo padrão de ICPQuarantine.tsx)
+  const rawData = (company.raw_data && typeof company.raw_data === 'object' && !Array.isArray(company.raw_data)) 
+    ? company.raw_data as Record<string, any>
+    : {};
 
   const handleApprove = () => {
     onApprove(company.id);
@@ -408,74 +414,48 @@ export function QuarantineRowActions({
                     const extractedInfo = await extractResponse.json();
                     console.log('[ENRICH-INTERNATIONAL] Dados extraídos:', extractedInfo);
                     
-                    // ✅ ATUALIZAR DIRETAMENTE em icp_analysis_results.raw_data (mesmo padrão de todas as páginas)
-                    
-                    const currentRawData = rawData || {};
-                    const updatedRawData = {
-                      ...currentRawData,
-                      // Preservar dados existentes
-                      domain: website || currentRawData.domain,
-                      website: website,
-                      // Atualizar com dados extraídos
-                      company_name: extractedInfo.company_name || currentRawData.company_name || company.razao_social,
-                      country: extractedInfo.country || currentRawData.country,
-                      city: extractedInfo.city || currentRawData.city,
-                      state: extractedInfo.state || currentRawData.state,
-                      address: extractedInfo.address || currentRawData.address,
-                      phone: extractedInfo.phone || currentRawData.phone,
-                      email: extractedInfo.email || currentRawData.email,
-                      international_enrichment: {
+                    // ✅ SINCRONIZAR ENRIQUECIMENTO EM TODAS AS TABELAS
+                    const companyId = company.company_id || null;
+                    const syncResult = await syncEnrichmentToAllTables(
+                      companyId,
+                      {
                         ...extractedInfo,
-                        extracted_at: new Date().toISOString(),
-                        source: extractedInfo.source || 'extract-company-info-from-url',
+                        domain: website || extractedInfo.domain,
+                        website: website,
+                        company_name: extractedInfo.company_name || company.razao_social,
+                        international_enrichment: {
+                          ...extractedInfo,
+                          extracted_at: new Date().toISOString(),
+                          source: extractedInfo.source || 'extract-company-info-from-url',
+                        },
                       },
-                    };
+                      {
+                        updateCompanies: !!companyId,
+                        updateICP: true,
+                        updateLeadsPool: true,
+                      }
+                    );
                     
-                    // Atualizar icp_analysis_results.raw_data
+                    if (syncResult.errors.length > 0) {
+                      console.warn('[ENRICH-INTERNATIONAL] Avisos na sincronização:', syncResult.errors);
+                    }
+                    
+                    // Atualizar também campos diretos em icp_analysis_results (para garantir)
                     const { error: updateError } = await supabase
                       .from('icp_analysis_results')
                       .update({
-                        raw_data: updatedRawData,
+                        razao_social: extractedInfo.company_name || company.razao_social,
+                        country: extractedInfo.country || company.country,
+                        city: extractedInfo.city || company.city,
+                        state: extractedInfo.state || company.state,
                       })
                       .eq('id', company.id);
                     
                     if (updateError) {
-                      console.error('[ENRICH-INTERNATIONAL] Erro ao atualizar icp_analysis_results:', updateError);
-                      throw updateError;
+                      console.warn('[ENRICH-INTERNATIONAL] Erro ao atualizar campos diretos:', updateError);
                     }
                     
-                    // Se tiver company_id, atualizar também a tabela companies
-                    if (company.company_id) {
-                      const companyUpdateData: any = {};
-                      if (extractedInfo.company_name && extractedInfo.company_name.length > 3) {
-                        companyUpdateData.company_name = extractedInfo.company_name;
-                      }
-                      if (extractedInfo.country && extractedInfo.country !== 'N/A') {
-                        companyUpdateData.country = extractedInfo.country;
-                      }
-                      if (extractedInfo.city) companyUpdateData.city = extractedInfo.city;
-                      if (extractedInfo.state) companyUpdateData.state = extractedInfo.state;
-                      
-                      const currentCompanyRawData = company.raw_data || {};
-                      companyUpdateData.raw_data = {
-                        ...currentCompanyRawData,
-                        re_enriched_at: new Date().toISOString(),
-                        extracted_info: extractedInfo,
-                      };
-                      
-                      const { error: companyUpdateError } = await supabase
-                        .from('companies')
-                        .update(companyUpdateData)
-                        .eq('id', company.company_id);
-                      
-                      if (companyUpdateError) {
-                        console.warn('[ENRICH-INTERNATIONAL] Erro ao atualizar companies:', companyUpdateError);
-                      } else {
-                        console.log('[ENRICH-INTERNATIONAL] ✅ Dados também atualizados na tabela companies');
-                      }
-                    }
-                    
-                    console.log('[ENRICH-INTERNATIONAL] ✅ Dados atualizados em icp_analysis_results');
+                    console.log('[ENRICH-INTERNATIONAL] ✅ Dados sincronizados em todas as tabelas');
                     
                     toast.success(`✅ Dados internacionais atualizados!`, {
                       description: `Nome: ${extractedInfo.company_name || 'N/A'}, País: ${extractedInfo.country || 'N/A'}`,

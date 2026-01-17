@@ -4,12 +4,20 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    console.log('[ICP-REFRESH-REPORT] 🔵 OPTIONS preflight request recebido');
+    const response = new Response(null, { 
+      headers: corsHeaders, 
+      status: 200 
+    });
+    console.log('[ICP-REFRESH-REPORT] ✅ OPTIONS response enviado com status 200');
+    return response;
   }
 
   try {

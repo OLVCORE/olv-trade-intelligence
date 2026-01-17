@@ -7,21 +7,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useLatestSTCReport } from "@/hooks/useSTCHistory";
 
 interface QuarantineEnrichmentStatusBadgeProps {
   rawAnalysis: any;
+  companyId?: string; // ✅ Opcional: para verificar stc_verification_history
   showProgress?: boolean;
 }
 
 export function QuarantineEnrichmentStatusBadge({ 
   rawAnalysis, 
+  companyId,
   showProgress = false 
 }: QuarantineEnrichmentStatusBadgeProps) {
+  // ✅ Verificar SCI na tabela stc_verification_history (se companyId fornecido)
+  const { data: latestSTCReport } = useLatestSTCReport(companyId);
+  const hasSTCInHistory = !!latestSTCReport;
+  
   // ✅ VERIFICAR 4 ENRIQUECIMENTOS (NÃO 3!)
   const hasReceitaFederal = !!rawAnalysis?.receita_federal || !!rawAnalysis?.receita;
   const hasApollo = !!rawAnalysis?.apollo_organization || !!rawAnalysis?.apollo || !!rawAnalysis?.enriched_apollo;
-  const hasEnrichment360 = !!rawAnalysis?.digital_intelligence || !!rawAnalysis?.enrichment_360;
-  const hasTOTVS = !!rawAnalysis?.totvs_report;
+  // ✅ Compatibilidade: enrichment_360 (quarentena) e last_360_enrichment (companies)
+  const hasEnrichment360 = !!rawAnalysis?.digital_intelligence || !!rawAnalysis?.enrichment_360 || !!rawAnalysis?.last_360_enrichment;
+  // ✅ SCI (Strategic Commercial Intelligence): verificar stc_verification_history (novo) ou totvs_report (legado - quarentena)
+  const hasSCI = hasSTCInHistory || !!rawAnalysis?.totvs_report || !!rawAnalysis?.totvs_detection_score || !!rawAnalysis?.stc_report;
   
   // 🐛 DEBUG
   if (rawAnalysis && Object.keys(rawAnalysis).length > 0) {
@@ -29,17 +38,17 @@ export function QuarantineEnrichmentStatusBadge({
     console.log('[BADGE] hasReceita:', hasReceitaFederal);
     console.log('[BADGE] hasApollo:', hasApollo);
     console.log('[BADGE] has360:', hasEnrichment360);
-    console.log('[BADGE] hasTOTVS:', hasTOTVS);
+    console.log('[BADGE] hasSCI:', hasSCI, '(from history:', hasSTCInHistory, ')');
   }
   
   // Calcular porcentagem de completude (4 checks)
   const totalChecks = 4;
-  const completedChecks = [hasReceitaFederal, hasApollo, hasEnrichment360, hasTOTVS].filter(Boolean).length;
+  const completedChecks = [hasReceitaFederal, hasApollo, hasEnrichment360, hasSCI].filter(Boolean).length;
   const completionPercentage = Math.round((completedChecks / totalChecks) * 100);
   
   // 🐛 DEBUG CÁLCULO
   console.log('[BADGE] Cálculo:', {
-    checks: [hasReceitaFederal, hasApollo, hasEnrichment360, hasTOTVS],
+    checks: [hasReceitaFederal, hasApollo, hasEnrichment360, hasSCI],
     completed: completedChecks,
     total: totalChecks,
     percentage: completionPercentage
@@ -118,11 +127,11 @@ export function QuarantineEnrichmentStatusBadge({
           </p>
         </div>
         
-        {/* 🟣 LUZ 4: TOTVS CHECK (100%) */}
+        {/* 🟣 LUZ 4: SCI - Strategic Commercial Intelligence (100%) */}
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${hasTOTVS ? 'bg-purple-500' : 'bg-gray-500'}`} />
-          <p className={hasTOTVS ? "text-purple-600 font-medium" : "text-muted-foreground"}>
-            {hasTOTVS ? "✓" : "○"} TOTVS Check <span className="text-xs opacity-70">(100%)</span>
+          <div className={`w-2 h-2 rounded-full ${hasSCI ? 'bg-purple-500' : 'bg-gray-500'}`} />
+          <p className={hasSCI ? "text-purple-600 font-medium" : "text-muted-foreground"}>
+            {hasSCI ? "✓" : "○"} SCI - Strategic Intelligence <span className="text-xs opacity-70">(100%)</span>
           </p>
         </div>
       </div>

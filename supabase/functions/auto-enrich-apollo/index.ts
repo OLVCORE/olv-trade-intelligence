@@ -6,13 +6,15 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 serve(async (req) => {
-  // CORS
+  // CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
+    return new Response(null, { 
+      status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Max-Age': '86400',
       } 
     });
   }
@@ -178,13 +180,20 @@ serve(async (req) => {
     // Conectar Supabase
     const supabase = createClient(SUPABASE_URL || '', SUPABASE_SERVICE_KEY || '');
 
-    // Verificar se já foi manualmente enriquecido
-    const { data: existingCompany } = await supabase
+    // MERGE INTELIGENTE: Ler dados existentes primeiro (incluindo enrichment_source)
+    console.log('📖 [AUTO-ENRICH] Lendo dados existentes...');
+    const { data: existingCompany, error: fetchError } = await supabase
       .from('companies')
-      .select('enrichment_source')
+      .select('enrichment_source, apollo_id, linkedin_url, description, raw_data')
       .eq('id', companyId)
-      .single();
+      .maybeSingle();
 
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('❌ [AUTO-ENRICH] Erro ao buscar company:', fetchError);
+      throw fetchError;
+    }
+
+    // Verificar se já foi manualmente enriquecido
     if (existingCompany?.enrichment_source === 'manual') {
       console.log('⚠️ [AUTO-ENRICH] Empresa já foi enriquecida MANUALMENTE - NÃO sobrescrever!');
       return new Response(
@@ -201,14 +210,6 @@ serve(async (req) => {
         }
       );
     }
-
-    // MERGE INTELIGENTE: Ler dados existentes primeiro
-    console.log('📖 [AUTO-ENRICH] Lendo dados existentes...');
-    const { data: existingCompany } = await supabase
-      .from('companies')
-      .select('apollo_id, linkedin_url, description, raw_data')
-      .eq('id', companyId)
-      .single();
     
     // Preparar dados para merge (NUNCA sobrescreve campos preenchidos!)
     const updateData: any = {
@@ -273,7 +274,7 @@ serve(async (req) => {
         .from('companies')
         .select('tenant_id')
         .eq('id', companyId)
-        .single();
+        .maybeSingle();
 
       const decisionMakersToInsert = decisionMakers.map((dm) => ({
         company_id: companyId,

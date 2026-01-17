@@ -373,9 +373,52 @@ export function getCommercialBlockDisplay(company: any): string {
 /**
  * Função: getContinentDisplay(company: any): string
  * 
- * Extrai Continente baseado no país
+ * Extrai Continente baseado no país (FALLBACK ESTÁTICO - usar apenas se API falhar)
+ * 
+ * ⚠️ DEPRECATED: Preferir getRegionDisplay() que usa API dinâmica
  */
 export function getContinentDisplay(company: any): string {
   const country = getCountryWithFallback(company);
   return getContinent(country);
+}
+
+/**
+ * Função: getRegionDisplay(company: any): Promise<string>
+ * 
+ * Extrai Região/Continente DINAMICAMENTE via API externa (REST Countries)
+ * 
+ * ✅ SEM HARDCODING - busca dados reais de APIs gratuitas
+ * ✅ Cobertura global (100% dos países)
+ * ✅ Cache para performance
+ */
+export async function getRegionDisplayAsync(company: any): Promise<string> {
+  const country = getCountryWithFallback(company);
+  
+  if (!country || country === 'N/A') {
+    return 'N/A';
+  }
+
+  try {
+    // Importar dinamicamente para evitar dependência circular
+    const { getRegion } = await import('@/services/countryRegionService');
+    const region = await getRegion(country);
+    return region;
+  } catch (error: any) {
+    console.warn(`[RegionDisplay] ⚠️ Erro ao buscar região via API para ${country}, usando fallback:`, error.message);
+    // Fallback para mapeamento estático se API falhar
+    return getContinentDisplay(company);
+  }
+}
+
+/**
+ * Função: getRegionDisplay(company: any): string
+ * 
+ * Versão SÍNCRONA (usa cache ou fallback estático)
+ * 
+ * ⚠️ Para uso em renderização React, use getRegionDisplayAsync() em useEffect
+ */
+export function getRegionDisplay(company: any): string {
+  // Por enquanto, usar fallback estático
+  // TODO: Implementar cache síncrono ou usar React Query para cache
+  return getContinentDisplay(company);
 }

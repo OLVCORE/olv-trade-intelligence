@@ -106,13 +106,7 @@ export function QuarantineActionsMenu({
         side="bottom"
         sideOffset={5}
         alignOffset={0}
-        className="w-64 bg-popover max-h-[calc(100vh-120px)] overflow-y-auto"
-        style={{ 
-          position: 'fixed',
-          maxHeight: 'calc(100vh - 120px)',
-          zIndex: 9999,
-          transform: 'none',
-        }}
+        className="w-64 bg-popover max-h-[calc(100vh-200px)] overflow-y-auto z-[9999]"
         data-testid="quarantine-actions-dropdown"
       >
         <DropdownMenuLabel>

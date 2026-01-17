@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { ExecutiveReportModal } from '@/components/reports/ExecutiveReportModal';
+import { syncEnrichmentToAllTables } from '@/lib/utils/enrichmentSync';
 
 interface CompanyRowActionsProps {
   company: any;
@@ -52,6 +53,11 @@ export function CompanyRowActions({
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichingAction, setEnrichingAction] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
+
+  // ✅ Extrair raw_data do company (mesmo padrão de QuarantineRowActions e ApprovedLeadActions)
+  const rawData = (company.raw_data && typeof company.raw_data === 'object' && !Array.isArray(company.raw_data)) 
+    ? company.raw_data as Record<string, any>
+    : {};
 
   const handleEnrich = async (action: string, fn: () => Promise<void>) => {
     try {
@@ -144,7 +150,7 @@ export function CompanyRowActions({
         {/* ✅ NOVO: Enriquecer Dados Internacionais */}
         <DropdownMenuItem
           onClick={async () => {
-            if (!company.website && !company.domain && !company.raw_data?.domain) {
+            if (!company.website && !company.domain && !rawData?.domain) {
               toast.error('Empresa sem website - não é possível enriquecer dados internacionais');
               return;
             }
@@ -153,7 +159,7 @@ export function CompanyRowActions({
               setIsEnriching(true);
               setEnrichingAction('Enriquecer Dados Internacionais');
               
-              const website = company.website || company.domain || company.raw_data?.domain;
+              const website = company.website || company.domain || rawData?.domain;
               const companyName = company.company_name || company.razao_social || company.name || '';
               const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
               
@@ -179,68 +185,54 @@ export function CompanyRowActions({
               const extractedInfo = await extractResponse.json();
               console.log('[ENRICH-INTERNATIONAL] Dados extraídos:', extractedInfo);
               
-              // ✅ ATUALIZAR company_name, country, city, state diretamente
-              const updateData: any = {};
-              
-              // Atualizar apenas se dados extraídos são válidos e diferentes
-              if (extractedInfo.company_name && 
-                  extractedInfo.company_name.length > 3 && 
-                  extractedInfo.company_name !== company.company_name) {
-                updateData.company_name = extractedInfo.company_name;
-              }
-              
-              if (extractedInfo.country && 
-                  extractedInfo.country !== 'N/A' && 
-                  extractedInfo.country !== company.country) {
-                updateData.country = extractedInfo.country;
-              }
-              
-              if (extractedInfo.city && extractedInfo.city !== company.city) {
-                updateData.city = extractedInfo.city;
-              }
-              
-              if (extractedInfo.state && extractedInfo.state !== company.state) {
-                updateData.state = extractedInfo.state;
-              }
-              
-              // Atualizar raw_data com informações extraídas
-              const currentRawData = company.raw_data || {};
-              updateData.raw_data = {
-                ...currentRawData,
-                re_enriched_at: new Date().toISOString(),
-                re_enriched_source: extractedInfo.source || 'extract-company-info-from-url',
-                extracted_info: {
-                  company_name: extractedInfo.company_name,
-                  country: extractedInfo.country,
-                  city: extractedInfo.city,
-                  state: extractedInfo.state,
-                  address: extractedInfo.address,
-                  phone: extractedInfo.phone,
-                  email: extractedInfo.email,
+              // ✅ SINCRONIZAR ENRIQUECIMENTO EM TODAS AS TABELAS
+              const syncResult = await syncEnrichmentToAllTables(
+                company.id,
+                {
+                  ...extractedInfo,
+                  domain: website || extractedInfo.domain,
+                  website: website,
+                  company_name: extractedInfo.company_name || company.company_name,
+                  international_enrichment: {
+                    ...extractedInfo,
+                    extracted_at: new Date().toISOString(),
+                    source: extractedInfo.source || 'extract-company-info-from-url',
+                  },
                 },
-              };
+                {
+                  updateCompanies: true,
+                  updateICP: true,
+                  updateLeadsPool: true,
+                }
+              );
               
-              // Aplicar atualização
+              if (syncResult.errors.length > 0) {
+                console.warn('[ENRICH-INTERNATIONAL] Avisos na sincronização:', syncResult.errors);
+              }
+              
+              // Atualizar também campos diretos em companies (para garantir)
               const { error: updateError } = await supabase
                 .from('companies')
-                .update(updateData)
+                .update({
+                  company_name: extractedInfo.company_name || company.company_name,
+                  country: extractedInfo.country || company.country,
+                  city: extractedInfo.city || company.city,
+                  state: extractedInfo.state || company.state,
+                })
                 .eq('id', company.id);
               
               if (updateError) {
-                console.error('[ENRICH-INTERNATIONAL] Erro ao atualizar:', updateError);
-                throw updateError;
+                console.warn('[ENRICH-INTERNATIONAL] Erro ao atualizar campos diretos:', updateError);
               }
               
-              console.log('[ENRICH-INTERNATIONAL] ✅ Dados atualizados na tabela companies');
+              console.log('[ENRICH-INTERNATIONAL] ✅ Dados sincronizados em todas as tabelas');
               
               toast.success(`✅ Dados internacionais atualizados!`, {
                 description: `Nome: ${extractedInfo.company_name || company.company_name}, País: ${extractedInfo.country || company.country}`,
               });
               
               // Recarregar dados
-              if (onRefresh) {
-                setTimeout(() => window.location.reload(), 1000);
-              }
+              setTimeout(() => window.location.reload(), 1000);
             } catch (error: any) {
               console.error('[ENRICH-INTERNATIONAL] Erro:', error);
               toast.error('Erro ao enriquecer dados internacionais', {
@@ -251,7 +243,7 @@ export function CompanyRowActions({
               setEnrichingAction(null);
             }
           }}
-          disabled={isEnriching || (!company.website && !company.domain && !company.raw_data?.domain)}
+          disabled={isEnriching || (!company.website && !company.domain && !rawData?.domain)}
           className="hover:bg-primary/10 hover:border-l-4 hover:border-primary transition-all cursor-pointer"
         >
           {enrichingAction === 'Enriquecer Dados Internacionais' ? (

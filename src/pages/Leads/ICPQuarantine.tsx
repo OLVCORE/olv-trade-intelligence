@@ -32,12 +32,15 @@ import * as Papa from 'papaparse';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ScrollControls } from '@/components/common/ScrollControls';
+import { WebsiteBadge } from '@/components/shared/WebsiteBadge';
+import { syncEnrichmentToAllTables } from '@/lib/utils/enrichmentSync';
 import { ExecutiveReportModal } from '@/components/reports/ExecutiveReportModal';
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { searchApolloOrganizations, searchApolloPeople } from '@/services/apolloDirect';
 import { enrichment360Simplificado } from '@/services/enrichment360';
 import { ColumnFilter } from '@/components/companies/ColumnFilter';
-import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
+import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource, getRegionDisplay } from '@/lib/utils/leadSourceHelpers';
+import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
 
 export default function ICPQuarantine() {
   const navigate = useNavigate();
@@ -76,6 +79,15 @@ export default function ICPQuarantine() {
   const [rejectReason, setRejectReason] = useState<string>('');
   const [rejectCustomReason, setRejectCustomReason] = useState<string>('');
   const [showDiscardedModal, setShowDiscardedModal] = useState(false);
+  
+  // ✅ MODAIS DE PROGRESSO DE ENRIQUECIMENTO
+  const [apolloModalOpen, setApolloModalOpen] = useState(false);
+  const [apolloProgress, setApolloProgress] = useState<EnrichmentProgress[]>([]);
+  const [internationalModalOpen, setInternationalModalOpen] = useState(false);
+  const [internationalProgress, setInternationalProgress] = useState<EnrichmentProgress[]>([]);
+  const [enrich360ModalOpen, setEnrich360ModalOpen] = useState(false);
+  const [enrich360Progress, setEnrich360Progress] = useState<EnrichmentProgress[]>([]);
+  const [cancelEnrichment, setCancelEnrichment] = useState(false);
 
   // ✅ QUARENTENA: Sempre mostrar apenas 'pendente' (não mostrar aprovados/descartados)
   // Aprovados vão para "Leads Aprovados", Descartados vão para "Empresas Descartadas"
@@ -962,26 +974,76 @@ export default function ICPQuarantine() {
     }
     
     const selectedCompanies = companies.filter(c => selectedIds.includes(c.id));
+    const companiesWithDomain = selectedCompanies.filter(c => 
+      c.website || (c.raw_data && typeof c.raw_data === 'object' && (c.raw_data as any).domain)
+    );
     
-    toast.loading(`Enriquecendo ${selectedCompanies.length} empresa(s) com Apollo...`, { id: 'bulk-apollo' });
+    if (companiesWithDomain.length === 0) {
+      toast.error('Nenhuma empresa selecionada possui website');
+      return;
+    }
+
+    // ✅ INICIALIZAR MODAL DE PROGRESSO
+    setCancelEnrichment(false);
+    const initialProgress: EnrichmentProgress[] = companiesWithDomain.map(c => ({
+      companyId: c.id,
+      companyName: c.razao_social || c.company_name || '',
+      status: 'pending',
+    }));
     
-    let success = 0;
+    setApolloProgress(initialProgress);
+    setApolloModalOpen(true);
+
+    let enriched = 0;
     let errors = 0;
-    
-    for (const company of selectedCompanies) {
+
+    for (let i = 0; i < companiesWithDomain.length; i++) {
+      // ✅ VERIFICAR CANCELAMENTO
+      if (cancelEnrichment) {
+        toast.info('❌ Processo cancelado pelo usuário');
+        break;
+      }
+
+      const company = companiesWithDomain[i];
+      
       try {
-        toast.loading(`Apollo: ${company.razao_social} (${success + 1}/${selectedCompanies.length})`, { id: 'bulk-apollo' });
+        // ✅ ATUALIZAR STATUS: PROCESSANDO
+        setApolloProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'processing', message: 'Buscando decisores no Apollo...' }
+            : p
+        ));
+
         await enrichApolloMutation.mutateAsync(company.id);
-        success++;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
+        
+        // ✅ ATUALIZAR STATUS: SUCESSO
+        setApolloProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'success', message: 'Decisores identificados!' }
+            : p
+        ));
+        
+        enriched++;
+      } catch (e: any) {
+        console.error(`Error enriching ${company.razao_social}:`, e);
+        
+        // ✅ ATUALIZAR STATUS: ERRO
+        setApolloProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'error', message: e.message || 'Erro desconhecido' }
+            : p
+        ));
+        
         errors++;
-        console.error(`Erro ao enriquecer ${company.razao_social}:`, error);
       }
     }
-    
-    toast.dismiss('bulk-apollo');
-    toast.success(`✅ ${success} enriquecidas | ${errors} erro(s)`);
+
+    if (!cancelEnrichment) {
+      toast.success(
+        `✅ Enriquecimento concluído! ${enriched} empresas processadas`,
+        { description: `${errors} erros` }
+      );
+    }
     
     // 🔄 FORÇAR ATUALIZAÇÃO TOTAL
     await queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
@@ -994,27 +1056,73 @@ export default function ICPQuarantine() {
       return;
     }
     
-    toast.loading(`Enriquecimento 360° em ${selectedIds.length} empresa(s)...`, { id: 'bulk-360' });
+    const selectedCompanies = companies.filter(c => selectedIds.includes(c.id));
+
+    // ✅ INICIALIZAR MODAL DE PROGRESSO
+    setCancelEnrichment(false);
+    const initialProgress: EnrichmentProgress[] = selectedCompanies.map(c => ({
+      companyId: c.id,
+      companyName: c.razao_social || c.company_name || '',
+      status: 'pending',
+    }));
     
-    let success = 0;
+    setEnrich360Progress(initialProgress);
+    setEnrich360ModalOpen(true);
+
+    let enriched = 0;
     let errors = 0;
-    
-    for (const id of selectedIds) {
+
+    for (let i = 0; i < selectedCompanies.length; i++) {
+      // ✅ VERIFICAR CANCELAMENTO
+      if (cancelEnrichment) {
+        toast.info('❌ Processo cancelado pelo usuário');
+        break;
+      }
+
+      const company = selectedCompanies[i];
+      
       try {
-        await enrich360Mutation.mutateAsync(id);
-        success++;
-      } catch (error) {
+        // ✅ ATUALIZAR STATUS: PROCESSANDO
+        setEnrich360Progress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'processing', message: 'Executando enriquecimento 360°...' }
+            : p
+        ));
+
+        await enrich360Mutation.mutateAsync(company.id);
+        
+        // ✅ ATUALIZAR STATUS: SUCESSO
+        setEnrich360Progress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'success', message: 'Enriquecimento 360° concluído!' }
+            : p
+        ));
+        
+        enriched++;
+      } catch (e: any) {
+        console.error(`Error enriching ${company.razao_social}:`, e);
+        
+        // ✅ ATUALIZAR STATUS: ERRO
+        setEnrich360Progress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'error', message: e.message || 'Erro desconhecido' }
+            : p
+        ));
+        
         errors++;
-        console.error(`Erro ao enriquecer ${id}:`, error);
       }
     }
-    
-    toast.dismiss('bulk-360');
-    if (errors === 0) {
-      toast.success(`✅ ${success} empresa(s) enriquecidas 360°!`);
-    } else {
-      toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
+
+    if (!cancelEnrichment) {
+      toast.success(
+        `✅ Enriquecimento 360° concluído! ${enriched} empresas processadas`,
+        { description: `${errors} erros` }
+      );
     }
+    
+    // 🔄 FORÇAR ATUALIZAÇÃO TOTAL
+    await queryClient.invalidateQueries({ queryKey: ['icp-quarantine'] });
+    await refetch();
   };
 
   // ✅ NOVO: Enriquecer Dados Internacionais em Massa
@@ -1036,14 +1144,38 @@ export default function ICPQuarantine() {
       return;
     }
     
-    toast.loading(`Enriquecendo dados internacionais de ${companiesWithWebsite.length} empresa(s)...`, { id: 'bulk-international' });
+    // ✅ INICIALIZAR MODAL DE PROGRESSO
+    setCancelEnrichment(false);
+    const initialProgress: EnrichmentProgress[] = companiesWithWebsite.map(c => ({
+      companyId: c.id,
+      companyName: c.razao_social || c.company_name || '',
+      status: 'pending',
+    }));
+    
+    setInternationalProgress(initialProgress);
+    setInternationalModalOpen(true);
     
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
     let success = 0;
     let errors = 0;
     
-    for (const company of companiesWithWebsite) {
+    for (let i = 0; i < companiesWithWebsite.length; i++) {
+      // ✅ VERIFICAR CANCELAMENTO
+      if (cancelEnrichment) {
+        toast.info('❌ Processo cancelado pelo usuário');
+        break;
+      }
+      
+      const company = companiesWithWebsite[i];
+      
       try {
+        // ✅ ATUALIZAR STATUS: PROCESSANDO
+        setInternationalProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'processing', message: 'Extraindo dados internacionais...' }
+            : p
+        ));
+        
         const website = company.website || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).domain : null);
         const companyName = company.razao_social || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).company_name : null) || company.company_name || '';
         if (!website) continue;
@@ -1067,7 +1199,33 @@ export default function ICPQuarantine() {
         
         const extractedInfo = await extractResponse.json();
         
-        // Atualizar empresa
+        // ✅ SINCRONIZAR ENRIQUECIMENTO EM TODAS AS TABELAS
+        const companyId = company.company_id || null;
+        const syncResult = await syncEnrichmentToAllTables(
+          companyId,
+          {
+            ...extractedInfo,
+            domain: website || extractedInfo.domain,
+            website: website,
+            company_name: extractedInfo.company_name || company.razao_social,
+            international_enrichment: {
+              ...extractedInfo,
+              extracted_at: new Date().toISOString(),
+              source: extractedInfo.source || 'extract-company-info-from-url',
+            },
+          },
+          {
+            updateCompanies: !!companyId,
+            updateICP: true,
+            updateLeadsPool: true,
+          }
+        );
+        
+        if (syncResult.errors.length > 0) {
+          console.warn('[BULK-ENRICH] Avisos na sincronização:', syncResult.errors);
+        }
+        
+        // Atualizar também campos diretos em icp_analysis_results (para garantir)
         const { error: updateError } = await supabase
           .from('icp_analysis_results')
           .update({
@@ -1078,20 +1236,36 @@ export default function ICPQuarantine() {
           })
           .eq('id', company.id);
         
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.warn('[BULK-ENRICH] Erro ao atualizar campos diretos:', updateError);
+        }
+        
+        // ✅ ATUALIZAR STATUS: SUCESSO
+        setInternationalProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'success', message: 'Dados internacionais extraídos!' }
+            : p
+        ));
         
         success++;
       } catch (error: any) {
         errors++;
         console.error(`Erro ao enriquecer ${company.razao_social}:`, error);
+        
+        // ✅ ATUALIZAR STATUS: ERRO
+        setInternationalProgress(prev => prev.map(p => 
+          p.companyId === company.id 
+            ? { ...p, status: 'error', message: error.message || 'Erro desconhecido' }
+            : p
+        ));
       }
     }
     
-    toast.dismiss('bulk-international');
-    if (errors === 0) {
-      toast.success(`✅ ${success} empresa(s) com dados internacionais atualizados!`);
-    } else {
-      toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
+    if (!cancelEnrichment) {
+      toast.success(
+        `✅ Enriquecimento internacional concluído! ${success} empresas processadas`,
+        { description: `${errors} erros` }
+      );
     }
     
     await refetch();
@@ -1166,15 +1340,15 @@ export default function ICPQuarantine() {
           
           const { data: decisorsData } = await supabase.functions.invoke('enrich-apollo-decisores', {
             body: {
-              companyName: company.razao_social,
-              linkedinUrl: company.linkedin_url || '',
+              company_id: company.company_id || company.id,
+              company_name: company.razao_social || company.company_name,
+              domain: company.website || company.domain,
               modes: ['people', 'company'], // 🔥 PESSOAS + ORGANIZAÇÃO
-              company_id: company.company_id,
               city: receitaData?.municipio || company.city || company.municipio,
               state: receitaData?.uf || company.state || company.uf,
               cep: receitaData?.cep || company.raw_data?.cep || company.zip_code, // 🥇 98% assertividade
               fantasia: receitaData?.fantasia || company.raw_data?.fantasia || company.raw_data?.nome_fantasia || company.fantasy_name, // 🥈 97% assertividade
-              domain: company.website || company.domain
+              industry: company.segmento || company.setor
             },
           });
           decisors = decisorsData;
@@ -1634,6 +1808,17 @@ export default function ICPQuarantine() {
                       <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'location' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                     </Button>
                   </TableHead>
+                  <TableHead className="min-w-[110px]">{/* ✅ Região */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort('region')}
+                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
+                    >
+                      <span className="font-semibold">Região</span>
+                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'region' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
+                    </Button>
+                  </TableHead>
                   <TableHead className="min-w-[110px]">{/* ✅ Bloco */}
                     <ColumnFilter
                       column="commercial_block"
@@ -1715,14 +1900,14 @@ export default function ICPQuarantine() {
               </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={13} className="text-center py-8">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
               ) : paginatedCompanies.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                     Nenhuma empresa encontrada
                   </TableCell>
                 </TableRow>
@@ -1792,17 +1977,24 @@ export default function ICPQuarantine() {
                           const location = getLocationDisplay(company);
                           
                           if (location.country !== 'N/A') {
-                            return (
-                              <>
-                                <Badge variant="secondary" className="w-fit">
-                                  {location.country}
-                                </Badge>
-                                {location.city && location.city !== 'N/A' && (
-                                  <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={location.city}>
+                            // Mostrar "Cidade, País" se ambos disponíveis
+                            if (location.city && location.city !== 'N/A') {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-xs font-medium truncate max-w-[140px]" title={`${location.city}, ${location.country}`}>
                                     {location.city}
                                   </span>
-                                )}
-                              </>
+                                  <Badge variant="secondary" className="w-fit text-[10px]">
+                                    {location.country}
+                                  </Badge>
+                                </div>
+                              );
+                            }
+                            // Só país se cidade não disponível
+                            return (
+                              <Badge variant="secondary" className="w-fit text-[10px]">
+                                {location.country}
+                              </Badge>
                             );
                           }
                           return <span className="text-xs text-muted-foreground">N/A</span>;
@@ -1810,7 +2002,12 @@ export default function ICPQuarantine() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <Badge variant="outline" className="w-fit">
+                      <Badge variant="outline" className="w-fit text-[10px]">
+                        {getRegionDisplay(company)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge variant="outline" className="w-fit text-[10px]">
                         {getCommercialBlockDisplay(company)}
                       </Badge>
                     </TableCell>
@@ -1880,6 +2077,7 @@ export default function ICPQuarantine() {
                     <TableCell>
                       <QuarantineEnrichmentStatusBadge 
                         rawAnalysis={rawData}
+                        companyId={company.company_id || null}
                         showProgress
                       />
                     </TableCell>
@@ -1900,25 +2098,13 @@ export default function ICPQuarantine() {
                           >Cancelar</Button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 max-w-[110px]">
-                          {(() => {
-                            const domain = sanitizeDomain(company.website || rawData?.domain || null);
-                            return domain ? (
-                              <a
-                                href={`https://${domain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate"
-                                onClick={(e) => e.stopPropagation()}
-                                title={domain}
-                              >
-                                {domain}
-                                <Globe className="h-3 w-3 flex-shrink-0" />
-                              </a>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">N/A</span>
-                            );
-                          })()}
+                        <div className="flex items-center gap-2">
+                          <WebsiteBadge
+                            websiteUrl={company.website || rawData?.website || rawData?.domain || null}
+                            domain={sanitizeDomain(company.website || rawData?.website || rawData?.domain)}
+                            companyName={company.razao_social || rawData?.company_name || ''}
+                            maxWidth="140px"
+                          />
                           <Button size="sm" variant="ghost" className="h-7 px-2"
                             onClick={() => { setEditingWebsiteId(company.id); setWebsiteInput(sanitizeDomain(company.website || rawData?.domain || null) || ''); }}
                           >Editar</Button>
@@ -2023,7 +2209,7 @@ export default function ICPQuarantine() {
                     
                     return (
                       <TableRow>
-                        <TableCell colSpan={12} className="bg-muted/30 p-0">
+                        <TableCell colSpan={13} className="bg-muted/30 p-0">
                           <Card className="border-0 shadow-none overflow-visible">
                             <CardContent className="p-6 overflow-visible max-h-[80vh] overflow-y-auto">
                               <div className="grid grid-cols-2 gap-6">
@@ -2764,6 +2950,36 @@ export default function ICPQuarantine() {
       <DiscardedCompaniesModal
         open={showDiscardedModal}
         onOpenChange={setShowDiscardedModal}
+      />
+      
+      {/* ✅ MODAL DE PROGRESSO APOLLO */}
+      <EnrichmentProgressModal
+        open={apolloModalOpen}
+        onOpenChange={setApolloModalOpen}
+        title="Enriquecimento Apollo - Decisores"
+        companies={apolloProgress}
+        onCancel={() => setCancelEnrichment(true)}
+        isCancelling={cancelEnrichment}
+      />
+      
+      {/* ✅ MODAL DE PROGRESSO INTERNACIONAL */}
+      <EnrichmentProgressModal
+        open={internationalModalOpen}
+        onOpenChange={setInternationalModalOpen}
+        title="Enriquecimento Internacional"
+        companies={internationalProgress}
+        onCancel={() => setCancelEnrichment(true)}
+        isCancelling={cancelEnrichment}
+      />
+      
+      {/* ✅ MODAL DE PROGRESSO 360° */}
+      <EnrichmentProgressModal
+        open={enrich360ModalOpen}
+        onOpenChange={setEnrich360ModalOpen}
+        title="Enriquecimento 360°"
+        companies={enrich360Progress}
+        onCancel={() => setCancelEnrichment(true)}
+        isCancelling={cancelEnrichment}
       />
       
       <ScrollControls />

@@ -10,7 +10,14 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { status: 200, headers: corsHeaders });
+    return new Response(null, { 
+      status: 200, 
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      }
+    });
   }
 
   try {
@@ -41,29 +48,60 @@ serve(async (req) => {
     
     console.log(`✅ Authenticated user: ${user.email}`);
 
-    const { force_refresh } = await req.json().catch(() => ({ force_refresh: false }));
-    console.log('🔄 Starting batch enrichment 360 (public proxy)...', force_refresh ? '(FORCE REFRESH MODE)' : '');
+    const body = await req.json().catch(() => ({}));
+    const { force_refresh = false, company_ids = null } = body;
+    
+    console.log('🔄 Starting batch enrichment 360...', force_refresh ? '(FORCE REFRESH MODE)' : '');
+    console.log('📋 Company IDs forçados:', company_ids?.length || 0);
 
-    // Busca empresas com CNPJ
-    const { data: companies, error: fetchError } = await supabaseClient
+    // ✅ Se company_ids foi fornecido, buscar apenas essas empresas
+    let companiesQuery = supabaseClient
       .from('companies')
       .select(`
         id,
         name,
+        company_name,
         cnpj,
         website,
         linkedin_url,
         digital_maturity_score,
         digital_maturity (id)
-      `)
-      .not('cnpj', 'is', null)
-      .limit(10); // Processa 10 por vez para evitar timeouts
+      `);
+
+    if (company_ids && Array.isArray(company_ids) && company_ids.length > 0) {
+      // Buscar apenas as empresas especificadas
+      companiesQuery = companiesQuery.in('id', company_ids);
+      console.log(`🎯 Buscando ${company_ids.length} empresas específicas`);
+    } else {
+      // Comportamento padrão: buscar empresas com CNPJ (limitar a 10 para evitar timeout)
+      companiesQuery = companiesQuery
+        .not('cnpj', 'is', null)
+        .limit(10);
+      console.log('📊 Buscando empresas com CNPJ (máximo 10)');
+    }
+
+    const { data: companies, error: fetchError } = await companiesQuery;
 
     if (fetchError) {
+      console.error('❌ Erro ao buscar empresas:', fetchError);
       throw fetchError;
     }
 
-    console.log(`📊 Found ${companies?.length || 0} companies to enrich`);
+    if (!companies || companies.length === 0) {
+      return new Response(
+        JSON.stringify({
+          total: 0,
+          processed: 0,
+          skipped: 0,
+          failed: 0,
+          errors: ['Nenhuma empresa encontrada'],
+          details: []
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`📊 Found ${companies.length} companies to enrich`);
 
     const results = {
       total: companies?.length || 0,
@@ -85,7 +123,7 @@ serve(async (req) => {
           results.skipped++;
           results.details.push({
             company_id: company.id,
-            company_name: company.name,
+            company_name: company.name || company.company_name,
             status: 'skipped',
             reason: 'Already has 360° analysis'
           });
@@ -96,7 +134,8 @@ serve(async (req) => {
           console.log(`🔄 Force refreshing ${company.name} (already had analysis)`);
         }
 
-        console.log(`🚀 Enriching: ${company.name}`);
+        const companyName = company.name || company.company_name || company.id;
+        console.log(`🚀 Enriching: ${companyName}`);
         
         const { data, error: enrichError } = await supabaseClient.functions.invoke('enrich-company-360', {
           body: {
@@ -105,25 +144,27 @@ serve(async (req) => {
         });
 
         if (enrichError) {
+          console.error(`❌ Erro ao enriquecer ${companyName}:`, enrichError);
           throw enrichError as any;
         }
 
         results.processed++;
         results.details.push({
           company_id: company.id,
-          company_name: company.name,
+          company_name: companyName,
           status: 'processed'
         });
-        console.log(`✅ ${company.name} enriched successfully`);
+        console.log(`✅ ${companyName} enriched successfully`);
 
         // Sem atraso para evitar timeout de execução
       } catch (error) {
         results.failed++;
-        const errorMsg = `Failed to enrich ${company.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        const companyName = company.name || company.company_name || company.id;
+        const errorMsg = `Failed to enrich ${companyName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         results.errors.push(errorMsg);
         results.details.push({
           company_id: company.id,
-          company_name: company.name,
+          company_name: companyName,
           status: 'error',
           reason: errorMsg
         });

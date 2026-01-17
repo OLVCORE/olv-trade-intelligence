@@ -58,17 +58,53 @@ function classifyBuyingPower(title: string): 'decision-maker' | 'influencer' | '
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      }
+    });
   }
 
   try {
-    const body: EnrichApolloRequest = await req.json();
+    // ✅ VALIDAR: Request body deve ser JSON válido
+    let body: EnrichApolloRequest;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error('[ENRICH-APOLLO] ❌ Erro ao parsear JSON:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Request body inválido. Deve ser JSON válido.',
+          details: parseError instanceof Error ? parseError.message : 'Unknown error'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log('[ENRICH-APOLLO] 📥 Request recebido:', {
       company_id: body.company_id,
       company_name: body.company_name,
       modes: body.modes
     });
+    
+    // ✅ VALIDAR: company_id ou company_name deve estar presente
+    const companyId = body.company_id || body.companyId;
+    const companyName = body.company_name || body.companyName;
+    
+    if (!companyId && !companyName && !body.apollo_org_id) {
+      console.error('[ENRICH-APOLLO] ❌ Parâmetros insuficientes:', { companyId, companyName, apollo_org_id: body.apollo_org_id });
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: 'Parâmetros insuficientes. Forneça company_id, company_name ou apollo_org_id.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // 🔥 CRIAR CLIENTE SUPABASE (SEMPRE usar SERVICE_ROLE_KEY para evitar 401)
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -86,8 +122,6 @@ serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
     console.log('[ENRICH-APOLLO] ✅ Cliente Supabase inicializado');
-    const companyId = body.company_id || body.companyId;
-    const companyName = body.company_name || body.companyName;
     const { domain, positions, apollo_org_id, city, state, industry, cep, fantasia } = body;
     
     console.log('[ENRICH-APOLLO] 🎯 Filtros inteligentes:', { city, state, industry, cep, fantasia });
@@ -105,19 +139,37 @@ serve(async (req) => {
     let organizationId: string | null = apollo_org_id || null;
     
     if (!organizationId) {
+      // ✅ VALIDAR: companyName deve ser válido (não vazio, não muito curto)
+      if (!companyName || typeof companyName !== 'string' || companyName.trim().length < 2) {
+        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ companyName inválido ou muito curto:', companyName);
+        // Se temos domain, podemos tentar usar domain ao invés de falhar
+        if (!domain) {
+          throw new Error('company_name inválido ou ausente. Forneça um nome válido (mínimo 2 caracteres) ou um domain/website.');
+        }
+      }
+      
       console.log('[ENRICH-APOLLO-DECISORES] Buscando Organization ID por nome...');
       
       // Apollo funciona melhor com "Primeira + Segunda palavra"
-      const words = (companyName || '').split(/\s+/);
+      const cleanCompanyName = (companyName || '').trim();
+      const words = cleanCompanyName.split(/\s+/).filter(w => w.length > 0);
       const firstTwo = words.slice(0, 2).join(' ');
       const firstOne = words[0];
       
-      const namesToTry = [firstTwo, firstOne, companyName];
+      const namesToTry = [firstTwo, firstOne, cleanCompanyName].filter(n => n && n.length >= 2);
       
-      console.log('[ENRICH-APOLLO-DECISORES] Tentando nomes:', namesToTry);
+      if (namesToTry.length === 0) {
+        console.warn('[ENRICH-APOLLO-DECISORES] ⚠️ Nenhum nome válido para tentar');
+        // Se temos domain, continuar sem organizationId (vai usar domain)
+        if (!domain) {
+          throw new Error('Não foi possível extrair nome válido para busca. Forneça company_name válido ou domain/website.');
+        }
+      } else {
+        console.log('[ENRICH-APOLLO-DECISORES] Tentando nomes:', namesToTry);
+      }
       
       for (const name of namesToTry) {
-        if (!name) continue;
+        if (!name || name.length < 2) continue;
         
         const orgSearchPayload = {
           q_organization_name: name,
@@ -487,12 +539,16 @@ serve(async (req) => {
         console.warn('[ENRICH-APOLLO] ⚠️ Nenhum decisor válido para salvar (todos sem nome)');
       }
 
-      // Atualizar flag na empresa
-      const { data: currentCompany } = await supabaseClient
+      // Atualizar flag na empresa (usar maybeSingle para evitar erro se não existir)
+      const { data: currentCompany, error: companyFetchError } = await supabaseClient
         .from('companies')
         .select('raw_data')
         .eq('id', companyId)
-        .single();
+        .maybeSingle();
+
+      if (companyFetchError && companyFetchError.code !== 'PGRST116') {
+        console.warn('[ENRICH-APOLLO] ⚠️ Erro ao buscar company:', companyFetchError.message);
+      }
 
       const existingRawData = currentCompany?.raw_data || {};
 

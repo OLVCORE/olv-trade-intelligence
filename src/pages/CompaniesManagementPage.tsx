@@ -57,10 +57,12 @@ import { ColumnFilter } from '@/components/companies/ColumnFilter';
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { QuarantineCNPJStatusBadge } from '@/components/icp/QuarantineCNPJStatusBadge';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
-import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
+import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource, getRegionDisplay } from '@/lib/utils/leadSourceHelpers';
 import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
 import { PartnerSearchModal } from '@/components/companies/PartnerSearchModal';
 import { ExpandableCompaniesTable } from '@/components/companies/ExpandableCompaniesTable';
+import { WebsiteBadge } from '@/components/shared/WebsiteBadge';
+import { syncEnrichmentToAllTables } from '@/lib/utils/enrichmentSync';
 
 
 export default function CompaniesManagementPage() {
@@ -818,14 +820,37 @@ export default function CompaniesManagementPage() {
         return;
       }
 
-      toast.loading(`Enriquecendo dados internacionais de ${companiesWithWebsite.length} empresa(s)...`, { id: 'bulk-international' });
+      // ✅ INICIALIZAR MODAL DE PROGRESSO
+      setCancelEnrichment(false);
+      const initialProgress: EnrichmentProgress[] = companiesWithWebsite.map(c => ({
+        companyId: c.id,
+        companyName: c.company_name || c.name,
+        status: 'pending',
+      }));
+      
+      setInternationalProgress(initialProgress);
+      setInternationalModalOpen(true);
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
       let success = 0;
       let errors = 0;
 
-      for (const company of companiesWithWebsite) {
+      for (let i = 0; i < companiesWithWebsite.length; i++) {
+        // ✅ VERIFICAR CANCELAMENTO
+        if (cancelEnrichment) {
+          toast.info('❌ Processo cancelado pelo usuário');
+          break;
+        }
+        
+        const company = companiesWithWebsite[i];
+        
         try {
+          // ✅ ATUALIZAR STATUS: PROCESSANDO
+          setInternationalProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'processing', message: 'Extraindo dados internacionais...' }
+              : p
+          ));
           const website = company.website || company.domain || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).domain : null);
           const companyName = company.company_name || company.razao_social || company.name || '';
           if (!website) continue;
@@ -849,7 +874,32 @@ export default function CompaniesManagementPage() {
 
           const extractedInfo = await extractResponse.json();
 
-          // Atualizar empresa
+          // ✅ SINCRONIZAR ENRIQUECIMENTO EM TODAS AS TABELAS
+          const syncResult = await syncEnrichmentToAllTables(
+            company.id,
+            {
+              ...extractedInfo,
+              domain: website || extractedInfo.domain,
+              website: website,
+              company_name: extractedInfo.company_name || company.company_name,
+              international_enrichment: {
+                ...extractedInfo,
+                extracted_at: new Date().toISOString(),
+                source: extractedInfo.source || 'extract-company-info-from-url',
+              },
+            },
+            {
+              updateCompanies: true,
+              updateICP: true,
+              updateLeadsPool: true,
+            }
+          );
+          
+          if (syncResult.errors.length > 0) {
+            console.warn('[BATCH-ENRICH] Avisos na sincronização:', syncResult.errors);
+          }
+          
+          // Atualizar também campos diretos em companies (para garantir)
           const { error: updateError } = await supabase
             .from('companies')
             .update({
@@ -860,20 +910,36 @@ export default function CompaniesManagementPage() {
             })
             .eq('id', company.id);
 
-          if (updateError) throw updateError;
+          if (updateError) {
+            console.warn('[BATCH-ENRICH] Erro ao atualizar campos diretos:', updateError);
+          }
+
+          // ✅ ATUALIZAR STATUS: SUCESSO
+          setInternationalProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'success', message: 'Dados internacionais extraídos!' }
+              : p
+          ));
 
           success++;
         } catch (error: any) {
           errors++;
           console.error(`Erro ao enriquecer ${company.company_name}:`, error);
+          
+          // ✅ ATUALIZAR STATUS: ERRO
+          setInternationalProgress(prev => prev.map(p => 
+            p.companyId === company.id 
+              ? { ...p, status: 'error', message: error.message || 'Erro desconhecido' }
+              : p
+          ));
         }
       }
 
-      toast.dismiss('bulk-international');
-      if (errors === 0) {
-        toast.success(`✅ ${success} empresa(s) com dados internacionais atualizados!`);
-      } else {
-        toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
+      if (!cancelEnrichment) {
+        toast.success(
+          `✅ Enriquecimento internacional concluído! ${success} empresas processadas`,
+          { description: `${errors} erros` }
+        );
       }
 
       await refetch();
@@ -885,9 +951,13 @@ export default function CompaniesManagementPage() {
 
   const [isBatchEnrichingApollo, setIsBatchEnrichingApollo] = useState(false);
   
-  // ✅ MODAL DE PROGRESSO EM TEMPO REAL
+  // ✅ MODAIS DE PROGRESSO EM TEMPO REAL
   const [enrichmentModalOpen, setEnrichmentModalOpen] = useState(false);
   const [enrichmentProgress, setEnrichmentProgress] = useState<EnrichmentProgress[]>([]);
+  const [internationalModalOpen, setInternationalModalOpen] = useState(false);
+  const [internationalProgress, setInternationalProgress] = useState<EnrichmentProgress[]>([]);
+  const [enrich360ModalOpen, setEnrich360ModalOpen] = useState(false);
+  const [enrich360Progress, setEnrich360Progress] = useState<EnrichmentProgress[]>([]);
   const [cancelEnrichment, setCancelEnrichment] = useState(false);
   
   // ✅ MODAL DE BUSCA POR SÓCIOS
@@ -2094,6 +2164,17 @@ export default function CompaniesManagementPage() {
                       </Button>
                     </TableHead>
                     <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('region')}
+                        className="h-8 flex items-center gap-1"
+                      >
+                        Região
+                        <ArrowUpDown className="h-3 w-3" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
                       <ColumnFilter
                         column="commercial_block"
                         title="Bloco"
@@ -2256,17 +2337,24 @@ export default function CompaniesManagementPage() {
                             const location = getLocationDisplay(company);
                             
                             if (location.country !== 'N/A') {
-                              return (
-                                <>
-                                  <Badge variant="secondary" className="w-fit">
-                                    {location.country}
-                                  </Badge>
-                                  {location.city && location.city !== 'N/A' && (
-                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={location.city}>
+                              // Mostrar "Cidade, País" se ambos disponíveis
+                              if (location.city && location.city !== 'N/A') {
+                                return (
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-medium truncate max-w-[140px]" title={`${location.city}, ${location.country}`}>
                                       {location.city}
                                     </span>
-                                  )}
-                                </>
+                                    <Badge variant="secondary" className="w-fit text-[10px]">
+                                      {location.country}
+                                    </Badge>
+                                  </div>
+                                );
+                              }
+                              // Só país se cidade não disponível
+                              return (
+                                <Badge variant="secondary" className="w-fit text-[10px]">
+                                  {location.country}
+                                </Badge>
                               );
                             }
                             return <span className="text-xs text-muted-foreground">N/A</span>;
@@ -2274,7 +2362,12 @@ export default function CompaniesManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="w-fit">
+                        <Badge variant="outline" className="w-fit text-[10px]">
+                          {getRegionDisplay(company)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="w-fit text-[10px]">
                           {getCommercialBlockDisplay(company)}
                         </Badge>
                       </TableCell>
@@ -2377,6 +2470,7 @@ export default function CompaniesManagementPage() {
                           {/* ✅ USAR COMPONENTE IDÊNTICO À QUARENTENA */}
                           <QuarantineEnrichmentStatusBadge 
                             rawAnalysis={(company as any).raw_data || {}}
+                            companyId={company.id}
                             showProgress={true}
                           />
                         </TableCell>
@@ -2402,25 +2496,13 @@ export default function CompaniesManagementPage() {
                               >Cancelar</Button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 max-w-[180px]">
-                              {(() => {
-                                const domain = sanitizeDomain(company.website || company.domain || null);
-                                return domain ? (
-                                  <a
-                                    href={`https://${domain}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate"
-                                    onClick={(e) => e.stopPropagation()}
-                                    title={domain}
-                                  >
-                                    {domain}
-                                    <Globe className="h-3 w-3 flex-shrink-0" />
-                                  </a>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">N/A</span>
-                                );
-                              })()}
+                            <div className="flex items-center gap-2">
+                              <WebsiteBadge
+                                websiteUrl={company.website || company.domain || (company as any).raw_data?.domain || (company as any).raw_data?.website || null}
+                                domain={sanitizeDomain(company.website || company.domain || (company as any).raw_data?.domain || (company as any).raw_data?.website)}
+                                companyName={company.company_name || company.razao_social || (company as any).raw_data?.company_name || ''}
+                                maxWidth="140px"
+                              />
                               <Button size="sm" variant="ghost" className="h-7 px-2"
                                 onClick={() => { 
                                   setEditingWebsiteId(company.id); 
@@ -2973,12 +3055,32 @@ export default function CompaniesManagementPage() {
           />
         )}
         
-        {/* ✅ MODAL DE PROGRESSO EM TEMPO REAL */}
+        {/* ✅ MODAL DE PROGRESSO APOLLO */}
         <EnrichmentProgressModal
           open={enrichmentModalOpen}
           onOpenChange={setEnrichmentModalOpen}
           title="Enriquecimento Apollo - Decisores"
           companies={enrichmentProgress}
+          onCancel={() => setCancelEnrichment(true)}
+          isCancelling={cancelEnrichment}
+        />
+        
+        {/* ✅ MODAL DE PROGRESSO INTERNACIONAL */}
+        <EnrichmentProgressModal
+          open={internationalModalOpen}
+          onOpenChange={setInternationalModalOpen}
+          title="Enriquecimento Internacional"
+          companies={internationalProgress}
+          onCancel={() => setCancelEnrichment(true)}
+          isCancelling={cancelEnrichment}
+        />
+        
+        {/* ✅ MODAL DE PROGRESSO 360° */}
+        <EnrichmentProgressModal
+          open={enrich360ModalOpen}
+          onOpenChange={setEnrich360ModalOpen}
+          title="Enriquecimento 360°"
+          companies={enrich360Progress}
           onCancel={() => setCancelEnrichment(true)}
           isCancelling={cancelEnrichment}
         />

@@ -20,6 +20,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { QuarantineReportModal } from '@/components/icp/QuarantineReportModal';
+import { syncEnrichmentToAllTables } from '@/lib/utils/enrichmentSync';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApprovedLeadActionsProps {
   lead: any;
@@ -361,7 +363,33 @@ export function ApprovedLeadActions({
                       
                       const extractedInfo = await extractResponse.json();
                       
-                      toast.success(`✅ Dados internacionais extraídos!`, {
+                      // ✅ SINCRONIZAR ENRIQUECIMENTO EM TODAS AS TABELAS
+                      const companyId = (lead as any).company_id || null;
+                      const syncResult = await syncEnrichmentToAllTables(
+                        companyId,
+                        {
+                          ...extractedInfo,
+                          domain: website || extractedInfo.domain,
+                          website: website,
+                          company_name: extractedInfo.company_name || lead.razao_social,
+                          international_enrichment: {
+                            ...extractedInfo,
+                            extracted_at: new Date().toISOString(),
+                            source: extractedInfo.source || 'extract-company-info-from-url',
+                          },
+                        },
+                        {
+                          updateCompanies: !!companyId,
+                          updateICP: true,
+                          updateLeadsPool: true,
+                        }
+                      );
+                      
+                      if (syncResult.errors.length > 0) {
+                        console.warn('[ENRICH-INTERNATIONAL] Avisos na sincronização:', syncResult.errors);
+                      }
+                      
+                      toast.success(`✅ Dados internacionais atualizados!`, {
                         description: `Nome: ${extractedInfo.company_name || 'N/A'}, País: ${extractedInfo.country || 'N/A'}`,
                       });
                       
