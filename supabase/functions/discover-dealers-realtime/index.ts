@@ -7,38 +7,6 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// KEYWORDS EXATAS DO CLIENTE (25 keywords Pilates)
-// ============================================================================
-
-const PILATES_KEYWORDS = [
-  // Equipamentos específicos
-  'pilates equipment wholesale',
-  'pilates apparatus wholesale',
-  'pilates equipment distributor',
-  'pilates reformer wholesale',
-  'pilates cadillac wholesale',
-  'commercial pilates equipment',
-  'professional pilates equipment',
-  'studio pilates equipment',
-  
-  // B2B e parcerias
-  'wholesale fitness equipment',
-  'b2b pilates equipment',
-  'become a dealer pilates equipment',
-  'become a distributor pilates equipment',
-  'international distribution pilates equipment',
-  'bulk order pilates equipment',
-  'authorized dealer pilates',
-  'supplier pilates equipment',
-  
-  // Trade
-  'pilates equipment import',
-  'fitness equipment import',
-  'export pilates equipment',
-  'trade only pilates equipment supplier',
-];
-
-// ============================================================================
 // HELPER: Determinar tipo B2B
 // ============================================================================
 
@@ -180,24 +148,54 @@ async function searchApollo(
         const blocked = ['facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com'];
         return !blocked.some(b => domain.includes(b));
       })
-      .map((c: any) => ({
-        name: c.name,
-        company_name: c.name,
-        website: c.website_url,
-        domain: c.website_url,
-        linkedin_url: c.linkedin_url,
-        country: c.country || country,
-        city: c.city,
-        state: c.state,
-        industry: c.industry,
-        employee_count: c.organization_num_employees,
-        description: c.short_description,
-        apollo_id: c.id,
-        apollo_link: `https://app.apollo.io/#/companies/${c.id}`,
-        source: 'apollo',
-        // Identificar tipo B2B baseado em keywords
-        b2b_type: determineB2BType(c, includeTypes),
-      }));
+      .map((c: any) => {
+        // ✅ CRÍTICO: País DEVE vir da Apollo, não do parâmetro de busca
+        // O parâmetro "country" é apenas para FILTRAR a busca, não para atribuir país às empresas
+        let extractedCountry = c.country || null;
+        
+        // ⚠️ VALIDAÇÃO: Se Apollo não retornou país, tentar extrair do nome
+        if (!extractedCountry && c.name) {
+          const nameLower = c.name.toLowerCase();
+          // Mapeamento básico de cidades conhecidas
+          if (nameLower.includes('guangzhou') || nameLower.includes('guangdong') || 
+              nameLower.includes('beijing') || nameLower.includes('shanghai') || 
+              nameLower.includes('shenzhen')) {
+            extractedCountry = 'China';
+            console.log(`[APOLLO] ✅ País extraído do nome: "China" para "${c.name}"`);
+          } else if (nameLower.includes('bogotá') || nameLower.includes('bogota')) {
+            extractedCountry = 'Colombia';
+          } else if (nameLower.includes('são paulo') || nameLower.includes('sao paulo')) {
+            extractedCountry = 'Brasil';
+          } else if (nameLower.includes('buenos aires')) {
+            extractedCountry = 'Argentina';
+          }
+        }
+        
+        // ❌ NÃO USAR país do parâmetro - se Apollo não retornou e não encontramos no nome, deixar null
+        // O país será extraído depois via scraping ou outras fontes
+        if (!extractedCountry) {
+          console.warn(`[APOLLO] ⚠️ País não encontrado na Apollo para "${c.name}". Será extraído via scraping depois.`);
+        }
+        
+        return {
+          name: c.name,
+          company_name: c.name,
+          website: c.website_url,
+          domain: c.website_url,
+          linkedin_url: c.linkedin_url,
+          country: extractedCountry, // ✅ APENAS da Apollo ou nome, nunca do parâmetro
+          city: c.city,
+          state: c.state,
+          industry: c.industry,
+          employee_count: c.organization_num_employees,
+          description: c.short_description,
+          apollo_id: c.id,
+          apollo_link: `https://app.apollo.io/#/companies/${c.id}`,
+          source: 'apollo',
+          // Identificar tipo B2B baseado em keywords
+          b2b_type: determineB2BType(c, includeTypes),
+        };
+      });
   } catch (error) {
     console.error('[APOLLO] ❌:', error);
     return [];
@@ -226,25 +224,26 @@ async function searchSerper(keyword: string, country: string) {
     `site:importgenius.com "${keyword}" ${country}`,
     `site:panjiva.com "${keyword}" importer ${country}`,
     
-    // B2B DIRECTORIES (COM país no filtro)
-    `site:kompass.com "${keyword}" ${country}`,
-    `site:europages.com "${keyword}" ${country}`,
-    `site:thomasnet.com "${keyword}" ${country}`,
+    // B2B DIRECTORIES (COM país no filtro) - ⚠️ REMOVIDO: kompass.com e europages.com (retornam portais genéricos)
+    // `site:kompass.com "${keyword}" ${country}`, // ❌ REMOVIDO: Portal genérico
+    // `site:europages.com "${keyword}" ${country}`, // ❌ REMOVIDO: Portal genérico
+    `site:thomasnet.com "${keyword}" ${country} -publication -journal -transactions`,
     `site:tradekey.com "${keyword}" ${country}`,
     
     // YELLOW PAGES LOCAIS (do país selecionado)
-    `"${keyword}" ${country} yellow pages`,
-    `"${keyword}" distributor ${country}`,
-    `"${keyword}" wholesaler ${country}`,
-    `"pilates equipment" importer ${country}`,
+    `"${keyword}" ${country} yellow pages -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" distributor ${country} -alibaba -made-in-china -ebay -aliexpress -kompass -europages`,
+    `"${keyword}" wholesaler ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" importer ${country} -alibaba -made-in-china -ebay -aliexpress`,
     
-    // LINKEDIN (EMPRESAS do país)
-    `site:linkedin.com/company "${keyword}" ${country}`,
+    // LINKEDIN (EMPRESAS do país) - ⚠️ EXCLUIR publicações acadêmicas e portais
+    `site:linkedin.com/company "${keyword}" ${country} -publication -journal -transactions -ieee -book -ebook`,
     
-    // GOOGLE DIRETO (COM país obrigatório)
-    `"${keyword}" distributor ${country} -studio -instructor -blog`,
-    `"pilates equipment" wholesale ${country} -studio -gym`,
-    `"fitness equipment" distributor ${country} b2b`,
+    // GOOGLE DIRETO (COM país obrigatório) - USAR KEYWORD DO USUÁRIO
+    // ⚠️ EXCLUSÕES RIGOROSAS: marketplaces, portais, publicações acadêmicas
+    `"${keyword}" distributor ${country} -studio -instructor -blog -alibaba -made-in-china -ebay -aliexpress -kompass -europages -publication -journal -transactions -ieee -book`,
+    `"${keyword}" wholesale ${country} -studio -gym -alibaba -made-in-china -ebay -aliexpress -kompass -europages -publication -journal`,
+    `"${keyword}" b2b ${country} -alibaba -made-in-china -ebay -aliexpress -kompass -europages -publication -journal`,
   ];
 
   const allResults: any[] = [];
@@ -302,11 +301,39 @@ async function searchSerper(keyword: string, country: string) {
     }
   }
 
-  // FILTRAR RESULTADOS: APENAS do país selecionado
+  // FILTRAR RESULTADOS: APENAS do país selecionado E bloquear marketplaces/portais
   const filtered = allResults.filter(r => {
     const snippet = (r.description || '').toLowerCase();
     const title = (r.name || '').toLowerCase();
-    const text = snippet + ' ' + title;
+    const link = (r.link || '').toLowerCase();
+    const text = snippet + ' ' + title + ' ' + link;
+    
+    // 🚫 BLOQUEAR MARKETPLACES E PORTALS
+    const blockedPatterns = [
+      'alibaba.com', 'made-in-china.com', 'ebay.', 'aliexpress.com',
+      'kompass.com', 'europages.com', // Portais genéricos
+      '/product/', '/products/', '/itm/', '/item/', '/listing/',
+      '/publication', '/journal', '/transactions', '/ieee',
+      'facebook.com/posts', 'facebook.com/pages', 'linkedin.com/posts',
+      'book', 'ebook', 'publication', 'publisher', 'publishing',
+    ];
+    
+    if (blockedPatterns.some(pattern => text.includes(pattern))) {
+      console.log(`[SERPER] 🚫 REJEITADO (marketplace/portal): ${r.name} (${r.link})`);
+      return false;
+    }
+    
+    // 🚫 BLOQUEAR NOMES QUE SÃO LIVROS/PRODUTOS (não empresas)
+    const productPatterns = [
+      /^Part [IVX]+:/i, // "Part II:", "Part III:", etc.
+      /^(The|A)\s+[A-Z][^:]*:\s*[A-Z]/i, // "The Pilates Reformer: Modern..."
+      /Exercises? & /i, // "Exercises & Training"
+      /Jumpboard|Exercises|Training|Manual/i,
+    ];
+    if (productPatterns.some(pattern => pattern.test(title))) {
+      console.log(`[SERPER] 🚫 REJEITADO (livro/produto): ${r.name}`);
+      return false;
+    }
     
     // REJEITAR se mencionar China/India/Taiwan e NÃO for o país selecionado
     const forbiddenCountries = ['china', 'chinese', 'india', 'indian', 'taiwan', 'vietnam', 'bangladesh'];
@@ -374,7 +401,7 @@ async function searchGoogleAPI(keyword: string, country: string) {
   const queries = [
     `"${keyword}" distributor ${country} -china -india`,
     `"${keyword}" importer ${country} -china -taiwan`,
-    `"pilates equipment" wholesale ${country} -alibaba -made-in-china`,
+    `"${keyword}" wholesale ${country} -alibaba -made-in-china -ebay -aliexpress`,
   ];
 
   const allResults: any[] = [];
@@ -444,25 +471,21 @@ async function calculateFitScore(website: string, keywords: string[]): Promise<n
     const html = await response.text();
     const text = html.toLowerCase();
 
-    // KEYWORDS PILATES ESPECÍFICAS (do cliente)
-    const pilatesKeywords = [
-      'pilates',
-      'reformer',
-      'cadillac',
-      'wunda chair',
-      'pilates chair',
-      'pilates barrel',
-      'pilates mat',
-      'pilates apparatus',
-      'pilates equipment',
-      'pilates reformer',
-      'pilates machine',
-      'pilates accessories',
+    // ✅ USAR KEYWORDS DO USUÁRIO (recebidas via parâmetro)
+    // Se não houver keywords, usar uma busca genérica baseada em B2B terms
+    const b2bKeywords = [
+      'wholesale', 'distributor', 'dealer', 'importer', 'supplier',
+      'b2b', 'bulk', 'commercial', 'trade', 'export', 'import'
     ];
 
-    const found = pilatesKeywords.filter(kw => text.includes(kw));
+    // Se keywords foram fornecidas, usar elas + termos B2B
+    const searchTerms = keywords.length > 0 
+      ? [...keywords.map(k => k.toLowerCase()), ...b2bKeywords]
+      : b2bKeywords;
 
-    // MÍNIMO 2 KEYWORDS = Fit 60
+    const found = searchTerms.filter(kw => text.includes(kw.toLowerCase()));
+
+    // MÍNIMO 2 KEYWORDS B2B = Fit 60
     if (found.length < 2) return 0;
 
     let score = 60 + ((found.length - 2) * 5); // +5 por keyword adicional
@@ -566,11 +589,12 @@ serve(async (req) => {
         serperAttempted = false;
       } else {
         const mainKeyword = searchKeywords[0];
-      const serperResults = await searchSerper(mainKeyword, country);
-      allDealers.push(...serperResults);
-      stats.serper = serperResults.length;
-      serperAttempted = true;
-      console.log(`[SERPER] ✅ ${stats.serper} resultados de 30 queries`);
+        const serperResults = await searchSerper(mainKeyword, country);
+        allDealers.push(...serperResults);
+        stats.serper = serperResults.length;
+        serperAttempted = true;
+        console.log(`[SERPER] ✅ ${stats.serper} resultados de 30 queries`);
+      }
     } catch (error) {
       console.error('[SERPER] ❌ Falhou:', error);
       serperAttempted = false;
@@ -593,13 +617,20 @@ serve(async (req) => {
 
     stats.total_bruto = allDealers.length;
 
-    // FILTRAR: Remover Facebook, Instagram, páginas genéricas, etc.
+    // FILTRAR: Remover Facebook, Instagram, páginas genéricas, MARKETPLACES, etc.
     const BLOCKED_DOMAINS = [
+      // Redes sociais
       'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com', 
       'twitter.com', 'tiktok.com', 'pinterest.com', 'reddit.com',
+      // Blogs e conteúdo genérico
       'blogspot.com', 'wordpress.com', 'medium.com', 'tumblr.com',
       'wikipedia.org', 'quora.com', 'yelp.com', 'tripadvisor.com',
+      // MARKETPLACES (BLOQUEADOS!)
       'faire.com', 'etsy.com', 'amazon.com', 'ebay.com',
+      'alibaba.com', 'made-in-china.com', 'aliexpress.com', 'globalsources.com',
+      'dhgate.com', 'tradekey.com', 'ec21.com', 'ecplaza.net',
+      // URLs específicas de marketplace
+      'm.alibaba.com', 'mm.made-in-china.com', 'inbusiness.aliexpress.com',
     ];
     
     const filtered = allDealers.filter(c => {
@@ -607,8 +638,15 @@ serve(async (req) => {
       const domain = c.website.toLowerCase();
       const name = (c.name || '').toLowerCase();
       
-      // Bloquear domínios de redes sociais e blogs
+      // Bloquear domínios de redes sociais, blogs e MARKETPLACES
       if (BLOCKED_DOMAINS.some(blocked => domain.includes(blocked))) {
+        return false;
+      }
+      
+      // ✅ BLOQUEAR MARKETPLACES ESPECÍFICOS (Alibaba, Made-in-China, eBay, AliExpress)
+      if (domain.includes('alibaba.com') || domain.includes('made-in-china.com') ||
+          domain.includes('aliexpress.com') || domain.includes('ebay.') ||
+          domain.includes('globalsources.com') || domain.includes('dhgate.com')) {
         return false;
       }
       
@@ -616,7 +654,9 @@ serve(async (req) => {
       if (domain.includes('/posts/') || domain.includes('/videos/') || 
           domain.includes('/groups/') || domain.includes('/pages/') ||
           domain.includes('/people/') || domain.includes('/p/') ||
-          domain.includes('/product/') || domain.includes('/products/')) {
+          domain.includes('/product/') || domain.includes('/products/') ||
+          domain.includes('/showroom/') || domain.includes('/factory/') ||
+          domain.includes('/hot-china-products/') || domain.includes('/itm/')) {
         return false;
       }
       
@@ -654,9 +694,9 @@ serve(async (req) => {
       prioritized.slice(0, 30).map(async (company) => {
         let fitScore = 0;
         
-        // TENTAR WEB SCRAPING (com timeout 5s)
+        // TENTAR WEB SCRAPING (com timeout 5s) - passar keywords do usuário
         try {
-          fitScore = await calculateFitScore(company.website, keywords);
+          fitScore = await calculateFitScore(company.website, searchKeywords);
         } catch (error) {
           // FALLBACK: Fit Score baseado na FONTE
           if (company.source === 'apollo') {
@@ -704,7 +744,7 @@ serve(async (req) => {
         total: finalResults.length,
         dealers: finalResults.sort((a, b) => b.fitScore - a.fitScore),
         stats: stats,
-        keywords_used: PILATES_KEYWORDS.slice(0, 8),
+        keywords_used: searchKeywords.slice(0, 8), // ✅ Usar keywords do usuário
         fallback_activated: qualified.length === 0,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

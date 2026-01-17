@@ -19,11 +19,13 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
-  FileText
+  FileText,
+  Globe
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { ExecutiveReportModal } from '@/components/reports/ExecutiveReportModal';
 
@@ -89,7 +91,13 @@ export function CompanyRowActions({
           <Settings className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent 
+        align="end"
+        side="bottom"
+        sideOffset={5}
+        alignOffset={0}
+        className="w-56 max-h-[80vh] overflow-y-auto"
+      >
         <DropdownMenuLabel>Ações</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
@@ -132,6 +140,127 @@ export function CompanyRowActions({
 
         <DropdownMenuSeparator />
         <DropdownMenuLabel>Enriquecimento</DropdownMenuLabel>
+        
+        {/* ✅ NOVO: Enriquecer Dados Internacionais */}
+        <DropdownMenuItem
+          onClick={async () => {
+            if (!company.website && !company.domain && !company.raw_data?.domain) {
+              toast.error('Empresa sem website - não é possível enriquecer dados internacionais');
+              return;
+            }
+            
+            try {
+              setIsEnriching(true);
+              setEnrichingAction('Enriquecer Dados Internacionais');
+              
+              const website = company.website || company.domain || company.raw_data?.domain;
+              const companyName = company.company_name || company.razao_social || company.name || '';
+              const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+              
+              toast.info('🔍 Extraindo dados internacionais do website...');
+              
+              // ✅ Chamar Edge Function de extração COM NOME DA EMPRESA
+              const extractResponse = await fetch(`${supabaseUrl}/functions/v1/extract-company-info-from-url`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify({ 
+                  url: website,
+                  company_name: companyName || undefined, // ✅ Enviar nome completo se disponível
+                }),
+              });
+              
+              if (!extractResponse.ok) {
+                throw new Error(`Erro ao extrair dados: ${extractResponse.status}`);
+              }
+              
+              const extractedInfo = await extractResponse.json();
+              console.log('[ENRICH-INTERNATIONAL] Dados extraídos:', extractedInfo);
+              
+              // ✅ ATUALIZAR company_name, country, city, state diretamente
+              const updateData: any = {};
+              
+              // Atualizar apenas se dados extraídos são válidos e diferentes
+              if (extractedInfo.company_name && 
+                  extractedInfo.company_name.length > 3 && 
+                  extractedInfo.company_name !== company.company_name) {
+                updateData.company_name = extractedInfo.company_name;
+              }
+              
+              if (extractedInfo.country && 
+                  extractedInfo.country !== 'N/A' && 
+                  extractedInfo.country !== company.country) {
+                updateData.country = extractedInfo.country;
+              }
+              
+              if (extractedInfo.city && extractedInfo.city !== company.city) {
+                updateData.city = extractedInfo.city;
+              }
+              
+              if (extractedInfo.state && extractedInfo.state !== company.state) {
+                updateData.state = extractedInfo.state;
+              }
+              
+              // Atualizar raw_data com informações extraídas
+              const currentRawData = company.raw_data || {};
+              updateData.raw_data = {
+                ...currentRawData,
+                re_enriched_at: new Date().toISOString(),
+                re_enriched_source: extractedInfo.source || 'extract-company-info-from-url',
+                extracted_info: {
+                  company_name: extractedInfo.company_name,
+                  country: extractedInfo.country,
+                  city: extractedInfo.city,
+                  state: extractedInfo.state,
+                  address: extractedInfo.address,
+                  phone: extractedInfo.phone,
+                  email: extractedInfo.email,
+                },
+              };
+              
+              // Aplicar atualização
+              const { error: updateError } = await supabase
+                .from('companies')
+                .update(updateData)
+                .eq('id', company.id);
+              
+              if (updateError) {
+                console.error('[ENRICH-INTERNATIONAL] Erro ao atualizar:', updateError);
+                throw updateError;
+              }
+              
+              console.log('[ENRICH-INTERNATIONAL] ✅ Dados atualizados na tabela companies');
+              
+              toast.success(`✅ Dados internacionais atualizados!`, {
+                description: `Nome: ${extractedInfo.company_name || company.company_name}, País: ${extractedInfo.country || company.country}`,
+              });
+              
+              // Recarregar dados
+              if (onRefresh) {
+                setTimeout(() => window.location.reload(), 1000);
+              }
+            } catch (error: any) {
+              console.error('[ENRICH-INTERNATIONAL] Erro:', error);
+              toast.error('Erro ao enriquecer dados internacionais', {
+                description: error.message || 'Erro desconhecido',
+              });
+            } finally {
+              setIsEnriching(false);
+              setEnrichingAction(null);
+            }
+          }}
+          disabled={isEnriching || (!company.website && !company.domain && !company.raw_data?.domain)}
+          className="hover:bg-primary/10 hover:border-l-4 hover:border-primary transition-all cursor-pointer"
+        >
+          {enrichingAction === 'Enriquecer Dados Internacionais' ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Globe className="h-4 w-4 mr-2" />
+          )}
+          Enriquecer Dados Internacionais
+        </DropdownMenuItem>
 
         {/* Descobrir CNPJ */}
         {!company.cnpj && onDiscoverCNPJ && (

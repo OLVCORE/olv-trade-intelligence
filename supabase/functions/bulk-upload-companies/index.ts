@@ -113,6 +113,7 @@ serve(async (req) => {
           // 🏷️ CAMPOS DE RASTREABILIDADE
           source_type: row.source_type || 'csv',
           source_name: row.source_name || metadata?.source_name || null,
+          lead_source: 'Importação CSV/XLS', // ✅ NOVO: Registro de Lead Source (campo direto)
           import_batch_id: row.import_batch_id || metadata?.import_batch_id || null,
           import_date: row.import_date || new Date().toISOString(),
           source_metadata: row.source_metadata || {
@@ -125,6 +126,8 @@ serve(async (req) => {
             imported_at: new Date().toISOString(),
             csv_row: i + 2,
             source: 'econodata_87_campos',
+            csv_import: true,
+            lead_source: 'Importação CSV/XLS', // ✅ NOVO: Registro de Lead Source
             
             // === IDENTIFICAÇÃO ===
             cnpj: cnpj,

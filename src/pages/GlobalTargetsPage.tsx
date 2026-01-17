@@ -13,23 +13,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, RefreshCw, Globe2, Search, Brain, Sparkles, ArrowRight } from "lucide-react";
+import { Loader2, RefreshCw, Globe2, Search, ArrowRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { runGlobalDiscovery } from "@/services/globalDiscovery";
 import { transferGlobalToCompanies } from "@/services/globalToCompanyFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { HSCodeAutocomplete } from "@/components/export/HSCodeAutocomplete";
+import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { ChevronsUpDown, Check, Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const BLOCKED_DOMAINS = ["alibaba", "globalsources", "made-in-china", "exporthub"];
+const BLOCKED_DOMAINS = [
+  "alibaba", "globalsources", "made-in-china", "exporthub",
+  "aliexpress", "ebay", "dhgate", "tradekey", "ec21", "ecplaza",
+  "facebook", "instagram", "tiktok", "youtube", "twitter", "pinterest", "reddit"
+];
 const BLOCKED_COUNTRIES = ["China", "Hong Kong", "Taiwan"];
 
-type DiscoveryMode = "b2b" | "trade";
+// Apenas Motor Trade - B2B Intelligence foi movido para Export Dealers (B2B)
 
 interface GlobalCompanyRow {
   id: string;
+  tenant_id?: string;
   company_name: string;
   domain: string | null;
   country: string | null;
@@ -46,18 +68,14 @@ export default function GlobalTargetsPage() {
   const { currentTenant } = useTenant();
   const navigate = useNavigate();
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
-  const [mode, setMode] = useState<DiscoveryMode>("b2b");
-  const [hsCodes, setHsCodes] = useState("");
+  const [tradeHsCodes, setTradeHsCodes] = useState<string[]>([]); // Múltiplos HS Codes para Motor Trade
   const [keywords, setKeywords] = useState("");
-  const [countries, setCountries] = useState("United States, Canada, Germany");
+  const [tradeCountries, setTradeCountries] = useState<string[]>([]); // Array de códigos de países para Motor Trade
+  const [openTradeCountryCombobox, setOpenTradeCountryCombobox] = useState(false);
   const [limit, setLimit] = useState(20);
-  const [b2bParams, setB2bParams] = useState({
-    includeTypes: "distributor, dealer, importer, wholesaler",
-    excludeTypes: "",
-    includeRoles: "Procurement Manager, Purchasing Director, Import Manager, Buyer",
-    intelligenceKeywords: "",
-    volumeMin: "100000",
-  });
+  // Controle de cancelamento
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const {
     data: companies,
@@ -83,25 +101,41 @@ export default function GlobalTargetsPage() {
     mutationFn: async () => {
       if (!currentTenant?.id) throw new Error("Tenant não carregado");
       
+      // Criar AbortController para cancelamento
+      const controller = new AbortController();
+      setAbortController(controller);
+      setIsCancelling(false);
+      
       // 🧹 LIMPAR registros antigos da mesma sessão (opcional - comentado para manter histórico)
       // Descomente se quiser limpar antes de cada nova busca:
       // await supabase.from("global_companies").delete().eq("tenant_id", currentTenant.id);
-      const normalizedHs = hsCodes
-        .split(",")
-        .map((code) => code.trim())
-        .filter(Boolean);
+      
+      // Usar múltiplos HS Codes do Motor Trade
+      if (tradeHsCodes.length === 0) {
+        throw new Error("Informe ao menos um HS Code para usar como referência");
+      }
+      
       const normalizedKeywords = keywords
         .split(",")
         .map((k) => k.trim())
         .filter(Boolean);
-      const normalizedCountries = countries
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean);
+      
+      // Converter códigos de países para nomes (para compatibilidade com a API)
+      const normalizedCountries = tradeCountries.length > 0
+        ? tradeCountries.map(code => {
+            const country = COUNTRIES.find(c => c.code === code);
+            return country ? country.nameEn : code;
+          })
+        : [];
+
+      // ✅ VERIFICAR CANCELAMENTO
+      if (controller.signal.aborted || isCancelling) {
+        throw new Error("Busca cancelada pelo usuário");
+      }
 
       return runGlobalDiscovery({
         tenantId: currentTenant.id,
-        hsCodes: normalizedHs,
+        hsCodes: tradeHsCodes,
         keywords: normalizedKeywords,
         countries: normalizedCountries,
         limit,
@@ -121,251 +155,18 @@ export default function GlobalTargetsPage() {
     },
   });
 
-  const b2bDiscoveryMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentTenant?.id) throw new Error("Tenant não carregado");
-      const normalizedCountries = countries
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .filter((c) => !BLOCKED_COUNTRIES.includes(c));
-
-      const hsCode = hsCodes.split(",")[0]?.trim();
-      if (!hsCode) {
-        throw new Error("Informe ao menos um HS Code para usar como referência");
-      }
-
-      const keywordsSet = new Set(
-        b2bParams.intelligenceKeywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean)
-      );
-      const dealers: any[] = [];
-
-      for (const country of normalizedCountries) {
-        const { data, error } = await supabase.functions.invoke("discover-dealers-realtime", {
-          body: {
-            hsCode,
-            country,
-            keywords: Array.from(keywordsSet),
-            minVolume: Number(b2bParams.volumeMin) || null,
-            // Parâmetros B2B específicos
-            includeTypes: b2bParams.includeTypes
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean),
-            excludeTypes: b2bParams.excludeTypes
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean),
-            includeRoles: b2bParams.includeRoles
-              .split(",")
-              .map((r) => r.trim())
-              .filter(Boolean),
-          },
-        });
-
-        if (error) {
-          console.error("[GLOBAL-APOLLO] Erro em", country, error);
-          continue;
-        }
-
-        if (data?.dealers) {
-          dealers.push(
-            ...data.dealers.filter((d: any) => {
-              const domain = (d.domain || d.website || "").toLowerCase();
-              // Bloquear domínios de redes sociais e marketplaces
-              const blocked = [
-                ...BLOCKED_DOMAINS,
-                'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com',
-                'twitter.com', 'tiktok.com', 'pinterest.com', 'reddit.com',
-                'faire.com', 'etsy.com', 'amazon.com', 'ebay.com',
-              ];
-              if (blocked.some((b) => domain.includes(b))) return false;
-              // Bloquear URLs com paths de posts/videos
-              if (domain.includes('/posts/') || domain.includes('/videos/') || 
-                  domain.includes('/groups/') || domain.includes('/people/') ||
-                  domain.includes('/p/') || domain.includes('/product/')) {
-                return false;
-              }
-              return true;
-            })
-          );
-        }
-      }
-
-      if (dealers.length === 0) return [];
-
-      const payload = dealers.map((dealer: any) => {
-        // Normalizar domínio (extrair apenas o domínio de URLs completas)
-        let domain = dealer.domain || dealer.website || null;
-        if (domain) {
-          try {
-            // Se for uma URL completa, extrair apenas o domínio
-            if (domain.startsWith('http://') || domain.startsWith('https://')) {
-              const url = new URL(domain);
-              domain = url.hostname.replace(/^www\./, '');
-            } else if (domain.includes('/')) {
-              // Se tiver path mas não protocolo, tentar extrair
-              const match = domain.match(/(?:https?:\/\/)?(?:www\.)?([^\/]+)/);
-              domain = match ? match[1] : domain.split('/')[0];
-            }
-          } catch {
-            // Se falhar, usar como está
-          }
-        }
-
-        // Normalizar nome da empresa (remover prefixos como "Title:", etc.)
-        let companyName = dealer.company_name || dealer.name || "Dealer sem nome";
-        companyName = companyName
-          .replace(/^Title:\s*/i, '')
-          .replace(/^About[-\s]us[-\s]–\s*/i, '')
-          .replace(/^HOME[-\s]–\s*/i, '')
-          .replace(/^Shop\s+/i, '')
-          .replace(/^Products?\s*$/i, '')
-          .replace(/^Global\s+Distributors?\s*$/i, '')
-          .replace(/^Germany\s*$/i, '')
-          .replace(/^Wholesale\s+/i, '')
-          .replace(/\s*–\s*.*$/i, '') // Remove tudo após "–"
-          .replace(/\s*-\s*.*$/i, '') // Remove tudo após "-" (se for título)
-          .replace(/\s*\|.*$/i, '') // Remove tudo após "|"
-          .replace(/\s*\.\.\.\s*$/i, '') // Remove "..."
-          .trim();
-        
-        // Se o nome ainda for muito genérico, tentar extrair do domínio
-        if (companyName.length < 3 || 
-            ['Germany', 'Products', 'Shop All', 'Global Distributors', 'About-us'].includes(companyName)) {
-          if (domain) {
-            const domainParts = domain.split('.');
-            if (domainParts.length >= 2) {
-              companyName = domainParts[domainParts.length - 2]
-                .replace(/-/g, ' ')
-                .replace(/\b\w/g, (l: string) => l.toUpperCase());
-            }
-          }
-        }
-
-        return {
-          tenant_id: currentTenant.id,
-          company_name: companyName,
-          domain: domain,
-          country: dealer.country || dealer.location_country || null,
-          city: dealer.city || dealer.location_city || null,
-          industry: dealer.industry || null,
-          company_type: dealer.b2b_type || "dealer",
-          fit_score: dealer.fitScore || null,
-          sources: {
-            discovery: {
-              source: "b2b-intelligence",
-              snippet: dealer.description || dealer.notes || null,
-              engine: "inteligencia-b2b", // Identificar motor usado
-            },
-          },
-          enrichment_stage: "discovery",
-          status: "pending",
-        };
+  // B2B Discovery removido - usar Export Dealers (B2B) para isso
+  
+  // Função para cancelar busca (Motor Trade)
+  const handleCancelSearch = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsCancelling(true);
+      toast.warning("Cancelando busca...", {
+        description: "Aguarde alguns segundos para a interrupção completa.",
       });
-
-      // Deduplicação em memória (domain_key será gerado pelo banco)
-      const dedupedPayload = Object.values(
-        payload.reduce((acc: Record<string, any>, item: any) => {
-          // Calcular domain_key exatamente como o banco faz
-          const domainKey = 
-            (item.domain?.trim() && item.domain.trim() !== '') 
-              ? item.domain.trim()
-              : `${item.company_name || "Unknown"}|${item.country || ""}`;
-          if (!acc[domainKey]) {
-            acc[domainKey] = item;
-          }
-          return acc;
-        }, {} as Record<string, any>)
-      );
-
-      // Estratégia: verificar existência usando colunas reais (domain_key é gerado, não pode filtrar diretamente)
-      const inserted: any[] = [];
-      for (const item of dedupedPayload) {
-        try {
-          // Buscar por domain OU por company_name+country (as colunas reais)
-          let query = (supabase as any)
-            .from("global_companies")
-            .select("id")
-            .eq("tenant_id", currentTenant.id);
-          
-          if (item.domain?.trim()) {
-            query = query.eq("domain", item.domain.trim());
-          } else {
-            // Se não tem domain, buscar por nome+país
-            query = query
-              .eq("company_name", item.company_name)
-              .eq("country", item.country || "");
-          }
-          
-          const { data: existing } = await query.maybeSingle();
-          
-          if (existing) {
-            // Já existe, pular
-            continue;
-          }
-          
-          // Inserir novo registro (sem onConflict - o índice único vai prevenir duplicatas)
-          const { data, error } = await (supabase as any)
-            .from("global_companies")
-            .insert(item)
-            .select()
-            .single();
-          
-          if (!error && data) {
-            inserted.push(data);
-          } else if (error) {
-            // Ignorar apenas erros de duplicata (23505 = unique violation, 409 = conflict, 23503 = foreign key)
-            if (error.code !== '23505' && error.code !== '23503' && error.status !== 409) {
-              console.warn("[GLOBAL-B2B] Erro ao inserir empresa:", error);
-            } else if (error.code === '23503') {
-              console.error("[GLOBAL-B2B] Erro de foreign key - tenant_id inválido:", error.details);
-            }
-          }
-        } catch (err: any) {
-          // Ignorar erros de duplicata e foreign key silenciosamente
-          if (err?.code !== '23505' && err?.code !== '23503' && err?.status !== 409) {
-            console.warn("[GLOBAL-B2B] Erro ao inserir empresa:", err);
-          } else if (err?.code === '23503') {
-            console.error("[GLOBAL-B2B] Erro de foreign key - tenant_id inválido:", err?.details);
-          }
-        }
-      }
-
-      const data = inserted;
-      const error = null;
-
-      const rows = (data as any[]) || [];
-
-      if (rows.length > 0) {
-        const logEntries = rows.map((row) => ({
-          company_id: row.id,
-          stage: "discovery",
-          status: "success",
-          source: "b2b-intelligence",
-          payload: row.sources,
-          finished_at: new Date().toISOString(),
-        }));
-        await (supabase as any).from("global_enrichment_logs").insert(logEntries);
-      }
-
-      return rows;
-    },
-    onSuccess: async (inserted) => {
-      toast.success("Inteligência B2B executada", {
-        description: `${inserted?.length || 0} empresas adicionadas via motor B2B.`,
-      });
-      await refetch();
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao executar Inteligência B2B", {
-        description: error?.message || "Erro desconhecido",
-      });
-    },
-  });
+    }
+  };
 
   // Mutation para transferir empresas
   const transferMutation = useMutation({
@@ -377,7 +178,13 @@ export default function GlobalTargetsPage() {
         throw new Error("Nenhuma empresa selecionada");
       }
 
-      return transferGlobalToCompanies(companiesToTransfer, true);
+      // Adicionar tenant_id se não existir
+      const companiesWithTenant = companiesToTransfer.map(c => ({
+        ...c,
+        tenant_id: c.tenant_id || currentTenant.id,
+      }));
+
+      return transferGlobalToCompanies(companiesWithTenant, true);
     },
     onSuccess: async (result) => {
       toast.success("Transferência concluída", {
@@ -402,6 +209,27 @@ export default function GlobalTargetsPage() {
     toast.info("Atualizando empresas globais...");
   };
 
+  // Helper functions para seleção de países (Motor Trade)
+  const toggleTradeCountry = (code: string) => {
+    setTradeCountries(prev => 
+      prev.includes(code) 
+        ? prev.filter(c => c !== code)
+        : [...prev, code]
+    );
+  };
+
+  const selectTradeRegion = (region: "Americas" | "Europe" | "Asia" | "Africa" | "Oceania") => {
+    const regionCountries = getCountriesByRegion(region).map(c => c.code);
+    setTradeCountries(prev => {
+      const combined = [...new Set([...prev, ...regionCountries])];
+      return combined;
+    });
+  };
+
+  const clearTradeCountries = () => {
+    setTradeCountries([]);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -412,7 +240,7 @@ export default function GlobalTargetsPage() {
               Sala Global de Alvos
             </h1>
             <p className="text-muted-foreground">
-              Descubra e qualifique dealers internacionais com base em HS Code, palavras-chave e países alvo.
+              Plataforma multissetorial: descubra e qualifique dealers internacionais de qualquer produto com base em HS Code, palavras-chave e países alvo.
             </p>
           </div>
           <Button variant="outline" onClick={handleRefresh}>
@@ -425,107 +253,268 @@ export default function GlobalTargetsPage() {
           <CardHeader>
             <CardTitle>Rodar Discovery</CardTitle>
             <CardDescription>
-              Escolha o motor: <strong>Inteligência B2B</strong> (decisores) ou <strong>Motor Trade</strong> (importadores reais sem marketplace).
+              <strong>Motor Trade</strong>: Descubra importadores reais usando HS Codes, feiras e dados de trade (ImportGenius, Panjiva, Volza).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Alert className="mb-4">
               <AlertDescription>
-                <strong>Como funciona:</strong> Inteligência B2B retorna empresas com decisores (múltiplas fontes). Motor Trade busca importadores reais usando HS Codes, feiras e dados de trade.
+                <strong>Como funciona:</strong> Motor Trade busca importadores reais usando HS Codes, feiras e dados de trade (ImportGenius, Panjiva, Volza).
                 Marketplaces ({BLOCKED_DOMAINS.join(", ")}) são ignorados e países bloqueados: {BLOCKED_COUNTRIES.join(", ")}.
               </AlertDescription>
             </Alert>
-            <Tabs value={mode} onValueChange={(value) => setMode(value as DiscoveryMode)}>
-              <TabsList className="grid grid-cols-2 mb-4">
-                <TabsTrigger value="b2b" className="gap-2">
-                  <Brain className="h-4 w-4" /> Inteligência B2B
-                </TabsTrigger>
-                <TabsTrigger value="trade" className="gap-2">
-                  <Globe2 className="h-4 w-4" /> Motor Trade
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="b2b" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tipos B2B (inclui)</label>
-                    <Textarea
-                      rows={2}
-                      value={b2bParams.includeTypes}
-                      onChange={(e) => setB2bParams((prev) => ({ ...prev, includeTypes: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tipos B2C (excluir)</label>
-                    <Textarea
-                      rows={2}
-                      value={b2bParams.excludeTypes}
-                      onChange={(e) => setB2bParams((prev) => ({ ...prev, excludeTypes: e.target.value }))}
-                    />
-                  </div>
-                </div>
+            
+            <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Cargos alvo</label>
-                  <Textarea
-                    rows={2}
-                    value={b2bParams.includeRoles}
-                    onChange={(e) => setB2bParams((prev) => ({ ...prev, includeRoles: e.target.value }))}
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    HS Code / NCM (Múltiplos)
+                    <span className="text-xs text-muted-foreground font-normal">
+                      • Clique no código no dropdown para adicionar
+                    </span>
+                  </label>
+                  <HSCodeAutocomplete
+                    value=""
+                    onSelect={(code) => {
+                      if (!tradeHsCodes.includes(code)) {
+                        setTradeHsCodes([...tradeHsCodes, code]);
+                      }
+                    }}
+                    placeholder="Digite código (ex: 1701) ou produto (ex: sugar, furniture, footwear)..."
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Palavras-chave B2B</label>
-                  <Textarea
-                    rows={3}
-                    value={b2bParams.intelligenceKeywords}
-                    onChange={(e) => setB2bParams((prev) => ({ ...prev, intelligenceKeywords: e.target.value }))}
-                    placeholder="Ex: Product Name, Product Type, Industry Keywords..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Volume mínimo anual (USD)</label>
-                  <Input
-                    value={b2bParams.volumeMin}
-                    onChange={(e) => setB2bParams((prev) => ({ ...prev, volumeMin: e.target.value }))}
-                  />
-                </div>
-                <Button
-                  variant="default"
-                  className="w-full md:w-auto gap-2"
-                  onClick={() => b2bDiscoveryMutation.mutate()}
-                  disabled={b2bDiscoveryMutation.isPending || !currentTenant?.id}
-                >
-                  {b2bDiscoveryMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Executando Inteligência B2B
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Rodar Inteligência B2B agora
-                    </>
+                  {tradeHsCodes.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {tradeHsCodes.map((code) => (
+                        <Badge key={code} variant="secondary" className="gap-1">
+                          {code}
+                          <button
+                            type="button"
+                            onClick={() => setTradeHsCodes(tradeHsCodes.filter((c) => c !== code))}
+                            className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
                   )}
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="trade" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">HS Codes (separados por vírgula)</label>
-                    <Input value={hsCodes} onChange={(e) => setHsCodes(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Países (separados por vírgula)</label>
-                    <Input value={countries} onChange={(e) => setCountries(e.target.value)} />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Adicione múltiplos HS Codes para buscar vários produtos ao mesmo tempo!
+                  </p>
                 </div>
+                
+                {/* PAÍSES-ALVO (Multi-select + Seleção por Região) - Motor Trade */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Países-Alvo (Multi-select)
+                  </Label>
+                  
+                  {/* Botões Seleção Rápida por Região */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Button type="button" variant="outline" size="sm" onClick={() => selectTradeRegion('Americas')}>
+                      Americas ({getCountriesByRegion('Americas').length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => selectTradeRegion('Europe')}>
+                      Europe ({getCountriesByRegion('Europe').length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => selectTradeRegion('Asia')}>
+                      Asia ({getCountriesByRegion('Asia').length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => selectTradeRegion('Africa')}>
+                      Africa ({getCountriesByRegion('Africa').length})
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => selectTradeRegion('Oceania')}>
+                      Oceania ({getCountriesByRegion('Oceania').length})
+                    </Button>
+                    {tradeCountries.length > 0 && (
+                      <Button type="button" variant="destructive" size="sm" onClick={clearTradeCountries}>
+                        <X className="h-3 w-3 mr-1" />
+                        Limpar ({tradeCountries.length})
+                      </Button>
+                    )}
+                  </div>
+
+                  <Popover open={openTradeCountryCombobox} onOpenChange={setOpenTradeCountryCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openTradeCountryCombobox}
+                        className="w-full justify-between"
+                      >
+                        {tradeCountries.length > 0
+                          ? `${tradeCountries.length} ${tradeCountries.length === 1 ? 'país' : 'países'} selecionado${tradeCountries.length > 1 ? 's' : ''}`
+                          : 'Selecione países...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[500px] p-0" align="start">
+                      <Command className="max-h-[500px]">
+                        <div className="sticky top-0 bg-background z-10 border-b">
+                          <CommandInput placeholder="🔍 Buscar país..." className="h-12" />
+                        </div>
+                        <CommandEmpty>
+                          <div className="py-6 text-center text-sm text-muted-foreground">
+                            Nenhum país encontrado.
+                          </div>
+                        </CommandEmpty>
+                        <CommandList className="max-h-[400px] overflow-y-auto">
+                          {/* TOP MARKETS */}
+                          <CommandGroup heading="Principais Mercados">
+                            {COUNTRIES.filter(c => TOP_EXPORT_MARKETS.includes(c.code)).map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                                <span className="ml-auto text-xs text-muted-foreground">{c.nameEn}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          
+                          {/* AMERICAS */}
+                          <CommandGroup heading="🌎 Americas">
+                            {getCountriesByRegion('Americas').map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          
+                          {/* EUROPE */}
+                          <CommandGroup heading="Europe">
+                            {getCountriesByRegion('Europe').map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          
+                          {/* ASIA */}
+                          <CommandGroup heading="🌏 Asia">
+                            {getCountriesByRegion('Asia').map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          
+                          {/* OCEANIA */}
+                          <CommandGroup heading="🌏 Oceania">
+                            {getCountriesByRegion('Oceania').map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          
+                          {/* AFRICA */}
+                          <CommandGroup heading="Africa">
+                            {getCountriesByRegion('Africa').map((c) => (
+                              <CommandItem
+                                key={c.code}
+                                value={`${c.name} ${c.nameEn} ${c.code}`}
+                                onSelect={() => toggleTradeCountry(c.code)}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    tradeCountries.includes(c.code) ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span className="mr-2">{c.flag}</span>
+                                <span>{c.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Países Selecionados (Badges) */}
+                  {tradeCountries.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {tradeCountries.map((code) => {
+                        const country = COUNTRIES.find(c => c.code === code);
+                        if (!country) return null;
+                        return (
+                          <Badge key={code} variant="secondary" className="gap-1">
+                            <span>{country.flag}</span>
+                            <span>{country.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleTradeCountry(code)}
+                              className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Palavras-chave estratégicas</label>
                   <Textarea
                     value={keywords}
                     onChange={(e) => setKeywords(e.target.value)}
                     rows={3}
-                    placeholder="Pilates Reformer, Pilates Studio Supplier..."
+                    placeholder="Ex: Product Name, Product Type, Industry Keywords..."
                   />
                 </div>
                 <div className="space-y-2">
@@ -538,52 +527,57 @@ export default function GlobalTargetsPage() {
                     max={100}
                   />
                 </div>
-                <Button
-                  onClick={() => tradeDiscoveryMutation.mutate()}
-                  disabled={tradeDiscoveryMutation.isPending || !currentTenant?.id}
-                  className="w-full md:w-auto"
-                >
-                  {tradeDiscoveryMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Executando Motor Trade
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-4 w-4 mr-2" />
-                      Rodar Motor Trade agora
-                    </>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={() => tradeDiscoveryMutation.mutate()}
+                    disabled={tradeDiscoveryMutation.isPending || !currentTenant?.id}
+                    className="gap-2"
+                  >
+                    {tradeDiscoveryMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Executando Motor Trade
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Rodar Motor Trade agora
+                      </>
+                    )}
+                  </Button>
+                  {tradeDiscoveryMutation.isPending && (
+                    <Button
+                      type="button"
+                      onClick={handleCancelSearch}
+                      disabled={isCancelling}
+                      className="gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 shadow-lg animate-pulse"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      {isCancelling ? "Cancelando..." : "⛔ ABORTAR BUSCA"}
+                    </Button>
                   )}
-                </Button>
-              </TabsContent>
-            </Tabs>
+                </div>
             <div className="mt-6 rounded-lg border bg-muted/40 p-4 space-y-2">
               <p className="text-sm font-semibold">Critérios ativos</p>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
-                  Modo: {mode === "b2b" ? "Inteligência B2B (decisores)" : "Motor Trade (importadores)"}
+                  Modo: Motor Trade (importadores reais)
                 </Badge>
-                {mode === "b2b" ? (
-                  <>
-                    <Badge variant="secondary">Tipos: {b2bParams.includeTypes}</Badge>
-                    <Badge variant="secondary">Exclui: {b2bParams.excludeTypes}</Badge>
-                    <Badge variant="outline">Cargos: {b2bParams.includeRoles}</Badge>
-                    <Badge variant="outline">Volume ≥ ${b2bParams.volumeMin}</Badge>
-                  </>
-                ) : (
-                  <>
-                    <Badge variant="secondary">HS: {hsCodes}</Badge>
-                    <Badge variant="secondary">Países: {countries}</Badge>
-                    <Badge variant="outline">Keywords: {keywords}</Badge>
-                    <Badge variant="outline">Limite: {limit}</Badge>
-                  </>
-                )}
+                <Badge variant="secondary">
+                  HS Codes: {tradeHsCodes.length > 0 ? tradeHsCodes.join(", ") : "Nenhum"}
+                </Badge>
+                <Badge variant="secondary">
+                  Países: {tradeCountries.length > 0 ? `${tradeCountries.length} selecionados` : "Nenhum"}
+                </Badge>
+                <Badge variant="outline">Keywords: {keywords || "Nenhuma"}</Badge>
+                <Badge variant="outline">Limite: {limit}</Badge>
                 <Badge variant="destructive">Marketplaces bloqueados</Badge>
                 <Badge variant="destructive">Países bloqueados: {BLOCKED_COUNTRIES.join(", ")}</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 Ajuste os filtros acima para refinar a busca. Após rodar o discovery, avance para qualificação e SDR diretamente nesta Sala.
               </p>
+            </div>
             </div>
           </CardContent>
         </Card>

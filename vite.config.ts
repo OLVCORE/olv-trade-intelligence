@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
-    port: Number(process.env.VITE_DEV_PORT ?? "5173"),
+    port: Number(process.env.VITE_DEV_PORT ?? "5174"), // ✅ Porta 5174 para evitar conflito com stratevo-intelligence-prospect (5173)
   },
   plugins: [
     react(), 

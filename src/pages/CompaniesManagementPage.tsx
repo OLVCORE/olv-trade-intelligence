@@ -57,6 +57,7 @@ import { ColumnFilter } from '@/components/companies/ColumnFilter';
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { QuarantineCNPJStatusBadge } from '@/components/icp/QuarantineCNPJStatusBadge';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
+import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
 import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
 import { PartnerSearchModal } from '@/components/companies/PartnerSearchModal';
 import { ExpandableCompaniesTable } from '@/components/companies/ExpandableCompaniesTable';
@@ -81,6 +82,8 @@ export default function CompaniesManagementPage() {
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterSector, setFilterSector] = useState<string[]>([]);
   const [filterRegion, setFilterRegion] = useState<string[]>([]);
+  const [filterBlock, setFilterBlock] = useState<string[]>([]); // ✅ NOVO: Filtro por Bloco
+  const [filterLeadSource, setFilterLeadSource] = useState<string[]>([]); // ✅ NOVO: Filtro por Lead Source
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
   const [filterEnrichment, setFilterEnrichment] = useState<string[]>([]); // ✅ NOVO: Filtro por enriquecimento
   
@@ -181,6 +184,24 @@ export default function CompaniesManagementPage() {
       console.log('🔍 [CompaniesManagement] Após filtro Região:', filtered.length);
     }
     
+    // ✅ NOVO: Filtro por Bloco
+    if (filterBlock.length > 0) {
+      filtered = filtered.filter(c => {
+        const block = getCommercialBlockDisplay(c);
+        return filterBlock.includes(block);
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Bloco:', filtered.length);
+    }
+    
+    // ✅ NOVO: Filtro por Lead Source
+    if (filterLeadSource.length > 0) {
+      filtered = filtered.filter(c => {
+        const leadSource = getLeadSource(c);
+        return filterLeadSource.includes(leadSource);
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Lead Source:', filtered.length);
+    }
+    
     // Filtro por Status Análise (percentual de completude)
     if (filterAnalysisStatus.length > 0) {
       filtered = filtered.filter(c => {
@@ -228,7 +249,7 @@ export default function CompaniesManagementPage() {
     
     console.log('🔍 [CompaniesManagement] FINAL filtered.length:', filtered.length);
     return filtered;
-  }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterAnalysisStatus, filterEnrichment]);
+  }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterBlock, filterLeadSource, filterAnalysisStatus, filterEnrichment]);
   
   // 🔢 ALIASES PARA COMPATIBILIDADE COM QUARENTENA
   const filteredCompanies = companies;
@@ -777,6 +798,88 @@ export default function CompaniesManagementPage() {
       toast.error('Erro ao executar enriquecimento 360°');
     } finally {
       setIsBatchEnriching360(false);
+    }
+  };
+
+  // ✅ NOVO: Enriquecer Dados Internacionais em Massa
+  const handleBatchEnrichInternational = async () => {
+    try {
+      const companiesToEnrich = selectedCompanies.length > 0
+        ? companies.filter(c => selectedCompanies.includes(c.id))
+        : companies;
+
+      // Filtrar apenas empresas com website
+      const companiesWithWebsite = companiesToEnrich.filter(c => 
+        c.website || c.domain || (c.raw_data && typeof c.raw_data === 'object' && (c.raw_data as any).domain)
+      );
+
+      if (companiesWithWebsite.length === 0) {
+        toast.error('Nenhuma empresa selecionada possui website');
+        return;
+      }
+
+      toast.loading(`Enriquecendo dados internacionais de ${companiesWithWebsite.length} empresa(s)...`, { id: 'bulk-international' });
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+      let success = 0;
+      let errors = 0;
+
+      for (const company of companiesWithWebsite) {
+        try {
+          const website = company.website || company.domain || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).domain : null);
+          const companyName = company.company_name || company.razao_social || company.name || '';
+          if (!website) continue;
+
+          // ✅ Extrair informações do website COM NOME DA EMPRESA
+          const extractResponse = await fetch(`${supabaseUrl}/functions/v1/extract-company-info-from-url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ 
+              url: website,
+              company_name: companyName || undefined, // ✅ Enviar nome completo se disponível
+            }),
+          });
+
+          if (!extractResponse.ok) {
+            throw new Error(`Erro ao extrair dados: ${extractResponse.status}`);
+          }
+
+          const extractedInfo = await extractResponse.json();
+
+          // Atualizar empresa
+          const { error: updateError } = await supabase
+            .from('companies')
+            .update({
+              company_name: extractedInfo.company_name || company.company_name,
+              country: extractedInfo.country || company.country,
+              city: extractedInfo.city || company.city,
+              state: extractedInfo.state || company.state,
+            })
+            .eq('id', company.id);
+
+          if (updateError) throw updateError;
+
+          success++;
+        } catch (error: any) {
+          errors++;
+          console.error(`Erro ao enriquecer ${company.company_name}:`, error);
+        }
+      }
+
+      toast.dismiss('bulk-international');
+      if (errors === 0) {
+        toast.success(`✅ ${success} empresa(s) com dados internacionais atualizados!`);
+      } else {
+        toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
+      }
+
+      await refetch();
+    } catch (error: any) {
+      console.error('Error batch enriching international:', error);
+      toast.error('Erro ao executar enriquecimento internacional');
     }
   };
 
@@ -1883,6 +1986,7 @@ export default function CompaniesManagementPage() {
                     onBulkEnrichReceita={handleBatchEnrichReceitaWS}
                     onBulkEnrichApollo={handleBatchEnrichApollo}
                     onBulkEnrich360={handleBatchEnrich360}
+                    onBulkEnrichInternational={handleBatchEnrichInternational}
                     onBulkEcoBooster={async () => {
                   try {
                     setIsBatchEnrichingEconodata(true);
@@ -1988,6 +2092,26 @@ export default function CompaniesManagementPage() {
                         Localização
                         <ArrowUpDown className="h-3 w-3" />
                       </Button>
+                    </TableHead>
+                    <TableHead>
+                      <ColumnFilter
+                        column="commercial_block"
+                        title="Bloco"
+                        values={allCompanies.map(c => getCommercialBlockDisplay(c))}
+                        selectedValues={filterBlock}
+                        onFilterChange={setFilterBlock}
+                        onSort={() => handleSort('commercial_block')}
+                      />
+                    </TableHead>
+                    <TableHead>
+                      <ColumnFilter
+                        column="lead_source"
+                        title="Lead Source"
+                        values={allCompanies.map(c => getLeadSource(c))}
+                        selectedValues={filterLeadSource}
+                        onFilterChange={setFilterLeadSource}
+                        onSort={() => handleSort('lead_source')}
+                      />
                     </TableHead>
                     <TableHead>
                       <ColumnFilter
@@ -2129,28 +2253,17 @@ export default function CompaniesManagementPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {(() => {
-                            const country = company.country || 'N/A';
-                            const uf = (company.location as any)?.state || 
-                                       (company as any).raw_data?.receita?.uf ||
-                                       (company as any).raw_data?.uf || company.state;
-                            const city = (company.location as any)?.city || 
-                                         (company as any).raw_data?.receita?.municipio ||
-                                         (company as any).raw_data?.municipio || company.city;
+                            const location = getLocationDisplay(company);
                             
-                            if (country !== 'N/A') {
+                            if (location.country !== 'N/A') {
                               return (
                                 <>
                                   <Badge variant="secondary" className="w-fit">
-                                    {country}
+                                    {location.country}
                                   </Badge>
-                                  {uf && (
-                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={uf}>
-                                      {uf}
-                                    </span>
-                                  )}
-                                  {city && (
-                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={city}>
-                                      {city}
+                                  {location.city && location.city !== 'N/A' && (
+                                    <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={location.city}>
+                                      {location.city}
                                     </span>
                                   )}
                                 </>
@@ -2159,6 +2272,16 @@ export default function CompaniesManagementPage() {
                             return <span className="text-xs text-muted-foreground">N/A</span>;
                           })()}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="w-fit">
+                          {getCommercialBlockDisplay(company)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="w-fit">
+                          {getLeadSource(company)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {(company as any).source_name ? (
@@ -2399,9 +2522,9 @@ export default function CompaniesManagementPage() {
                                  
                                  return (
                                    <TableRow>
-                                     <TableCell colSpan={11} className="bg-muted/30 p-0">
-                                       <Card className="border-0 shadow-none">
-                                         <CardContent className="p-6">
+                                    <TableCell colSpan={11} className="bg-muted/30 p-0">
+                                      <Card className="border-0 shadow-none overflow-visible">
+                                        <CardContent className="p-6 overflow-visible max-h-[80vh] overflow-y-auto">
                                            <div className="grid grid-cols-2 gap-6">
                                 {/* COLUNA ESQUERDA */}
                                 <div className="space-y-4">

@@ -8,6 +8,31 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Função: getLeadSourceFromGlobal(globalCompany: GlobalCompany): string
+ * 
+ * Identifica Lead Source baseado nos dados do global_company
+ */
+function getLeadSourceFromGlobal(globalCompany: GlobalCompany): string {
+  const engine = globalCompany.sources?.discovery?.engine || '';
+  const engineLower = engine.toLowerCase();
+  
+  if (engineLower.includes('panjiva')) {
+    return 'Panjiva';
+  }
+  
+  if (engineLower.includes('trade') || engineLower === 'motor_trade') {
+    return 'Motor Trade';
+  }
+  
+  if (engineLower.includes('b2b') || engineLower === 'sala_global_b2b') {
+    return 'Sala Global B2B';
+  }
+  
+  // Fallback padrão
+  return 'Motor Trade';
+}
+
 export interface GlobalCompany {
   id: string;
   tenant_id: string;
@@ -123,6 +148,27 @@ export async function transferGlobalToCompanies(
           result.companiesSkipped++;
           console.log(`✓ Empresa ${globalCompany.company_name} já existe (ID: ${existingCompanyId})`);
         } else {
+          // ✅ Função helper para identificar Lead Source
+          const getLeadSourceFromGlobal = (gc: GlobalCompany): string => {
+            const engine = gc.sources?.discovery?.engine || '';
+            const engineLower = engine.toLowerCase();
+            
+            if (engineLower.includes('panjiva')) {
+              return 'Panjiva';
+            }
+            
+            if (engineLower.includes('trade') || engineLower === 'motor_trade') {
+              return 'Motor Trade';
+            }
+            
+            if (engineLower.includes('b2b') || engineLower === 'sala_global_b2b') {
+              return 'Sala Global B2B';
+            }
+            
+            // Fallback padrão
+            return 'Motor Trade';
+          };
+          
           // Criar nova empresa
           const newCompany = {
             tenant_id: globalCompany.tenant_id,
@@ -135,6 +181,7 @@ export async function transferGlobalToCompanies(
             industry: globalCompany.industry || null,
             b2b_type: globalCompany.company_type || 'dealer',
             data_source: 'global_discovery',
+            lead_source: getLeadSourceFromGlobal(globalCompany), // ✅ NOVO: Registro de Lead Source (campo direto)
             source_type: 'global_targets',
             source_name: globalCompany.sources?.discovery?.engine || 'sala-global',
             raw_data: {
@@ -144,6 +191,7 @@ export async function transferGlobalToCompanies(
               enrichment_stage: globalCompany.enrichment_stage,
               discovery_date: new Date().toISOString(),
               engine: globalCompany.sources?.discovery?.engine || 'unknown',
+              lead_source: getLeadSourceFromGlobal(globalCompany), // ✅ NOVO: Registro de Lead Source
             },
           };
 
@@ -241,6 +289,14 @@ export async function transferGlobalToCompanies(
             fit_score: globalCompany.fit_score,
             sources: globalCompany.sources,
             engine: globalCompany.sources?.discovery?.engine || 'unknown',
+            lead_source: (() => { // ✅ NOVO: Identificar Lead Source para quarentena
+              const engine = globalCompany.sources?.discovery?.engine || '';
+              const engineLower = engine.toLowerCase();
+              if (engineLower.includes('panjiva')) return 'Panjiva';
+              if (engineLower.includes('trade') || engineLower === 'motor_trade') return 'Motor Trade';
+              if (engineLower.includes('b2b') || engineLower === 'sala_global_b2b') return 'Sala Global B2B';
+              return 'Motor Trade';
+            })(),
             needs_enrichment: true,
             auto_validated: false,
             is_international: isInternational, // Flag para identificar empresas internacionais

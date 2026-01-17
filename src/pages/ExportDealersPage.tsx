@@ -19,7 +19,8 @@ import {
   Sparkles,
   Save,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -36,6 +37,9 @@ export default function ExportDealersPage() {
   const [searchParams, setSearchParams] = useState<DealerSearchParams | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Controle de cancelamento
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   
   // PROTEÇÃO CONTRA PERDA DE DADOS
   useUnsavedChanges(hasUnsavedChanges, 
@@ -56,6 +60,11 @@ export default function ExportDealersPage() {
     mutationFn: async (params: DealerSearchParams) => {
       console.log('[EXPORT] 🔍 Busca INTELIGENTE multi-source...', params);
 
+      // Criar AbortController para cancelamento
+      const controller = new AbortController();
+      setAbortController(controller);
+      setIsCancelling(false);
+
       // 1. IDENTIFICAR PRODUTO(S) pelos HS Codes (MÚLTIPLOS!)
       const { identifyProduct } = await import('@/services/hsCodeIntelligence');
       const hsCodes = Array.isArray(params.hsCodes) ? params.hsCodes : [params.hsCode].filter(Boolean);
@@ -67,6 +76,10 @@ export default function ExportDealersPage() {
       // Coletar keywords de TODOS os HS Codes
       const allHSKeywords: string[] = [];
       for (const code of hsCodes) {
+        // ✅ VERIFICAR CANCELAMENTO
+        if (controller.signal.aborted || isCancelling) {
+          throw new Error("Busca cancelada pelo usuário");
+        }
         const intelligence = identifyProduct(code);
         if (intelligence) {
           allHSKeywords.push(...intelligence.keywords);
@@ -85,6 +98,12 @@ export default function ExportDealersPage() {
       const allDealers: Dealer[] = [];
       
       for (const country of params.countries) {
+        // ✅ VERIFICAR CANCELAMENTO
+        if (controller.signal.aborted || isCancelling) {
+          console.log('[EXPORT] ⛔ Busca cancelada pelo usuário');
+          throw new Error("Busca cancelada pelo usuário");
+        }
+
         const { data, error } = await supabase.functions.invoke('discover-dealers-realtime', {
           body: {
             hsCode: hsCodes[0], // Usar primeiro HS Code (depois iterar todos)
@@ -92,9 +111,20 @@ export default function ExportDealersPage() {
             keywords: allKeywords, // Combinado: HS + Custom
             minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
           },
+          signal: controller.signal, // ✅ Passar signal para cancelar requisição
         });
 
+        // ✅ VERIFICAR CANCELAMENTO APÓS REQUISIÇÃO
+        if (controller.signal.aborted || isCancelling) {
+          console.log('[EXPORT] ⛔ Busca cancelada após requisição');
+          throw new Error("Busca cancelada pelo usuário");
+        }
+
         if (error) {
+          // Se foi cancelado, não tratar como erro normal
+          if (error.message?.includes('aborted') || controller.signal.aborted) {
+            throw new Error("Busca cancelada pelo usuário");
+          }
           console.error('[EXPORT] ❌ Erro em', country, error);
           continue;
         }
@@ -119,9 +149,14 @@ export default function ExportDealersPage() {
       }
 
       console.log(`[EXPORT] ✅ Total: ${allDealers.length} dealers qualificados`);
+      // ✅ LIMPAR CONTROLLER AO FINALIZAR
+      setAbortController(null);
+      setIsCancelling(false);
       return allDealers;
     },
     onSuccess: (data) => {
+      setAbortController(null);
+      setIsCancelling(false);
       setDealers(data || []);
       
       if (!data || data.length === 0) {
@@ -140,12 +175,31 @@ export default function ExportDealersPage() {
       }
     },
     onError: (error: any) => {
-      console.error('[EXPORT] ❌ Erro na busca:', error);
-      toast.error('Erro ao buscar dealers', {
-        description: error.message || 'Verifique o console',
-      });
+      setAbortController(null);
+      setIsCancelling(false);
+      if (error?.message?.includes('cancelada')) {
+        toast.warning("Busca cancelada", {
+          description: "O processo foi interrompido. Nenhum crédito adicional será consumido.",
+        });
+      } else {
+        console.error('[EXPORT] ❌ Erro na busca:', error);
+        toast.error('Erro ao buscar dealers', {
+          description: error.message || 'Verifique o console',
+        });
+      }
     },
   });
+
+  // Função para cancelar busca
+  const handleCancelSearch = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsCancelling(true);
+      toast.warning("Cancelando busca...", {
+        description: "Aguarde alguns segundos para a interrupção completa.",
+      });
+    }
+  };
 
   const handleSearch = (params: DealerSearchParams) => {
     setSearchParams(params);
@@ -249,6 +303,8 @@ export default function ExportDealersPage() {
       <DealerDiscoveryForm
         onSearch={handleSearch}
         isSearching={searchMutation.isPending}
+        onCancel={handleCancelSearch}
+        isCancelling={isCancelling}
       />
 
       {/* RESULTS STATS */}

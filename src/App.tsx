@@ -68,6 +68,7 @@ const PersonasLibraryPage = lazy(() => import("./pages/PersonasLibraryPage"));
 const DataMigrationPage = lazy(() => import("./pages/DataMigrationPage"));
 const EnhancedBenchmarkPage = lazy(() => import("./pages/EnhancedBenchmarkPage"));
 const PlaybooksPage = lazy(() => import("./pages/PlaybooksPage"));
+const ReEnrichCompaniesPage = lazy(() => import("./pages/Admin/ReEnrichCompaniesPage"));
 const CompanyDetailPage = lazy(() => import("./pages/CompanyDetailPage"));
 const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
 const CanvasPage = lazy(() => import("./pages/CanvasPage"));
@@ -237,7 +238,9 @@ const App = () => (
                 path="/leads/approved"
                 element={
                   <ProtectedRoute>
-                    <ApprovedLeads />
+                    <AppLayout>
+                      <ApprovedLeads />
+                    </AppLayout>
                   </ProtectedRoute>
                 }
               />
@@ -435,6 +438,16 @@ const App = () => (
                 <ProtectedRoute>
                   <AppLayout>
                     <PlaybooksPage />
+                  </AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/re-enrich-companies"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <ReEnrichCompaniesPage />
                   </AppLayout>
                 </ProtectedRoute>
               }

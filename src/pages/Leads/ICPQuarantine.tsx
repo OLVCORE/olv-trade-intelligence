@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle, XCircle, Flame, Thermometer, Snowflake, Download, Filter, Search, RefreshCw, FileText, Globe, ArrowUpDown, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, CheckCircle, XCircle, Flame, Thermometer, Snowflake, Download, Filter, Search, RefreshCw, FileText, Globe, ArrowUpDown, Loader2, AlertCircle, ChevronDown, ChevronUp, Building2, MapPin, Target, Users, ExternalLink, Linkedin, Mail, Phone, Edit, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { searchApolloOrganizations, searchApolloPeople } from '@/services/apolloDirect';
 import { enrichment360Simplificado } from '@/services/enrichment360';
 import { ColumnFilter } from '@/components/companies/ColumnFilter';
+import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
 
 export default function ICPQuarantine() {
   const navigate = useNavigate();
@@ -51,7 +52,16 @@ export default function ICPQuarantine() {
   const [filterCNPJStatus, setFilterCNPJStatus] = useState<string[]>([]);
   const [filterSector, setFilterSector] = useState<string[]>([]);
   const [filterUF, setFilterUF] = useState<string[]>([]);
+  const [filterBlock, setFilterBlock] = useState<string[]>([]); // ✅ NOVO: Filtro por Bloco
+  const [filterLeadSource, setFilterLeadSource] = useState<string[]>([]); // ✅ NOVO: Filtro por Lead Source
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
+  
+  // ✅ EXPANSÃO DE LINHAS (card dropdown) - IDÊNTICO À BASE DE EMPRESAS
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  
+  const toggleRow = (companyId: string) => {
+    setExpandedRow(expandedRow === companyId ? null : companyId);
+  };
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewCompany, setPreviewCompany] = useState<any>(null);
@@ -67,8 +77,10 @@ export default function ICPQuarantine() {
   const [rejectCustomReason, setRejectCustomReason] = useState<string>('');
   const [showDiscardedModal, setShowDiscardedModal] = useState(false);
 
+  // ✅ QUARENTENA: Sempre mostrar apenas 'pendente' (não mostrar aprovados/descartados)
+  // Aprovados vão para "Leads Aprovados", Descartados vão para "Empresas Descartadas"
   const { data: companies = [], isLoading, refetch } = useQuarantineCompanies({
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    status: 'pendente', // ✅ SEMPRE 'pendente' - aprovados/descartados não devem aparecer aqui
     temperatura: tempFilter === 'all' ? undefined : (tempFilter as any),
   });
 
@@ -573,6 +585,18 @@ export default function ICPQuarantine() {
         if (!filterUF.includes(uf)) return false;
       }
       
+      // ✅ NOVO: Filtro por Bloco
+      if (filterBlock.length > 0) {
+        const block = getCommercialBlockDisplay(c);
+        if (!filterBlock.includes(block)) return false;
+      }
+      
+      // ✅ NOVO: Filtro por Lead Source
+      if (filterLeadSource.length > 0) {
+        const leadSource = getLeadSource(c);
+        if (!filterLeadSource.includes(leadSource)) return false;
+      }
+      
       // Filtro por Status Análise
       if (filterAnalysisStatus.length > 0) {
         const rawData = (c as any).raw_data || {};
@@ -993,6 +1017,86 @@ export default function ICPQuarantine() {
     }
   };
 
+  // ✅ NOVO: Enriquecer Dados Internacionais em Massa
+  const handleBulkEnrichInternational = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('Selecione pelo menos uma empresa');
+      return;
+    }
+    
+    const selectedCompanies = companies.filter(c => selectedIds.includes(c.id));
+    
+    // Filtrar apenas empresas com website
+    const companiesWithWebsite = selectedCompanies.filter(c => 
+      c.website || (c.raw_data && typeof c.raw_data === 'object' && (c.raw_data as any).domain)
+    );
+    
+    if (companiesWithWebsite.length === 0) {
+      toast.error('Nenhuma empresa selecionada possui website');
+      return;
+    }
+    
+    toast.loading(`Enriquecendo dados internacionais de ${companiesWithWebsite.length} empresa(s)...`, { id: 'bulk-international' });
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+    let success = 0;
+    let errors = 0;
+    
+    for (const company of companiesWithWebsite) {
+      try {
+        const website = company.website || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).domain : null);
+        const companyName = company.razao_social || (company.raw_data && typeof company.raw_data === 'object' ? (company.raw_data as any).company_name : null) || company.company_name || '';
+        if (!website) continue;
+        
+        // ✅ Extrair informações do website COM NOME DA EMPRESA
+        const extractResponse = await fetch(`${supabaseUrl}/functions/v1/extract-company-info-from-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ 
+            url: website,
+            company_name: companyName || undefined, // ✅ Enviar nome completo se disponível
+          }),
+        });
+        
+        if (!extractResponse.ok) {
+          throw new Error(`Erro ao extrair dados: ${extractResponse.status}`);
+        }
+        
+        const extractedInfo = await extractResponse.json();
+        
+        // Atualizar empresa
+        const { error: updateError } = await supabase
+          .from('icp_analysis_results')
+          .update({
+            razao_social: extractedInfo.company_name || company.razao_social,
+            country: extractedInfo.country || company.country,
+            city: extractedInfo.city || company.city,
+            state: extractedInfo.state || company.state,
+          })
+          .eq('id', company.id);
+        
+        if (updateError) throw updateError;
+        
+        success++;
+      } catch (error: any) {
+        errors++;
+        console.error(`Erro ao enriquecer ${company.razao_social}:`, error);
+      }
+    }
+    
+    toast.dismiss('bulk-international');
+    if (errors === 0) {
+      toast.success(`✅ ${success} empresa(s) com dados internacionais atualizados!`);
+    } else {
+      toast.warning(`Concluído: ${success} sucesso, ${errors} erro(s)`);
+    }
+    
+    await refetch();
+  };
+
   const handleBulkTotvsCheck = async () => {
     if (selectedIds.length === 0) {
       toast.error('Selecione pelo menos uma empresa');
@@ -1398,6 +1502,7 @@ export default function ICPQuarantine() {
                 onBulkEnrichReceita={handleBulkEnrichReceita}
                 onBulkEnrichApollo={handleBulkEnrichApollo}
                 onBulkEnrich360={handleBulkEnrich360}
+                onBulkEnrichInternational={handleBulkEnrichInternational}
                 onBulkTotvsCheck={handleBulkTotvsCheck}
                 onBulkDiscoverCNPJ={handleBulkDiscoverCNPJ}
                 onBulkApprove={handleBulkApprove}
@@ -1518,18 +1623,38 @@ export default function ICPQuarantine() {
                       <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'empresa' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                     </Button>
                   </TableHead>
-                  <TableHead className="min-w-[110px]">{/* ✅ CNPJ reduzido */}
+                  <TableHead className="min-w-[140px]">{/* ✅ Localização (Cidade + País) */}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleSort('cnpj')}
+                      onClick={() => handleSort('location')}
                       className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
                     >
-                      <span className="font-semibold">CNPJ</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'cnpj' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
+                      <span className="font-semibold">Localização</span>
+                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'location' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
                     </Button>
                   </TableHead>
-                  <TableHead className="min-w-[120px]">{/* ✅ Origem reduzido */}
+                  <TableHead className="min-w-[110px]">{/* ✅ Bloco */}
+                    <ColumnFilter
+                      column="commercial_block"
+                      title="Bloco"
+                      values={companies.map(c => getCommercialBlockDisplay(c))}
+                      selectedValues={filterBlock}
+                      onFilterChange={setFilterBlock}
+                      onSort={() => handleSort('commercial_block')}
+                    />
+                  </TableHead>
+                  <TableHead className="min-w-[120px]">{/* ✅ Lead Source */}
+                    <ColumnFilter
+                      column="lead_source"
+                      title="Lead Source"
+                      values={companies.map(c => getLeadSource(c))}
+                      selectedValues={filterLeadSource}
+                      onFilterChange={setFilterLeadSource}
+                      onSort={() => handleSort('lead_source')}
+                    />
+                  </TableHead>
+                  <TableHead className="min-w-[120px]">{/* ✅ Origem (mantido para retrocompatibilidade) */}
                     <ColumnFilter
                       column="source_name"
                       title="Origem"
@@ -1537,40 +1662,6 @@ export default function ICPQuarantine() {
                       selectedValues={filterOrigin}
                       onFilterChange={setFilterOrigin}
                       onSort={() => handleSort('source_name')}
-                    />
-                  </TableHead>
-                  <TableHead className="min-w-[90px]">
-                    <ColumnFilter
-                      column="cnpj_status"
-                      title="Status CNPJ"
-                      values={companies.map(c => {
-                        const rawData = (c as any).raw_data?.receita_federal || (c as any).raw_data || {};
-                        
-                        // ✅ Buscar status em MÚLTIPLOS CAMPOS
-                        let status = rawData.situacao || rawData.status || (c as any).cnpj_status || '';
-                        
-                        // ✅ Se tem CNPJ mas sem status = assumir ATIVA
-                        if (c.cnpj && !status) {
-                          status = 'ATIVA';
-                        }
-                        
-                        if (!status) {
-                          return 'PENDENTE';
-                        }
-                        
-                        // Normalizar
-                        const statusUpper = String(status).toUpperCase();
-                        if (statusUpper.includes('ATIVA') || status === '02') return 'ATIVA';
-                        if (statusUpper.includes('SUSPENSA') || status === '03') return 'SUSPENSA';
-                        if (statusUpper.includes('INAPTA') || status === '04') return 'INAPTA';
-                        if (statusUpper.includes('BAIXADA') || status === '08') return 'BAIXADA';
-                        if (statusUpper.includes('NULA') || status === '01') return 'NULA';
-                        
-                        return status;
-                      })}
-                      selectedValues={filterCNPJStatus}
-                      onFilterChange={setFilterCNPJStatus}
-                      onSort={() => handleSort('cnpj_status')}
                     />
                   </TableHead>
                   <TableHead className="min-w-[80px]">
@@ -1583,16 +1674,6 @@ export default function ICPQuarantine() {
                       onSort={() => handleSort('setor')}
                     />
                   </TableHead>
-                     <TableHead className="min-w-[60px]">
-                      <ColumnFilter
-                        column="uf"
-                      title="UF"
-                      values={companies.map(c => c.uf || (c as any).raw_data?.uf || '')}
-                      selectedValues={filterUF}
-                      onFilterChange={setFilterUF}
-                      onSort={() => handleSort('uf')}
-                    />
-                     </TableHead>
                      <TableHead className="min-w-[70px]">
                     <Button
                       variant="ghost"
@@ -1628,20 +1709,20 @@ export default function ICPQuarantine() {
                     />
                   </TableHead>
                   <TableHead className="min-w-[90px]"><span className="font-semibold text-[10px]">Website</span></TableHead>
-                  <TableHead className="min-w-[50px]"><span className="font-semibold text-[10px]">STC</span></TableHead>
+                  <TableHead className="min-w-[50px]"><span className="font-semibold text-[10px]">SCI</span></TableHead>
                   <TableHead className="w-[40px]"><span className="font-semibold text-[10px]">⚙️</span></TableHead>
                 </TableRow>
               </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="text-center py-8">
+                  <TableCell colSpan={12} className="text-center py-8">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : paginatedCompanies.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                     Nenhuma empresa encontrada
                   </TableCell>
                 </TableRow>
@@ -1653,15 +1734,35 @@ export default function ICPQuarantine() {
                     : {};
                   
                   return (
-                  <TableRow key={company.id}>
+                    <React.Fragment key={company.id}>
+                  <TableRow>
                     <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(company.id)}
-                        onCheckedChange={(checked) => 
-                          handleSelectOne(company.id, checked as boolean)
-                        }
-                        disabled={company.status !== 'pendente'}
-                      />
+                      <div className="flex items-center gap-2">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.includes(company.id)}
+                            onCheckedChange={(checked) => 
+                              handleSelectOne(company.id, checked as boolean)
+                            }
+                            disabled={company.status !== 'pendente'}
+                          />
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRow(company.id);
+                          }}
+                        >
+                          {expandedRow === company.id ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="py-4">
                       <div 
@@ -1686,26 +1787,37 @@ export default function ICPQuarantine() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      {company.cnpj ? (
-                        <Badge 
-                          variant="outline" 
-                          className="font-mono text-xs cursor-pointer hover:bg-primary/10 transition-colors whitespace-nowrap"
-                          onClick={() => {
-                            if (company.company_id) {
-                              setExecutiveReportCompanyId(company.company_id);
-                              setExecutiveReportOpen(true);
-                            } else {
-                              toast.info('Empresa ainda não possui relatório completo', {
-                                description: 'Aprove a empresa primeiro para gerar o relatório executivo'
-                              });
-                            }
-                          }}
-                        >
-                          {company.cnpj}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">N/A</span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {(() => {
+                          const location = getLocationDisplay(company);
+                          
+                          if (location.country !== 'N/A') {
+                            return (
+                              <>
+                                <Badge variant="secondary" className="w-fit">
+                                  {location.country}
+                                </Badge>
+                                {location.city && location.city !== 'N/A' && (
+                                  <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={location.city}>
+                                    {location.city}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          }
+                          return <span className="text-xs text-muted-foreground">N/A</span>;
+                        })()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge variant="outline" className="w-fit">
+                        {getCommercialBlockDisplay(company)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge variant="secondary" className="w-fit">
+                        {getLeadSource(company)}
+                      </Badge>
                     </TableCell>
                     <TableCell className="py-4">
                       {company.source_name ? (
@@ -1738,24 +1850,6 @@ export default function ICPQuarantine() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <QuarantineCNPJStatusBadge 
-                        cnpj={company.cnpj} 
-                        cnpjStatus={(() => {
-                          const receitaData = rawData?.receita_federal || rawData || {};
-                          let status = receitaData.situacao || receitaData.status || company.cnpj_status || '';
-                          
-                          // Normalizar para lowercase
-                          if (status.toUpperCase().includes('ATIVA') || status === '02') return 'ativa';
-                          if (status.toUpperCase().includes('SUSPENSA') || status === '03') return 'inativo';
-                          if (status.toUpperCase().includes('INAPTA') || status === '04') return 'inativo';
-                          if (status.toUpperCase().includes('BAIXADA') || status === '08') return 'inexistente';
-                          if (status.toUpperCase().includes('NULA') || status === '01') return 'inexistente';
-                          
-                          return status.toLowerCase();
-                        })()}
-                      />
-                    </TableCell>
                     <TableCell className="py-4">
                       <div className="max-w-[100px]">
                         {(() => {
@@ -1768,24 +1862,6 @@ export default function ICPQuarantine() {
                             <span className="text-xs text-muted-foreground">Não identificado</span>
                           );
                         })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {company.uf ? (
-                          <>
-                            <Badge variant="secondary" className="w-fit">
-                              {company.uf}
-                            </Badge>
-                            {company.municipio && (
-                              <span className="text-xs text-muted-foreground truncate max-w-[120px]" title={company.municipio}>
-                                {company.municipio}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">N/A</span>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1938,7 +2014,384 @@ export default function ICPQuarantine() {
                       />
                     </TableCell>
                   </TableRow>
-                );
+                  
+                  {/* LINHA EXPANDIDA - CARD DROPDOWN COM TODOS OS DADOS (IDÊNTICO À BASE DE EMPRESAS) */}
+                  {expandedRow === company.id && (() => {
+                    const rawDataExpanded = (company.raw_data && typeof company.raw_data === 'object' && !Array.isArray(company.raw_data)) 
+                      ? company.raw_data as Record<string, any>
+                      : {};
+                    
+                    return (
+                      <TableRow>
+                        <TableCell colSpan={12} className="bg-muted/30 p-0">
+                          <Card className="border-0 shadow-none overflow-visible">
+                            <CardContent className="p-6 overflow-visible max-h-[80vh] overflow-y-auto">
+                              <div className="grid grid-cols-2 gap-6">
+                                {/* COLUNA ESQUERDA */}
+                                <div className="space-y-4">
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Building2 className="h-4 w-4" />
+                                      Informações Gerais
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Nome:</span>
+                                        <span className="font-medium flex-1">{company.razao_social || company.company_name}</span>
+                                      </div>
+                                      {company.cnpj && (
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-muted-foreground min-w-[100px]">CNPJ:</span>
+                                          <span className="font-mono text-xs flex-1">{company.cnpj}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Indústria:</span>
+                                        <span className="font-medium flex-1">{company.segmento || company.setor || rawDataExpanded?.setor_amigavel || rawDataExpanded?.atividade_economica || 'N/A'}</span>
+                                      </div>
+                                      {(company.employee_count || company.employees_count) && (
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-muted-foreground min-w-[100px]">Funcionários:</span>
+                                          <Badge variant="secondary" className="flex-1 justify-start w-fit">
+                                            {company.employee_count || company.employees_count}
+                                          </Badge>
+                                        </div>
+                                      )}
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Origem:</span>
+                                        <Badge variant="outline" className="flex-1 justify-start w-fit">
+                                          {getLeadSource(company)}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-muted-foreground min-w-[100px]">Bloco:</span>
+                                        <Badge variant="outline" className="flex-1 justify-start w-fit">
+                                          {getCommercialBlockDisplay(company)}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <MapPin className="h-4 w-4" />
+                                      Localização
+                                    </h4>
+                                    <div className="space-y-1 text-sm">
+                                      {(() => {
+                                        const location = getLocationDisplay(company);
+                                        return (
+                                          <>
+                                            {location.city && location.city !== 'N/A' && <p className="text-muted-foreground">{location.city}</p>}
+                                            {company.state && <p className="text-muted-foreground">{company.state}</p>}
+                                            {location.country && location.country !== 'N/A' && <p className="font-medium">{location.country}</p>}
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+                                  </div>
+                                  
+                                  {(company.description || rawDataExpanded?.notes) && (
+                                    <div>
+                                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                        Descrição
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-4 w-4 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (company.company_id) {
+                                              navigate(`/company/${company.company_id}`);
+                                            }
+                                          }}
+                                          title="Editar descrição na página da empresa"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                      </h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {company.description || rawDataExpanded?.notes}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1 italic">
+                                        💡 Esta descrição pode ser enriquecida via Apollo/LinkedIn
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* COLUNA DIREITA */}
+                                <div className="space-y-4">
+                                  {/* FIT SCORE */}
+                                  {(() => {
+                                    const fitScore = rawDataExpanded?.fit_score || 0;
+                                    const b2bType = rawDataExpanded?.type || company.b2b_type;
+                                    
+                                    if (fitScore > 0) {
+                                      return (
+                                        <div>
+                                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                            <Target className="h-4 w-4" />
+                                            Fit Score
+                                          </h4>
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                                <div
+                                                  className={`h-full ${fitScore >= 80 ? 'bg-green-500' : fitScore >= 60 ? 'bg-yellow-500' : 'bg-orange-500'}`}
+                                                  style={{ width: `${fitScore}%` }}
+                                                />
+                                              </div>
+                                            </div>
+                                            <span className="text-2xl font-bold">{fitScore}</span>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mt-2">
+                                            {fitScore >= 80 && '🟢 Excelente fit para B2B'}
+                                            {fitScore >= 60 && fitScore < 80 && '🟡 Bom fit para B2B'}
+                                            {fitScore < 60 && '🟠 Fit moderado'}
+                                          </p>
+                                          {b2bType && (
+                                            <Badge variant="default" className="mt-2">{b2bType}</Badge>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  
+                                  {/* LINKS EXTERNOS */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Globe className="h-4 w-4" />
+                                      Links Externos
+                                    </h4>
+                                    <div className="space-y-2">
+                                      {/* WEBSITE */}
+                                      {(company.website || rawDataExpanded?.domain) ? (
+                                        <div className="flex items-center gap-2">
+                                          <a href={company.website || rawDataExpanded?.domain} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                            <Globe className="h-4 w-4" />
+                                            Website
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 p-0"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (company.company_id) {
+                                                navigate(`/company/${company.company_id}`);
+                                              }
+                                            }}
+                                            title="Editar website na página da empresa"
+                                          >
+                                            <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="text-xs h-7"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (company.company_id) {
+                                              navigate(`/company/${company.company_id}`);
+                                            }
+                                          }}
+                                        >
+                                          <Plus className="h-3 w-3 mr-1" />
+                                          Adicionar Website
+                                        </Button>
+                                      )}
+                                      
+                                      {/* LINKEDIN */}
+                                      {(() => {
+                                        const linkedinUrl = company.linkedin_url || rawDataExpanded?.linkedin_url;
+                                        if (linkedinUrl) {
+                                          return (
+                                            <div className="flex items-center gap-2">
+                                              <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                                <Linkedin className="h-4 w-4" />
+                                                LinkedIn
+                                                <ExternalLink className="h-3 w-3" />
+                                              </a>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-4 w-4 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  if (company.company_id) {
+                                                    navigate(`/company/${company.company_id}`);
+                                                  }
+                                                }}
+                                                title="Editar LinkedIn na página da empresa"
+                                              >
+                                                <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                              </Button>
+                                            </div>
+                                          );
+                                        }
+                                        return (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (company.company_id) {
+                                                navigate(`/company/${company.company_id}`);
+                                              }
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Adicionar LinkedIn
+                                          </Button>
+                                        );
+                                      })()}
+                                      
+                                      {/* APOLLO */}
+                                      {(() => {
+                                        const apolloId = company.apollo_id || rawDataExpanded?.apollo_id;
+                                        const apolloLink = rawDataExpanded?.apollo_link || (apolloId ? `https://app.apollo.io/#/companies/${apolloId}` : null);
+                                        if (apolloLink) {
+                                          return (
+                                            <div className="flex items-center gap-2">
+                                              <a href={apolloLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                                <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-4 w-4" />
+                                                Apollo.io
+                                                <ExternalLink className="h-3 w-3" />
+                                              </a>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-4 w-4 p-0"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  if (company.company_id) {
+                                                    navigate(`/company/${company.company_id}`);
+                                                  }
+                                                }}
+                                                title="Editar Apollo ID na página da empresa"
+                                              >
+                                                <Edit className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                              </Button>
+                                            </div>
+                                          );
+                                        }
+                                        return (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (company.company_id) {
+                                                navigate(`/company/${company.company_id}`);
+                                              }
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Adicionar Apollo ID
+                                          </Button>
+                                        );
+                                      })()}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* DECISORES - SEMPRE MOSTRAR (mesmo que vazio) */}
+                                  <div>
+                                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                      <Users className="h-4 w-4" />
+                                      Decisores ({(rawDataExpanded?.decision_makers?.length || 0)})
+                                    </h4>
+                                    {(() => {
+                                      const decisores = rawDataExpanded?.decision_makers || [];
+                                      if (decisores.length > 0) {
+                                        return (
+                                          <div className="space-y-2">
+                                            {decisores.slice(0, 5).map((dm: any, idx: number) => (
+                                              <div key={idx} className="p-2 bg-muted/30 rounded text-xs border">
+                                                <div className="font-medium">{dm.name}</div>
+                                                <div className="text-muted-foreground">{dm.title}</div>
+                                                <div className="flex gap-3 mt-2">
+                                                  {dm.linkedin_url && (
+                                                    <a href={dm.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                                      <Linkedin className="h-3 w-3" />
+                                                      LinkedIn
+                                                    </a>
+                                                  )}
+                                                  {dm.apollo_link && (
+                                                    <a href={dm.apollo_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                                      <img src="https://www.apollo.io/favicon.ico" alt="Apollo" className="h-3 w-3" />
+                                                      Apollo
+                                                    </a>
+                                                  )}
+                                                  {dm.email && (
+                                                    <a href={`mailto:${dm.email}`} className="flex items-center gap-1 text-primary hover:underline">
+                                                      <Mail className="h-3 w-3" />
+                                                      Email
+                                                    </a>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        );
+                                      }
+                                      return (
+                                        <div className="text-center py-4 space-y-3">
+                                          <p className="text-xs text-muted-foreground">Nenhum decisor cadastrado</p>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-xs h-7"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              
+                                              try {
+                                                toast.info('🔍 Buscando decisores no Apollo...');
+                                                
+                                                const { data, error } = await supabase.functions.invoke('enrich-apollo-decisores', {
+                                                  body: {
+                                                    company_id: company.company_id || company.id,
+                                                    company_name: company.razao_social || company.company_name,
+                                                    domain: company.website || rawDataExpanded?.domain,
+                                                    modes: ['people', 'company'],
+                                                    city: company.city || rawDataExpanded?.city,
+                                                    state: company.state || rawDataExpanded?.state,
+                                                  }
+                                                });
+                                                
+                                                if (error) throw error;
+                                                
+                                                toast.success(`✅ ${data?.decisores?.length || 0} decisores encontrados!`);
+                                                refetch();
+                                              } catch (err: any) {
+                                                console.error('Erro ao buscar decisores:', err);
+                                                toast.error('Erro ao buscar decisores no Apollo');
+                                              }
+                                            }}
+                                          >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Buscar Decisores no Apollo
+                                          </Button>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })()}
+                    </React.Fragment>
+                  );
                 })
               )}
             </TableBody>

@@ -523,6 +523,11 @@ serve(async (req) => {
             naics_codes: organizationData.naics_codes || [],
             retail_location_count: organizationData.retail_location_count,
             raw_location_count: organizationData.raw_location_count,
+            // ✅ CRÍTICO: País da organização Apollo (extraído da fonte real)
+            country: organizationData.country || organizationData.primary_phone?.country_code || null,
+            headquarters_country: organizationData.headquarters_country || null,
+            city: organizationData.city || null,
+            state: organizationData.state || null,
           } : null
         }
       };
@@ -538,6 +543,28 @@ serve(async (req) => {
       
       if (organizationData?.industry) {
         updateData.industry = organizationData.industry;
+      }
+      
+      // ✅ CRÍTICO: Atualizar país da empresa (extraído da Apollo - fonte real)
+      if (organizationData?.country && typeof organizationData.country === 'string' && organizationData.country.trim() !== '') {
+        const apolloCountry = organizationData.country.trim();
+        console.log(`[ENRICH-APOLLO] 🌍 País extraído da Apollo: ${apolloCountry} para empresa ${companyName || companyId}`);
+        updateData.country = apolloCountry;
+      } else if (organizationData?.headquarters_country && typeof organizationData.headquarters_country === 'string' && organizationData.headquarters_country.trim() !== '') {
+        const apolloCountry = organizationData.headquarters_country.trim();
+        console.log(`[ENRICH-APOLLO] 🌍 País (headquarters) extraído da Apollo: ${apolloCountry} para empresa ${companyName || companyId}`);
+        updateData.country = apolloCountry;
+      } else {
+        console.warn(`[ENRICH-APOLLO] ⚠️ País NÃO encontrado na resposta Apollo para empresa ${companyName || companyId}. Verifique API Apollo.`);
+      }
+      
+      // ✅ Atualizar cidade e estado se disponíveis
+      if (organizationData?.city && typeof organizationData.city === 'string' && organizationData.city.trim() !== '') {
+        updateData.city = organizationData.city.trim();
+      }
+      
+      if (organizationData?.state && typeof organizationData.state === 'string' && organizationData.state.trim() !== '') {
+        updateData.state = organizationData.state.trim();
       }
       
       if (organizationData?.short_description) {

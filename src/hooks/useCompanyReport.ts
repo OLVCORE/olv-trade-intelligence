@@ -245,17 +245,22 @@ export function useCompanyReport(companyId: string | undefined) {
         };
       }
 
-      // Se não existir, gerar novo
-      const { data, error } = await supabase.functions.invoke('generate-company-report', {
-        body: { companyId }
-      });
+      // Se não existir, retornar null (não gerar automaticamente devido a CORS)
+      // TODO: Corrigir CORS na Edge Function generate-company-report
+      console.warn('[useCompanyReport] Relatório não encontrado. Geração automática desabilitada devido a CORS.');
+      return null;
       
-      if (error) {
-        console.error('Error generating report:', error);
-        throw error;
-      }
-
-      return data;
+      // DESABILITADO: Geração automática causa erro CORS
+      // const { data, error } = await supabase.functions.invoke('generate-company-report', {
+      //   body: { companyId }
+      // });
+      // 
+      // if (error) {
+      //   console.error('Error generating report:', error);
+      //   throw error;
+      // }
+      //
+      // return data;
     },
     enabled: !!companyId,
     staleTime: 300000, // 5 minutes

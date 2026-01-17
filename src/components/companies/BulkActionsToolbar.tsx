@@ -50,6 +50,7 @@ interface BulkActionsToolbarProps {
   onBulkDiscoverCNPJ?: () => Promise<void>;
   onBulkApprove?: () => Promise<void>;
   onBulkSendToQuarantine?: () => Promise<void>; // 🆕 NOVO
+  onBulkEnrichInternational?: () => Promise<void>; // ✅ NOVO: Enriquecer Dados Internacionais
   onExportSelected: () => void;
   isProcessing?: boolean;
 }
@@ -68,6 +69,7 @@ export function BulkActionsToolbar({
   onBulkDiscoverCNPJ,
   onBulkApprove,
   onBulkSendToQuarantine, // 🆕 NOVO
+  onBulkEnrichInternational, // ✅ NOVO: Enriquecer Dados Internacionais
   onExportSelected,
   isProcessing = false
 }: BulkActionsToolbarProps) {
@@ -142,7 +144,13 @@ export function BulkActionsToolbar({
                   Enriquecer
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent 
+                align="end"
+                side="bottom"
+                sideOffset={5}
+                alignOffset={0}
+                className="max-h-[80vh] overflow-y-auto"
+              >
                 {onBulkDiscoverCNPJ && (
                   <>
                     <DropdownMenuItem 
@@ -192,6 +200,17 @@ export function BulkActionsToolbar({
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   360° Completo
+                </DropdownMenuItem>
+                {/* ✅ NOVO: Enriquecer Dados Internacionais em Massa */}
+                <DropdownMenuItem 
+                  onClick={async () => {
+                    if (!onBulkEnrichInternational) return;
+                    onBulkEnrichInternational();
+                  }}
+                  disabled={isProcessing}
+                >
+                  <Globe className="h-4 w-4 mr-2" />
+                  Enriquecer Dados Internacionais
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -51,6 +51,8 @@ import { HSCodeAutocomplete } from './HSCodeAutocomplete';
 interface DealerDiscoveryFormProps {
   onSearch: (params: DealerSearchParams) => void;
   isSearching: boolean;
+  onCancel?: () => void;
+  isCancelling?: boolean;
 }
 
 export interface DealerSearchParams {
@@ -85,7 +87,7 @@ const B2B_INCLUDE_KEYWORDS = [
 ];
 
 const B2C_EXCLUDE_KEYWORDS = [
-  'Pilates Studio',
+  'Fitness Studio',
   'Gym / Fitness Center',
   'Wellness Center',
   'Personal Training',
@@ -95,7 +97,7 @@ const B2C_EXCLUDE_KEYWORDS = [
   'Physiotherapy',
 ];
 
-export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFormProps) {
+export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancelling }: DealerDiscoveryFormProps) {
   const [hsCodes, setHsCodes] = useState<string[]>([]); // MÚLTIPLOS HS Codes
   const [hsCodeInput, setHsCodeInput] = useState(''); // Input temporário
   const [countries, setCountries] = useState<string[]>([]);
@@ -188,7 +190,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
       excludeKeywords, // Keywords B2C selecionadas
       keywords: customKeywords.length > 0 
         ? customKeywords // Se tem custom, usar elas
-        : ['pilates', 'fitness equipment', 'gym equipment'], // Senão, padrão
+        : [], // Sem padrão - usuário deve fornecer keywords
     });
   };
 
@@ -222,7 +224,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
           Descobrir Dealers & Distribuidores B2B
         </CardTitle>
         <CardDescription>
-          Encontre distribuidores, wholesalers e importadores internacionais de equipamentos de pilates
+          Encontre distribuidores, wholesalers e importadores internacionais de qualquer produto
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -332,7 +334,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                       • Digite código (ex: 9506.91) → Aperte <kbd className="px-1 py-0.5 bg-muted rounded">TAB</kbd><br />
                       • Adicione quantos quiser (2, 5, 10 códigos)<br />
                       • Sistema busca dealers para TODOS os códigos<br />
-                      • Útil para: Pilates (9506.91) + Furniture (9403.60)
+                      • Útil para: Múltiplos produtos simultaneamente (ex: 1701 + 9403.60)
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -344,7 +346,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
               <HSCodeAutocomplete
                 value={hsCodeInput}
                 onSelect={(code) => handleAddHSCode(code)} // Adiciona automaticamente ao clicar
-                placeholder="🔍 Digite código (ex: 9506) ou produto (ex: pilates, furniture, footwear)..."
+                placeholder="🔍 Digite código (ex: 1701) ou produto (ex: sugar, furniture, footwear)..."
               />
               
               {/* HS Codes adicionados */}
@@ -720,7 +722,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
                   <X className="h-3 w-3" /> EXCLUIR:
                 </span>
                 <div className="mt-1 space-y-1 text-muted-foreground">
-                  <div>• Pilates Studio</div>
+                  <div>• Fitness Studio</div>
                   <div>• Gym / Fitness Center</div>
                   <div>• Wellness Center</div>
                   <div>• Personal Training</div>
@@ -735,24 +737,38 @@ export function DealerDiscoveryForm({ onSearch, isSearching }: DealerDiscoveryFo
           </div>
 
           {/* SUBMIT BUTTON */}
-          <Button
-            type="submit"
-            disabled={!canSearch || isSearching}
-            className="w-full gap-2"
-            size="lg"
-          >
-            {isSearching ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Buscando Dealers B2B...
-              </>
-            ) : (
-              <>
-                <Search className="h-5 w-5" />
-                Buscar Dealers & Distribuidores
-              </>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              type="submit"
+              disabled={!canSearch || isSearching}
+              className="flex-1 gap-2"
+              size="lg"
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Buscando Dealers B2B...
+                </>
+              ) : (
+                <>
+                  <Search className="h-5 w-5" />
+                  Buscar Dealers & Distribuidores
+                </>
+              )}
+            </Button>
+            {isSearching && onCancel && (
+              <Button
+                type="button"
+                onClick={onCancel}
+                disabled={isCancelling}
+                className="gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 shadow-lg animate-pulse"
+                size="lg"
+              >
+                <X className="h-5 w-5" />
+                {isCancelling ? "Cancelando..." : "⛔ ABORTAR"}
+              </Button>
             )}
-          </Button>
+          </div>
 
           {isSearching && (
             <p className="text-xs text-center text-muted-foreground">

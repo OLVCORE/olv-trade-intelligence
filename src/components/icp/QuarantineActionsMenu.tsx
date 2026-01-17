@@ -21,7 +21,8 @@ import {
   Sparkles,
   Search,
   CheckCircle,
-  Undo2
+  Undo2,
+  Globe
 } from 'lucide-react';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { useState } from 'react';
@@ -38,6 +39,7 @@ interface QuarantineActionsMenuProps {
   onBulkTotvsCheck?: () => Promise<void>;
   onBulkDiscoverCNPJ?: () => Promise<void>;
   onBulkApprove?: () => Promise<void>;
+  onBulkEnrichInternational?: () => Promise<void>; // ✅ NOVO: Enriquecer Dados Internacionais
   onReverifyAllV2?: () => void;
   onRestoreDiscarded?: () => Promise<void>;
   isProcessing?: boolean;
@@ -58,6 +60,7 @@ export function QuarantineActionsMenu({
   onBulkTotvsCheck,
   onBulkDiscoverCNPJ,
   onBulkApprove,
+  onBulkEnrichInternational, // ✅ NOVO: Enriquecer Dados Internacionais
   onReverifyAllV2,
   onRestoreDiscarded,
   isProcessing = false,
@@ -99,8 +102,17 @@ export function QuarantineActionsMenu({
           </Button>
         </DropdownMenuTrigger>
       <DropdownMenuContent 
-        align="end" 
-        className="w-64 z-[100] bg-popover"
+        align="end"
+        side="bottom"
+        sideOffset={5}
+        alignOffset={0}
+        className="w-64 bg-popover max-h-[calc(100vh-120px)] overflow-y-auto"
+        style={{ 
+          position: 'fixed',
+          maxHeight: 'calc(100vh - 120px)',
+          zIndex: 9999,
+          transform: 'none',
+        }}
         data-testid="quarantine-actions-dropdown"
       >
         <DropdownMenuLabel>
@@ -271,6 +283,21 @@ export function QuarantineActionsMenu({
             >
               <Sparkles className="h-4 w-4 mr-2" />
               360° Completo
+            </DropdownMenuItem>
+          )}
+          
+          {/* ✅ NOVO: Enriquecer Dados Internacionais em Massa */}
+          {onBulkEnrichInternational && (
+            <DropdownMenuItem 
+              onClick={() => {
+                if (selectedCount === 0 || !onBulkEnrichInternational) return;
+                onBulkEnrichInternational();
+              }}
+              disabled={selectedCount === 0 || isProcessing}
+              className="transition-all duration-200 cursor-pointer hover:bg-accent hover:shadow-md hover:border-l-2 hover:border-primary"
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Enriquecer Dados Internacionais
             </DropdownMenuItem>
           )}
         </DropdownMenuGroup>

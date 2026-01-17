@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Check, ChevronsUpDown, Building2, Sparkles, X, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { normalizeCompanyData } from '@/lib/utils/companyDataNormalizer';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DealFormDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface DealFormDialogProps {
 
 export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialogProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'select' | 'manual' | 'icp'>('icp');
   const [companies, setCompanies] = useState<any[]>([]);
@@ -69,12 +71,13 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
       let queryBuilder = supabase
         .from('icp_analysis_results')
         .select('*')
-        .eq('status', 'aprovado') // FIX: usar tabela e status corretos
+        .eq('status', 'aprovada') // ✅ CORRIGIDO: 'aprovado' → 'aprovada'
         .order('icp_score', { ascending: false, nullsLast: true });
 
       if (query) {
         const cleanQuery = query.replace(/[^\w\s]/g, '');
-        queryBuilder = queryBuilder.or(`name.ilike.%${query}%,cnpj.ilike.%${cleanQuery}%`);
+        // ✅ CORRIGIDO: Usar razao_social em vez de name
+        queryBuilder = queryBuilder.or(`razao_social.ilike.%${query}%,cnpj.ilike.%${cleanQuery}%`);
       }
 
       const { data, error } = await queryBuilder.limit(50);
@@ -459,14 +462,16 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
           companyId = newCompany.id;
         }
 
-        // Marcar lead como aprovado/movido para pipeline
-        await supabase
-          .from('leads_qualified')
-          .update({ 
-            status: 'aprovada',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedLeadICP.id);
+        // ✅ REMOVIDO: leads_qualified não existe mais
+        // Lead já está em icp_analysis_results com status='aprovada'
+        // Opcional: Marcar como movido para pipeline se houver coluna pipeline_status
+        // await supabase
+        //   .from('icp_analysis_results')
+        //   .update({ 
+        //     pipeline_status: 'in_pipeline',
+        //     updated_at: new Date().toISOString()
+        //   })
+        //   .eq('id', selectedLeadICP.id);
       }
       // Modo SELECT: usar empresa selecionada
       else if (mode === 'select') {
@@ -552,6 +557,11 @@ export function DealFormDialog({ open, onOpenChange, onSuccess }: DealFormDialog
         });
 
       if (dealError) throw dealError;
+
+      // ✅ INVALIDAR CACHE DO SALES WORKSPACE (garantir que deal aparece no pipeline)
+      queryClient.invalidateQueries({ queryKey: ['sales_deals'] });
+      queryClient.invalidateQueries({ queryKey: ['sdr_deals'] });
+      queryClient.invalidateQueries({ queryKey: ['sales_deals'] });
 
       toast({
         title: '✅ Deal criado com sucesso!',

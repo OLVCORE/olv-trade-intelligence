@@ -107,10 +107,55 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
   console.log(`💾 [FLOW] Salvando ${dealers.length} dealers...`);
   
   try {
-    // ETAPA 1: Preparar dados para companies (NORMALIZADOR UNIVERSAL!)
-    const companiesToInsert = dealers.map(dealer => ({
-      // ✅ Campos base (tabela companies)
-      company_name: dealer.name,
+    // ETAPA 1: Enriquecer informações via scraping (se website disponível)
+    const enrichedDealers = await Promise.all(
+      dealers.map(async (dealer) => {
+        // Se tem website, tentar extrair informações reais
+        if (dealer.website && (dealer.website.startsWith('http') || dealer.website.includes('.'))) {
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+            const response = await fetch(`${supabaseUrl}/functions/v1/extract-company-info-from-url`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({ url: dealer.website }),
+            });
+
+            if (response.ok) {
+              const scrapedInfo = await response.json();
+              
+              // ✅ Usar nome da empresa extraído do website (não título da página)
+              if (scrapedInfo.company_name && scrapedInfo.company_name.length > 3) {
+                dealer.name = scrapedInfo.company_name;
+                console.log(`[FLOW] ✅ Nome corrigido via scraping: "${dealer.name}"`);
+              }
+              
+              // ✅ Usar país extraído do website (código postal, endereço, etc.)
+              if (scrapedInfo.country && scrapedInfo.country !== 'N/A') {
+                dealer.country = scrapedInfo.country;
+                console.log(`[FLOW] ✅ País corrigido via scraping: "${dealer.country}"`);
+              }
+              
+              // ✅ Atualizar cidade e estado se disponíveis
+              if (scrapedInfo.city) dealer.city = scrapedInfo.city;
+              if (scrapedInfo.state) dealer.state = scrapedInfo.state;
+            }
+          } catch (error) {
+            console.error(`[FLOW] ⚠️ Erro ao enriquecer via scraping para ${dealer.name}:`, error);
+            // Continuar mesmo se scraping falhar
+          }
+        }
+        
+        return dealer;
+      })
+    );
+
+    // ETAPA 2: Preparar dados para companies (NORMALIZADOR UNIVERSAL!)
+    const companiesToInsert = enrichedDealers.map(dealer => ({
+      // ✅ Campos base (tabela companies) - USANDO DADOS ENRIQUECIDOS
+      company_name: dealer.name, // ✅ Já corrigido via scraping se disponível
       website: dealer.website || null,
       city: dealer.city || null,
       state: dealer.state || null,
@@ -123,6 +168,7 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
       b2b_type: dealer.b2bType || 'distributor',
       description: dealer.description || null,
       data_source: 'dealer_discovery',
+      lead_source: 'Export Dealers (B2B)', // ✅ NOVO: Registro de Lead Source (campo direto)
       tenant_id: currentWorkspace?.tenant_id || null,
       workspace_id: currentWorkspace?.id || null,
       
@@ -135,6 +181,7 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
         fit_score: dealer.fitScore || 50,
         description: dealer.description,
         source: 'dealer_discovery_realtime',
+        lead_source: 'Export Dealers (B2B)', // ✅ NOVO: Registro de Lead Source
         search_date: new Date().toISOString(),
         validated: true,
         type: dealer.b2bType ? `${dealer.b2bType[0].toUpperCase()}${dealer.b2bType.slice(1)}` : 'Distributor',

@@ -16,7 +16,8 @@ import {
   Sparkles,
   Target,
   Building2,
-  Zap
+  Zap,
+  Globe
 } from 'lucide-react';
 import apolloIcon from '@/assets/logos/apollo-icon.ico';
 import { useState } from 'react';
@@ -28,6 +29,7 @@ interface CompaniesActionsMenuProps {
   onBulkEnrichReceita?: () => Promise<void>;
   onBulkEnrichApollo?: () => Promise<void>;
   onBulkEnrich360?: () => Promise<void>;
+  onBulkEnrichInternational?: () => Promise<void>; // ✅ NOVO: Enriquecer Dados Internacionais
   onBulkEcoBooster?: () => Promise<void>;
   onBulkSendToQuarantine?: () => Promise<void>;
   isProcessing?: boolean;
@@ -40,6 +42,7 @@ export function CompaniesActionsMenu({
   onBulkEnrichReceita,
   onBulkEnrichApollo,
   onBulkEnrich360,
+  onBulkEnrichInternational, // ✅ NOVO: Enriquecer Dados Internacionais
   onBulkEcoBooster,
   onBulkSendToQuarantine,
   isProcessing = false,
@@ -75,8 +78,11 @@ export function CompaniesActionsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
-        align="end" 
-        className="w-64 z-[100] bg-popover"
+        align="end"
+        side="bottom"
+        sideOffset={5}
+        alignOffset={0}
+        className="w-64 z-[100] bg-popover max-h-[80vh] overflow-y-auto"
       >
         <DropdownMenuLabel>
           {selectedCount > 0 ? `${selectedCount} selecionada(s)` : 'Nenhuma empresa selecionada'}
@@ -119,6 +125,18 @@ export function CompaniesActionsMenu({
             >
               <Sparkles className="h-4 w-4 mr-2" />
               360° em Lote
+            </DropdownMenuItem>
+          )}
+
+          {/* ✅ NOVO: Enriquecer Dados Internacionais em Massa */}
+          {onBulkEnrichInternational && (
+            <DropdownMenuItem 
+              onClick={onBulkEnrichInternational}
+              disabled={selectedCount === 0 || isDeleting}
+              className="cursor-pointer hover:bg-accent"
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Enriquecer Dados Internacionais
             </DropdownMenuItem>
           )}
 

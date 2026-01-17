@@ -96,11 +96,15 @@ export function useQuarantineCompanies(filters?: {
         console.warn('[QUARENTENA] ⚠️ Execute a migration 20260116000002_cleanup_quarantine_orphans.sql para limpar');
       }
 
+      // ✅ FILTRO PADRÃO: Apenas empresas pendentes (não aprovadas, não descartadas)
+      // Isso garante que empresas aprovadas/descartadas não apareçam mais na quarentena
       let query = supabase
         .from('icp_analysis_results')
         .select('*')
+        .eq('status', 'pendente') // ✅ PADRÃO: Apenas pendentes na quarentena
         .order('icp_score', { ascending: false });
 
+      // Se filtro específico de status for passado, substituir o padrão
       if (filters?.status) {
         query = query.eq('status', filters.status);
       }
@@ -185,34 +189,133 @@ export function useApproveQuarantineBatch() {
         throw new Error('Nenhuma empresa possui dados válidos (Razão Social é obrigatória)');
       }
 
+      // 2a. Buscar tenant_id do usuário autenticado (OBRIGATÓRIO para RLS)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (userError) throw userError;
+      if (!userData?.tenant_id) throw new Error('Usuário sem tenant associado');
+
       // 3. Inserir no leads_pool apenas empresas válidas
       // ⚠️ CNPJ pode ser NULL para empresas internacionais
-      const leadsToInsert = validCompanies.map(q => ({
-        company_id: q.company_id || null,
-        cnpj: q.cnpj || null, // ✅ Permite NULL para empresas internacionais
-        razao_social: q.razao_social!,
-        icp_score: q.icp_score || 0,
-        temperatura: q.temperatura || 'cold',
-        status: 'pool',
-        source: 'icp_batch_analysis',
-        origem: 'icp_massa',
-        raw_data: q.raw_analysis || {},
-      }));
+      // ✅ tenant_id é OBRIGATÓRIO para RLS multi-tenant
+      // ✅ PRESERVAR TODOS OS DADOS: website, linkedin, apollo, etc.
+      const leadsToInsert = validCompanies.map(q => {
+        // ✅ Preservar TODOS os dados do raw_analysis, incluindo website, linkedin, apollo
+        const rawData = q.raw_analysis || {};
+        
+        // ✅ Garantir que dados críticos estejam preservados
+        const preservedRawData = {
+          ...rawData,
+          // Preservar links externos se existirem
+          domain: rawData.domain || rawData.website || q.website || null,
+          website: rawData.website || rawData.domain || q.website || null,
+          linkedin_url: rawData.linkedin_url || rawData.linkedIn_url || rawData.linkedin || null,
+          apollo_id: rawData.apollo_id || rawData.apolloId || null,
+          apollo_link: rawData.apollo_link || rawData.apolloLink || null,
+          apollo_organization: rawData.apollo_organization || rawData.apolloOrganization || null,
+          // Preservar dados de localização
+          country: rawData.country || q.country || null,
+          city: rawData.city || q.city || null,
+          state: rawData.state || q.state || null,
+          // Preservar outros dados importantes
+          decision_makers: rawData.decision_makers || rawData.decisores || [],
+          apollo_decisores_count: rawData.apollo_decisores_count || rawData.apolloDecisoresCount || 0,
+        };
+        
+        return {
+          tenant_id: userData.tenant_id, // ✅ OBRIGATÓRIO para RLS
+          company_id: q.company_id || null,
+          cnpj: q.cnpj || null, // ✅ Permite NULL para empresas internacionais
+          razao_social: q.razao_social!,
+          icp_score: q.icp_score || 0,
+          temperatura: q.temperatura || 'cold',
+          status: 'pool',
+          source: 'icp_batch_analysis',
+          origem: 'icp_massa',
+          raw_data: preservedRawData, // ✅ DADOS COMPLETOS PRESERVADOS
+        };
+      });
 
-      const { error: insertError } = await supabase
+      // 🔍 LOG DETALHADO para debug
+      console.log('[APPROVE-BATCH] 📋 Inserindo leads no pool:', {
+        count: leadsToInsert.length,
+        sample: leadsToInsert.slice(0, 2).map(l => ({
+          razao_social: l.razao_social,
+          cnpj: l.cnpj ? 'SIM' : 'NULL (internacional)',
+          status: l.status,
+          origem: l.origem,
+          icp_score: l.icp_score,
+          temperatura: l.temperatura,
+        })),
+      });
+
+      const { data: insertedData, error: insertError } = await supabase
         .from('leads_pool')
-        .insert(leadsToInsert);
+        .insert(leadsToInsert)
+        .select('id, razao_social, cnpj, status');
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('[APPROVE-BATCH] ❌ Erro ao inserir no leads_pool:', {
+          error: insertError,
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint,
+          samplePayload: leadsToInsert[0],
+          fullError: JSON.stringify(insertError, null, 2),
+        });
+        
+        // ✅ EXPANDIR MENSAGEM DE ERRO PARA AJUDAR NO DEBUG
+        const errorMessage = `
+Erro ao inserir no leads_pool:
+- Código: ${insertError.code}
+- Mensagem: ${insertError.message}
+- Detalhes: ${insertError.details || 'N/A'}
+- Hint: ${insertError.hint || 'N/A'}
 
-      // 4. Atualizar status na quarentena para empresas válidas
+⚠️ POSSÍVEL CAUSA: Migration não aplicada ou constraint violada.
+✅ SOLUÇÃO: Aplique a migration 20260117000000_fix_leads_pool_approval.sql no Supabase.
+        `.trim();
+        
+        throw new Error(errorMessage);
+      }
+
+      console.log('[APPROVE-BATCH] ✅ Leads inseridos com sucesso:', {
+        count: insertedData?.length || 0,
+        insertedIds: insertedData?.map(d => d.id) || [],
+      });
+
+      // 4. Atualizar status na quarentena para empresas válidas (EM MASSA)
+      // ✅ CORRIGIDO: Atualização em massa funciona melhor que loop individual
       const validIds = validCompanies.map(q => q.id);
       const { error: updateError } = await supabase
         .from('icp_analysis_results')
         .update({ status: 'aprovada' })
         .in('id', validIds);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[APPROVE-BATCH] ❌ Erro ao atualizar status para aprovada:', {
+          error: updateError,
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+          validIds: validIds,
+        });
+        throw updateError;
+      }
+
+      console.log('[APPROVE-BATCH] ✅ Status atualizado para aprovada:', {
+        count: validIds.length,
+        ids: validIds,
+      });
 
       // 5. Marcar empresas inválidas como "dados_incompletos"
       if (invalidCompanies.length > 0) {
