@@ -68,7 +68,7 @@ const PersonasLibraryPage = lazy(() => import("./pages/PersonasLibraryPage"));
 const DataMigrationPage = lazy(() => import("./pages/DataMigrationPage"));
 const EnhancedBenchmarkPage = lazy(() => import("./pages/EnhancedBenchmarkPage"));
 const PlaybooksPage = lazy(() => import("./pages/PlaybooksPage"));
-const ReEnrichCompaniesPage = lazy(() => import("./pages/Admin/ReEnrichCompaniesPage"));
+// const ReEnrichCompaniesPage = lazy(() => import("./pages/Admin/ReEnrichCompaniesPage"));
 const CompanyDetailPage = lazy(() => import("./pages/CompanyDetailPage"));
 const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
 const CanvasPage = lazy(() => import("./pages/CanvasPage"));
@@ -442,6 +442,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Temporarily disabled - file not found in Vercel build
             <Route
               path="/admin/re-enrich-companies"
               element={
@@ -452,6 +453,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            */}
             <Route
               path="/company/:id"
               element={
