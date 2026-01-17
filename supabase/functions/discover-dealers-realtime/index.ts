@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ✅ NOVO: Importar serviços de bloqueio e classificação (via URL import se necessário)
+// Como estamos em Edge Function (Deno), usar imports diretos quando possível
+// Para agora, consolidar lógica inline mas usando padrões dos serviços
+
 // ============================================================================
 // HELPER: Determinar tipo B2B
 // ============================================================================
@@ -308,11 +312,17 @@ async function searchSerper(keyword: string, country: string) {
     const link = (r.link || '').toLowerCase();
     const text = snippet + ' ' + title + ' ' + link;
     
-    // 🚫 BLOQUEAR MARKETPLACES E PORTALS
+    // 🚫 BLOQUEAR MARKETPLACES E PORTALS E E-COMMERCE
     const blockedPatterns = [
       'alibaba.com', 'made-in-china.com', 'ebay.', 'aliexpress.com',
       'kompass.com', 'europages.com', // Portais genéricos
-      '/product/', '/products/', '/itm/', '/item/', '/listing/',
+      'falabella', 'compumarket', 'mercado-livre', 'mercadolibre', 'mercadolivre',
+      'linio', 'ripley', 'oechsle', 'saga', 'sodimac', 'wong', 'metro', 'tottus',
+      'fravega', 'garbarino', 'alkosto', 'alkomprar', 'liverpool', 'palacio', 'coppel',
+      'americanas', 'magazine-luiza', 'casas-bahia', 'extra', 'pontofrio', 'submarino',
+      '/product/', '/products/', '/produto/', '/produtos/', '/tienda/', '/tiendas/',
+      '/shop/', '/store/', '/categoria/', '/categorias/', '/cat/', '/category/',
+      '/itm/', '/item/', '/listing/',
       '/publication', '/journal', '/transactions', '/ieee',
       'facebook.com/posts', 'facebook.com/pages', 'linkedin.com/posts',
       'book', 'ebook', 'publication', 'publisher', 'publishing',
@@ -459,7 +469,7 @@ async function searchGoogleAPI(keyword: string, country: string) {
 // CAMADA 4: WEB SCRAPING (Calcular Fit Score)
 // ============================================================================
 
-async function calculateFitScore(website: string, keywords: string[]): Promise<number> {
+async function calculateFitScore(website: string, keywords: string[], requiredKeywords: string[] = []): Promise<number> {
   try {
     const response = await fetch(website, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -478,12 +488,44 @@ async function calculateFitScore(website: string, keywords: string[]): Promise<n
       'b2b', 'bulk', 'commercial', 'trade', 'export', 'import'
     ];
 
+    // ✅ CRÍTICO: Validar se contém keywords obrigatórias do usuário
+    if (requiredKeywords.length > 0) {
+      const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normalizedKeywords = requiredKeywords.map(normalize);
+      const normalizedText = normalize(text);
+      
+      const hasRequiredKeyword = normalizedKeywords.some(keyword => 
+        normalizedText.includes(keyword) || 
+        normalizedText.includes(keyword.split(' ')[0]) // Aceitar palavra parcial
+      );
+      
+      // ✅ OBRIGATÓRIO: Se não contém keywords do usuário, Fit Score = 0 (será rejeitado)
+      if (!hasRequiredKeyword) {
+        console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" não contém keywords obrigatórias: ${requiredKeywords.join(', ')}`);
+        return 0;
+      }
+    }
+    
     // Se keywords foram fornecidas, usar elas + termos B2B
     const searchTerms = keywords.length > 0 
       ? [...keywords.map(k => k.toLowerCase()), ...b2bKeywords]
       : b2bKeywords;
 
     const found = searchTerms.filter(kw => text.includes(kw.toLowerCase()));
+
+    // 🚫 BLOQUEAR MARKETPLACES/E-COMMERCE no scraping também
+    const blockedInText = [
+      'falabella', 'compumarket', 'mercado-livre', 'mercadolibre', 'mercadolivre',
+      'linio', 'ripley', 'oechsle', 'saga', 'sodimac', 'wong', 'metro', 'tottus',
+      'fravega', 'garbarino', 'alkosto', 'alkomprar', 'liverpool', 'palacio', 'coppel',
+      'americanas', 'magazine-luiza', 'casas-bahia', 'extra', 'pontofrio', 'submarino',
+      'amazon', 'ebay', 'alibaba', 'made-in-china', 'aliexpress',
+    ];
+    
+    if (blockedInText.some(blocked => text.includes(blocked))) {
+      console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" é marketplace/e-commerce bloqueado`);
+      return 0;
+    }
 
     // MÍNIMO 2 KEYWORDS B2B = Fit 60
     if (found.length < 2) return 0;
@@ -617,7 +659,7 @@ serve(async (req) => {
 
     stats.total_bruto = allDealers.length;
 
-    // FILTRAR: Remover Facebook, Instagram, páginas genéricas, MARKETPLACES, etc.
+    // FILTRAR: Remover Facebook, Instagram, páginas genéricas, MARKETPLACES, E-COMMERCE, etc.
     const BLOCKED_DOMAINS = [
       // Redes sociais
       'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com', 
@@ -625,45 +667,203 @@ serve(async (req) => {
       // Blogs e conteúdo genérico
       'blogspot.com', 'wordpress.com', 'medium.com', 'tumblr.com',
       'wikipedia.org', 'quora.com', 'yelp.com', 'tripadvisor.com',
-      // MARKETPLACES (BLOQUEADOS!)
+      // MARKETPLACES GLOBAIS (BLOQUEADOS!)
       'faire.com', 'etsy.com', 'amazon.com', 'ebay.com',
       'alibaba.com', 'made-in-china.com', 'aliexpress.com', 'globalsources.com',
       'dhgate.com', 'tradekey.com', 'ec21.com', 'ecplaza.net',
       // URLs específicas de marketplace
       'm.alibaba.com', 'mm.made-in-china.com', 'inbusiness.aliexpress.com',
+      // E-COMMERCE E MARKETPLACES LATINO-AMERICANOS (BLOQUEADOS!)
+      'falabella.com', 'falabella.cl', 'falabella.com.co', 'falabella.com.pe',
+      'compumarket.com.py', 'compumarket.com',
+      'mercado-livre.com', 'mercadolivre.com.br', 'mercadolibre.com',
+      'linio.com', 'linio.com.mx', 'linio.com.co', 'linio.com.pe',
+      'ripley.com', 'ripley.cl', 'ripley.com.pe',
+      'oechsle.com', 'oechsle.com.pe',
+      'saga.com.pe', 'sodimac.com', 'sodimac.cl', 'sodimac.com.pe',
+      'wong.com.pe', 'metro.com.pe', 'tottus.com.pe',
+      'casaidea.com', 'paris.cl', 'lider.cl', 'jumbo.cl',
+      'fravega.com', 'fravega.com.ar', 'garbarino.com', 'garbarino.com.ar',
+      'almacenes-exito.com', 'exito.com', 'carulla.com', 'carulla.com.co',
+      'alkosto.com', 'alkomprar.com', 'k-tronix.com',
+      'liverpool.com.mx', 'palacio.com.mx', 'el-palacio-de-hierro.com',
+      'coppel.com', 'coppel.com.mx', 'coppel.com.ar',
+      'magazine-luiza.com.br', 'americanas.com.br', 'submarino.com.br',
+      'casas-bahia.com.br', 'extra.com.br', 'pontofrio.com.br',
+      // E-COMMERCE GENÉRICO (qualquer site com padrões de e-commerce)
+      '.com/product/', '.com/products/', '.com/tienda/', '.com/shop/',
+      '.com/categoria/', '.com/categoria/', '.com/cat/',
     ];
+    
+    // ✅ NOVO: PALAVRAS-CHAVE OBRIGATÓRIAS (deve conter pelo menos uma)
+    const requiredKeywords = keywords.length > 0 ? keywords.map(k => k.toLowerCase()) : [];
+    
+    // ✅ NOVO: TIPOS B2B OBRIGATÓRIOS (deve conter pelo menos um)
+    const requiredB2BTypes = includeTypes.map(t => t.toLowerCase());
+    const excludedB2CTypes = excludeTypes.map(t => t.toLowerCase());
     
     const filtered = allDealers.filter(c => {
       if (!c.website) return false;
-      const domain = c.website.toLowerCase();
+      
+      // Extrair domínio completo e base
+      const url = new URL(c.website.startsWith('http') ? c.website : `https://${c.website}`);
+      const domain = url.hostname.toLowerCase();
+      const domainBase = domain.replace(/^www\./, ''); // Remover www
+      
       const name = (c.name || '').toLowerCase();
+      const description = (c.description || '').toLowerCase();
+      const fullText = (name + ' ' + description + ' ' + domain + ' ' + url.pathname).toLowerCase();
       
-      // Bloquear domínios de redes sociais, blogs e MARKETPLACES
-      if (BLOCKED_DOMAINS.some(blocked => domain.includes(blocked))) {
+      // 🚫 CRITÉRIO 1: Bloquear domínios de redes sociais, blogs e MARKETPLACES/E-COMMERCE
+      // Verificar tanto domínio completo quanto base
+      if (BLOCKED_DOMAINS.some(blocked => domain.includes(blocked) || domainBase.includes(blocked))) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (domínio bloqueado): ${c.name} (${c.website})`);
         return false;
       }
       
-      // ✅ BLOQUEAR MARKETPLACES ESPECÍFICOS (Alibaba, Made-in-China, eBay, AliExpress)
-      if (domain.includes('alibaba.com') || domain.includes('made-in-china.com') ||
-          domain.includes('aliexpress.com') || domain.includes('ebay.') ||
-          domain.includes('globalsources.com') || domain.includes('dhgate.com')) {
+      // 🚫 CRITÉRIO 1B: BLOQUEAR MARKETPLACES/E-COMMERCE ESPECÍFICOS (lista expandida)
+      const blockedMarketplaces = [
+        'falabella', 'compumarket', 'mercado-livre', 'mercadolibre', 'mercadolivre',
+        'linio', 'ripley', 'oechsle', 'saga', 'sodimac', 'wong', 'metro', 'tottus',
+        'fravega', 'garbarino', 'alkosto', 'alkomprar', 'liverpool', 'palacio', 'coppel',
+        'americanas', 'magazine-luiza', 'casas-bahia', 'extra', 'pontofrio', 'submarino',
+        'amazon', 'ebay', 'alibaba', 'made-in-china', 'aliexpress', 'globalsources',
+        'dhgate', 'tradekey', 'ec21', 'ecplaza', 'kompass', 'europages',
+        'faire', 'etsy', 'wish', 'banggood', 'gearbest', 'lightinthebox',
+      ];
+      
+      if (blockedMarketplaces.some(blocked => domain.includes(blocked) || domainBase.includes(blocked) || name.includes(blocked))) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (marketplace/e-commerce): ${c.name} (${c.website})`);
         return false;
       }
       
-      // Bloquear URLs que são claramente posts/páginas genéricas
-      if (domain.includes('/posts/') || domain.includes('/videos/') || 
-          domain.includes('/groups/') || domain.includes('/pages/') ||
-          domain.includes('/people/') || domain.includes('/p/') ||
-          domain.includes('/product/') || domain.includes('/products/') ||
-          domain.includes('/showroom/') || domain.includes('/factory/') ||
-          domain.includes('/hot-china-products/') || domain.includes('/itm/')) {
+      // 🚫 CRITÉRIO 2: Bloquear URLs que são claramente posts/páginas genéricas/E-COMMERCE
+      const blockedUrlPatterns = [
+        '/posts/', '/videos/', '/groups/', '/pages/', '/people/', '/p/',
+        '/product/', '/products/', '/produto/', '/produtos/',
+        '/tienda/', '/tiendas/', '/shop/', '/store/',
+        '/categoria/', '/categorias/', '/cat/', '/category/',
+        '/showroom/', '/factory/', '/hot-china-products/', '/itm/',
+        '/item/', '/listing/', '/produtos/', '/productos/',
+      ];
+      if (blockedUrlPatterns.some(pattern => urlLower.includes(pattern))) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (URL de produto/tienda): ${c.name} (${c.website})`);
         return false;
       }
       
-      // Bloquear nomes genéricos demais
+      // 🚫 CRITÉRIO 4: Bloquear nomes genéricos ou que parecem produtos/livros
       const genericNames = ['germany', 'products', 'shop all', 'global distributors', 
                            'about-us', 'home', 'title:', 'wholesale'];
       if (genericNames.some(gen => name.includes(gen) && name.length < 30)) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (nome genérico): ${c.name}`);
+        return false;
+      }
+      
+      // 🚫 CRITÉRIO 5: Bloquear se parecer livro/produto (não empresa B2B)
+      const productPatterns = [
+        /^Part [IVX]+:/i, // "Part II:", "Part III:", etc.
+        /^(The|A)\s+[A-Z][^:]*:\s*[A-Z]/i, // "The Pilates Reformer: Modern..."
+        /Exercises? & /i, // "Exercises & Training"
+        /Jumpboard|Exercises|Training|Manual/i,
+        /^[A-Z][a-z]+\s+(Reformer|Cadillac|Chair|Tower|Barrel)$/i, // Nomes de produtos isolados
+      ];
+      if (productPatterns.some(pattern => pattern.test(name))) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (parece produto/livro): ${c.name}`);
+        return false;
+      }
+      
+      // ✅ CRITÉRIO 6: VALIDAR KEYWORDS OBRIGATÓRIAS (deve conter pelo menos uma)
+      if (normalizedRequiredKeywords.length > 0) {
+        const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedFullText = normalize(fullText);
+        
+        const hasRequiredKeyword = normalizedRequiredKeywords.some(keyword => {
+          const normalizedKeyword = normalize(keyword);
+          // Aceitar palavra parcial quando keyword é HS code (números) ou tem hífen
+          if (/^\d+$/.test(keyword) || keyword.includes('-')) {
+            return normalizedFullText.includes(normalizedKeyword) || 
+                   normalizedFullText.includes(normalizedKeyword.replace(/-/g, ' '));
+          }
+          // Para keywords normais, buscar palavra completa (mas aceitar variações)
+          return normalizedFullText.includes(normalizedKeyword) ||
+                 normalizedFullText.includes(normalizedKeyword.split(' ')[0]);
+        });
+        
+        if (!hasRequiredKeyword) {
+          console.log(`[FILTER] 🚫 REJEITADO (não contém keywords): ${c.name} | keywords: ${normalizedRequiredKeywords.slice(0, 3).join(', ')}...`);
+          return false;
+        }
+      }
+      
+      // ✅ CRITÉRIO 7: VALIDAR PAÍS (deve estar na lista de países válidos)
+      if (c.country && normalizedAllowedCountries.length > 0) {
+        const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedCountry = normalize(c.country);
+        
+        const isValidCountry = normalizedAllowedCountries.some(allowed => {
+          const normalizedAllowed = normalize(allowed);
+          return normalizedCountry === normalizedAllowed ||
+                 normalizedCountry.includes(normalizedAllowed) ||
+                 normalizedAllowed.includes(normalizedCountry);
+        });
+        
+        if (!isValidCountry) {
+          console.log(`[FILTER] 🚫 REJEITADO (país inválido): ${c.name} | país: ${c.country} | permitidos: ${normalizedAllowedCountries.slice(0, 3).join(', ')}...`);
+          return false;
+        }
+      }
+      
+      // ✅ CRITÉRIO 8: VALIDAR TIPOS B2B (deve ser tipo B2B, não B2C)
+      if (excludedB2CTypes.length > 0) {
+        const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedFullText = normalize(fullText);
+        
+        const isB2C = excludedB2CTypes.some(type => {
+          const normalizedType = normalize(type);
+          return normalizedFullText.includes(normalizedType);
+        });
+        if (isB2C) {
+          console.log(`[FILTER] 🚫 BLOQUEADO (B2C excluído): ${c.name} (contém: ${excludedB2CTypes.join(', ')})`);
+          return false;
+        }
+      }
+      
+      // ✅ CRITÉRIO 9: VALIDAR TIPOS B2B OBRIGATÓRIOS (deve conter pelo menos 1 termo B2B)
+      const b2bTerms = ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 
+                        'supplier', 'reseller', 'agent', 'export', 'import', 'b2b', 'wholesale',
+                        'bulk', 'commercial', 'trade', 'distribuidor', 'mayorista', 'importador',
+                        'atacadista', 'fornecedor', 'exportador'];
+      const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normalizedFullText = normalize(fullText);
+      
+      const isB2B = b2bTerms.some(term => {
+        const normalizedTerm = normalize(term);
+        return normalizedFullText.includes(normalizedTerm);
+      });
+      
+      if (!isB2B && requiredB2BTypes.length > 0) {
+        // Verificar se pelo menos contém um dos tipos B2B requeridos
+        const hasRequiredB2B = requiredB2BTypes.some(type => {
+          const normalizedType = normalize(type);
+          return normalizedFullText.includes(normalizedType) ||
+                 (c.b2b_type && normalize(c.b2b_type).includes(normalizedType));
+        });
+        
+        if (!hasRequiredB2B) {
+          console.log(`[FILTER] 🚫 REJEITADO (não é tipo B2B requerido): ${c.name}`);
+          return false;
+        }
+      }
+      
+      // ✅ CRITÉRIO 10: Bloquear sinais de e-commerce no texto
+      const ecommerceSignals = ['add to cart', 'buy now', 'price', 'shipping', 'frete', 
+                                 'parcelamento', 'checkout', 'carrinho', 'promo', 'oferta'];
+      const hasEcommerceSignal = ecommerceSignals.some(signal => {
+        const normalizedSignal = normalize(signal);
+        return normalizedFullText.includes(normalizedSignal);
+      });
+      if (hasEcommerceSignal) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (sinal de e-commerce): ${c.name}`);
         return false;
       }
       
@@ -694,9 +894,9 @@ serve(async (req) => {
       prioritized.slice(0, 30).map(async (company) => {
         let fitScore = 0;
         
-        // TENTAR WEB SCRAPING (com timeout 5s) - passar keywords do usuário
+        // TENTAR WEB SCRAPING (com timeout 5s) - passar keywords do usuário E obrigatórias
         try {
-          fitScore = await calculateFitScore(company.website, searchKeywords);
+          fitScore = await calculateFitScore(company.website, searchKeywords, requiredKeywords);
         } catch (error) {
           // FALLBACK: Fit Score baseado na FONTE
           if (company.source === 'apollo') {

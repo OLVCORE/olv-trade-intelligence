@@ -3,6 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { COUNTRIES } from '@/data/countries';
+import { normalizeCountries, getAllSearchVariations, denormalizeCountryName, type CountryNormalization } from '@/services/countryNormalizer';
 import { DealerDiscoveryForm, type DealerSearchParams } from '@/components/export/DealerDiscoveryForm';
 import { DealerCard, DealersEmptyState, type Dealer } from '@/components/export/DealerCard';
 import { DealersTable } from '@/components/export/DealersTable';
@@ -94,25 +96,58 @@ export default function ExportDealersPage() {
 
       console.log(`[EXPORT] 🔑 Keywords finais (${allKeywords.length}):`, allKeywords.join(', '));
 
-      // 3. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn)
+      // ✅ UNIVERSALIZAR PAÍSES (TRADUÇÃO SIMULTÂNEA) - ANTES DAS BUSCAS
+      // 1. Converter códigos ISO para nomes completos
+      const countryNames = params.countries.map(code => {
+        const countryData = COUNTRIES.find(c => c.code === code);
+        return countryData?.name || countryData?.nameEn || code;
+      });
+      
+      // 2. Normalizar cada país (inglês + nativo + variações)
+      const normalizedCountries = normalizeCountries(countryNames);
+      console.log(`[EXPORT] 🌍 Países normalizados:`, normalizedCountries.map(n => `${n.canonicalPt || n.displayName} → [${n.searchVariations.join(', ')}]`).join(' | '));
+      
+      // 3. Extrair todas as variações de busca (inglês + nativo) - SEM DUPLICATAS, SEM VAZIOS
+      const allCountryVariations = getAllSearchVariations(normalizedCountries);
+      console.log(`[EXPORT] 🌐 Variações de busca (${allCountryVariations.length}):`, allCountryVariations.join(', '));
+      
+      // ✅ NORMALIZAR KEYWORDS (remover acentos, lower, remover vazios)
+      const requiredKeywords = allKeywords
+        .map(k => k.trim())
+        .filter(k => k.length > 0)
+        .map(k => k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+      
+      console.log(`[EXPORT] 📋 Keywords normalizadas (${requiredKeywords.length}):`, requiredKeywords.join(', '));
+
+      // 4. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn) - MÚLTIPLAS VARIAÇÕES
       const allDealers: Dealer[] = [];
       
-      for (const country of params.countries) {
-        // ✅ VERIFICAR CANCELAMENTO
-        if (controller.signal.aborted || isCancelling) {
-          console.log('[EXPORT] ⛔ Busca cancelada pelo usuário');
-          throw new Error("Busca cancelada pelo usuário");
-        }
+      // ✅ BUSCAR COM TODAS AS VARIAÇÕES (inglês + nativo) para cada país
+      for (const normalizedCountry of normalizedCountries) {
+        // Buscar com cada variação do país (inglês + nativo)
+        for (const countryVariation of normalizedCountry.searchVariations) {
+          // ✅ VERIFICAR CANCELAMENTO
+          if (controller.signal.aborted || isCancelling) {
+            console.log('[EXPORT] ⛔ Busca cancelada pelo usuário');
+            throw new Error("Busca cancelada pelo usuário");
+          }
 
-        const { data, error } = await supabase.functions.invoke('discover-dealers-realtime', {
-          body: {
-            hsCode: hsCodes[0], // Usar primeiro HS Code (depois iterar todos)
-            country: country,
-            keywords: allKeywords, // Combinado: HS + Custom
-            minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
-          },
-          signal: controller.signal, // ✅ Passar signal para cancelar requisição
-        });
+          console.log(`[EXPORT] 🔍 Buscando "${normalizedCountry.displayName}" usando variação: "${countryVariation}"`);
+
+          const { data, error } = await supabase.functions.invoke('discover-dealers-realtime', {
+            body: {
+              hsCode: hsCodes[0] || null, // Usar primeiro HS Code (depois iterar todos)
+              country: countryVariation, // ✅ USAR VARIAÇÃO (inglês ou nativo)
+              keywords: allKeywords, // Combinado: HS + Custom - ✅ OBRIGATÓRIO para validação
+              requiredKeywords: requiredKeywords, // ✅ Keywords normalizadas para validação rigorosa
+              allowedCountryVariations: allCountryVariations, // ✅ Todas as variações válidas para validação cruzada
+              minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
+              includeTypes: ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 'supplier', 'reseller', 'agent'], // ✅ TIPOS B2B OBRIGATÓRIOS
+              excludeTypes: ['fitness studio', 'gym / fitness center', 'wellness center', 'personal training', 'yoga studio', 'spa', 'rehabilitation center', 'physiotherapy'], // ✅ TIPOS B2C BLOQUEADOS
+              includeRoles: ['procurement manager', 'purchasing director', 'import manager', 'buyer'], // ✅ DECISORES ALVO
+            },
+            signal: controller.signal, // ✅ Passar signal para cancelar requisição
+          });
 
         // ✅ VERIFICAR CANCELAMENTO APÓS REQUISIÇÃO
         if (controller.signal.aborted || isCancelling) {
@@ -120,39 +155,82 @@ export default function ExportDealersPage() {
           throw new Error("Busca cancelada pelo usuário");
         }
 
-        if (error) {
-          // Se foi cancelado, não tratar como erro normal
-          if (error.message?.includes('aborted') || controller.signal.aborted) {
-            throw new Error("Busca cancelada pelo usuário");
+          if (error) {
+            // Se foi cancelado, não tratar como erro normal
+            if (error.message?.includes('aborted') || controller.signal.aborted) {
+              throw new Error("Busca cancelada pelo usuário");
+            }
+            console.error(`[EXPORT] ❌ Erro em ${normalizedCountry.displayName} (${countryVariation}):`, error);
+            continue; // Continuar com próxima variação
           }
-          console.error('[EXPORT] ❌ Erro em', country, error);
-          continue;
-        }
 
-        if (data?.dealers) {
-          console.log(`[EXPORT] ✅ ${country}: ${data.dealers.length} dealers (Fit > 0)`);
-          
-          // ✅ CONVERTER snake_case para camelCase (Edge Function → Frontend)
-          const convertedDealers = data.dealers.map((d: any) => ({
-            ...d,
-            linkedinUrl: d.linkedin_url || d.linkedinUrl, // ← FIX: converter snake_case
-            apolloId: d.apollo_id || d.apolloId,
-            apollo_link: d.apollo_link,
-            employeeCount: d.employee_count || d.employeeCount,
-            fitScore: d.fitScore || 50,
-            b2bType: d.b2bType || 'distributor',
-            decision_makers: d.decision_makers || [],
-          }));
-          
-          allDealers.push(...convertedDealers);
+          if (data?.dealers) {
+            console.log(`[EXPORT] ✅ ${normalizedCountry.displayName} (${countryVariation}): ${data.dealers.length} dealers (Fit > 0)`);
+            
+              // ✅ CONVERTER snake_case para camelCase (Edge Function → Frontend)
+              const convertedDealers = data.dealers.map((d: any) => {
+                // ✅ NORMALIZAR país do resultado de volta para português/nome canônico
+                let normalizedResultCountry = normalizedCountry.canonicalPt || normalizedCountry.displayName; // Usar nome canônico PT
+                
+                // Se o resultado tiver país, tentar denormalizar para PT
+                if (d.country) {
+                  normalizedResultCountry = denormalizeCountryName(d.country) || normalizedCountry.canonicalPt || normalizedCountry.displayName;
+                }
+                
+                return {
+                  ...d,
+                  linkedinUrl: d.linkedin_url || d.linkedinUrl, // ← FIX: converter snake_case
+                  apolloId: d.apollo_id || d.apolloId,
+                  apollo_link: d.apollo_link,
+                  employeeCount: d.employee_count || d.employeeCount,
+                  fitScore: d.fitScore || 50,
+                  b2bType: d.b2bType || 'distributor',
+                  decision_makers: d.decision_makers || [],
+                  // ✅ CRÍTICO: Usar nome canônico em português para exibição (não variação)
+                  country: normalizedResultCountry,
+                };
+              });
+            
+            allDealers.push(...convertedDealers);
+          }
         }
       }
 
-      console.log(`[EXPORT] ✅ Total: ${allDealers.length} dealers qualificados`);
+      console.log(`[EXPORT] ✅ Total bruto: ${allDealers.length} dealers`);
+      
+      // ✅ CRÍTICO: FILTRAR APENAS PAÍSES SELECIONADOS (Apollo pode retornar países errados)
+      const selectedCountryNames = params.countries.map(c => {
+        // Converter código para nome (ex: AR -> Argentina)
+        const countryData = COUNTRIES.find(cnt => cnt.code === c);
+        return countryData?.nameEn || countryData?.name || c;
+      });
+      
+      const filteredDealers = allDealers.filter((dealer: any) => {
+        const dealerCountry = dealer.country || '';
+        // Verificar se o país do dealer está na lista de países selecionados
+        const isInSelected = selectedCountryNames.some(selected => 
+          dealerCountry.toLowerCase().includes(selected.toLowerCase()) ||
+          selected.toLowerCase().includes(dealerCountry.toLowerCase()) ||
+          params.countries.some(code => {
+            const countryData = COUNTRIES.find(cnt => cnt.code === code);
+            return countryData?.nameEn?.toLowerCase() === dealerCountry.toLowerCase() ||
+                   countryData?.name?.toLowerCase() === dealerCountry.toLowerCase();
+          })
+        );
+        
+        if (!isInSelected) {
+          console.warn(`[EXPORT] ⚠️ Dealer "${dealer.name}" com país "${dealerCountry}" fora da seleção - REMOVIDO`);
+        }
+        
+        return isInSelected;
+      });
+      
+      console.log(`[EXPORT] ✅ Total filtrado: ${filteredDealers.length} dealers (apenas países selecionados)`);
+      
       // ✅ LIMPAR CONTROLLER AO FINALIZAR
       setAbortController(null);
       setIsCancelling(false);
-      return allDealers;
+      return filteredDealers;
     },
     onSuccess: (data) => {
       setAbortController(null);

@@ -31,20 +31,24 @@ export function ColumnFilter({
   const [open, setOpen] = useState(false);
 
   // Valores únicos (sem duplicatas, null, undefined, vazios, ou "N/A")
+  // ✅ CRÍTICO: Converter todos os valores para string antes de processar
   const uniqueValues = Array.from(new Set(
-    values.filter((v) => v !== null && v !== undefined && v !== '' && v !== 'N/A')
+    values
+      .filter((v) => v !== null && v !== undefined && v !== '' && v !== 'N/A')
+      .map((v) => String(v)) // Converter para string (trata números, objetos, etc.)
   )).sort();
 
   // Filtrar valores com base no termo de busca
   const filteredValues = uniqueValues.filter((value) =>
-    value.toLowerCase().includes(searchTerm.toLowerCase())
+    String(value).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleToggle = (value: string) => {
-    if (selectedValues.includes(value)) {
-      onFilterChange(selectedValues.filter((v) => v !== value));
+    const valueStr = String(value); // Garantir que é string
+    if (selectedValues.includes(valueStr)) {
+      onFilterChange(selectedValues.filter((v) => v !== valueStr));
     } else {
-      onFilterChange([...selectedValues, value]);
+      onFilterChange([...selectedValues, valueStr]);
     }
   };
 

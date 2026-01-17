@@ -8,6 +8,8 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeCountries, getAllSearchVariations, denormalizeCountryName, normalizeCountry } from '@/services/countryNormalizer';
+import { normalizeText } from '@/services/b2bClassifier';
 
 export interface Dealer {
   // Identificação
@@ -108,8 +110,17 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
   
   try {
     // ETAPA 1: Enriquecer informações via scraping (se website disponível)
+    // ⚠️ CRÍTICO: NÃO sobrescrever país se já estiver correto ou se scraping retornar país inválido
+    
+    // ✅ NOVO: Normalizar países originais para validação cruzada (usando inglês + nativo)
+    const originalCountryNames = dealers.map(d => d.country).filter(Boolean);
+    const normalizedOriginalCountries = normalizeCountries(originalCountryNames);
+    const originalCountryVariations = new Set(getAllSearchVariations(normalizedOriginalCountries));
+    
     const enrichedDealers = await Promise.all(
       dealers.map(async (dealer) => {
+        const originalCountry = dealer.country; // Guardar país original
+        
         // Se tem website, tentar extrair informações reais
         if (dealer.website && (dealer.website.startsWith('http') || dealer.website.includes('.'))) {
           try {
@@ -132,10 +143,39 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
                 console.log(`[FLOW] ✅ Nome corrigido via scraping: "${dealer.name}"`);
               }
               
-              // ✅ Usar país extraído do website (código postal, endereço, etc.)
+              // ✅ CRÍTICO: Só aceitar país do scraping se:
+              // 1. Não tiver país original OU
+              // 2. País do scraping estiver na lista de países originais (validação cruzada com universalização)
               if (scrapedInfo.country && scrapedInfo.country !== 'N/A') {
-                dealer.country = scrapedInfo.country;
-                console.log(`[FLOW] ✅ País corrigido via scraping: "${dealer.country}"`);
+                const scrapedCountry = scrapedInfo.country.trim();
+                const scrapedNormalized = normalizeText(scrapedCountry); // Normalizar para comparação
+                
+                // Verificar se país do scraping está na lista de países originais (usando variações normalizadas)
+                const isValidCountry = originalCountryVariations.has(scrapedNormalized) || 
+                  Array.from(originalCountryVariations).some(origVar => 
+                    scrapedNormalized.includes(origVar) || origVar.includes(scrapedNormalized)
+                  ) || !originalCountry; // Se não tiver país original, ainda validar
+                
+                if (isValidCountry && originalCountryVariations.size > 0) {
+                  // Se país do scraping passou validação, denormalizar para português
+                  const finalCountry = denormalizeCountryName(scrapedCountry) || scrapedCountry;
+                  dealer.country = finalCountry;
+                  console.log(`[FLOW] ✅ País aceito via scraping: "${scrapedCountry}" → "${finalCountry}" (válido - está na lista original)`);
+                } else if (!originalCountry && originalCountryVariations.size > 0) {
+                  // Se não tinha país original, ainda validar contra lista
+                  const isValid = originalCountryVariations.has(scrapedNormalized);
+                  if (isValid) {
+                    const finalCountry = denormalizeCountryName(scrapedCountry) || scrapedCountry;
+                    dealer.country = finalCountry;
+                    console.log(`[FLOW] ✅ País aceito via scraping (sem original): "${scrapedCountry}" → "${finalCountry}" (válido)`);
+                  } else {
+                    console.warn(`[FLOW] ⚠️ País do scraping "${scrapedCountry}" não está na lista original - deixando vazio (não inventar)`);
+                    // Deixar vazio (não inventar país)
+                  }
+                } else {
+                  console.warn(`[FLOW] ⚠️ País do scraping "${scrapedCountry}" não está na lista original - mantendo "${originalCountry || 'vazio'}"`);
+                  // Manter país original ou vazio
+                }
               }
               
               // ✅ Atualizar cidade e estado se disponíveis
@@ -168,12 +208,14 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
       b2b_type: dealer.b2bType || 'distributor',
       description: dealer.description || null,
       data_source: 'dealer_discovery',
-      lead_source: 'Export Dealers (B2B)', // ✅ NOVO: Registro de Lead Source (campo direto)
+      // ⚠️ REMOVIDO: lead_source (campo não existe - usar lead_source_id se necessário)
       tenant_id: currentWorkspace?.tenant_id || null,
       workspace_id: currentWorkspace?.id || null,
       
       // ✅ NORMALIZADOR UNIVERSAL: raw_data (JSONB) - TODOS OS DADOS!
       raw_data: {
+        // ✅ CRÍTICO: Salvar país em raw_data.country para que getCountryWithFallback encontre
+        country: dealer.country, // PRIORIDADE MÁXIMA - usado por getCountryWithFallback
         apollo_id: dealer.apolloId,
         apollo_link: dealer.apollo_link || (dealer.apolloId ? `https://app.apollo.io/#/companies/${dealer.apolloId}` : null),
         linkedin_url: dealer.linkedinUrl,
@@ -194,6 +236,9 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
         revenue: dealer.revenue,
         apollo_data: dealer.apolloData,
         hunter_data: dealer.hunterData,
+        // ✅ Adicionar dados de localização para extração inteligente
+        city: dealer.city,
+        state: dealer.state,
       },
     }));
     
