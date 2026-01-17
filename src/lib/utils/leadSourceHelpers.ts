@@ -14,7 +14,7 @@ import {
   getCommercialBlock, 
   getContinent, 
   normalizeLeadSource 
-} from '@/data/leadSources';
+} from '@/data/leadSources.ts';
 
 // ============================================================================
 // LEAD SOURCE HELPERS
