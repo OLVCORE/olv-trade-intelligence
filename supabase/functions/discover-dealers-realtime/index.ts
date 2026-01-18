@@ -796,10 +796,18 @@ serve(async (req) => {
       const description = (c.description || '').toLowerCase();
       const fullText = (name + ' ' + description + ' ' + domain + ' ' + url.pathname).toLowerCase();
       
+      // 🔒 BLINDADO: Filtros e gates do Export Dealers (não alterar sem autorização)
       // 🚫 CRITÉRIO 1: Bloquear domínios de redes sociais, blogs e MARKETPLACES/E-COMMERCE
       // Verificar tanto domínio completo quanto base
       if (BLOCKED_DOMAINS.some(blocked => domain.includes(blocked) || domainBase.includes(blocked))) {
         console.log(`[FILTER] 🚫 BLOQUEADO (domínio bloqueado): ${c.name} (${c.website})`);
+        return false;
+      }
+      
+      // 🚫 CRITÉRIO 1B: BLOQUEAR DATA SOURCES / DIRECTORIES (ImportGenius, Panjiva, ImportKey, Tradebase, sitemaps, directories)
+      const blockedDataSources = ['importgenius', 'panjiva', 'importkey', 'tradebase', 'trademap', 'sitemap', 'sitemaps', 'directory', 'directories'];
+      if (blockedDataSources.some(blocked => domain.includes(blocked) || domainBase.includes(blocked) || name.toLowerCase().includes(blocked))) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (data source/directory): ${c.name} (${c.website})`);
         return false;
       }
       

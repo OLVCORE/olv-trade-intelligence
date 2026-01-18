@@ -180,6 +180,30 @@ export const BLOCKED_URL_PATH_PATTERNS = [
 ];
 
 // Termos no texto da página que indicam e-commerce
+/**
+ * Padrões de texto que indicam DATA SOURCE / DIRECTORY (BLOQUEAR TOTALMENTE)
+ */
+export const BLOCKED_DATASOURCE_SIGNALS = [
+  'shipment data',
+  'customs records',
+  'see full importer history',
+  'importer database',
+  'trade data',
+  'import statistics',
+  'customs data',
+  'shipment records',
+  'importer directory',
+  'trade directory',
+  'sitemap',
+  'xml sitemap',
+  'html sitemap',
+  'dados embarque',
+  'registros alfandegarios',
+  'ver historico importador',
+  'base dados importadores',
+  'estatisticas importacao',
+];
+
 export const BLOCKED_TEXT_PATTERNS = [
   'add to cart',
   'adicionar ao carrinho',
@@ -273,6 +297,20 @@ export function isBlockedUrl(url: string): boolean {
 /**
  * Verifica se o texto contém sinais de e-commerce
  */
+/**
+ * Verifica se o texto contém sinais de DATA SOURCE / DIRECTORY
+ */
+export function hasDataSourceSignals(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  
+  const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  return BLOCKED_DATASOURCE_SIGNALS.some(signal => {
+    const normalizedSignal = signal.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return normalized.includes(normalizedSignal);
+  });
+}
+
 export function hasEcommerceSignals(text: string): boolean {
   const normalized = normalizeText(text);
   return BLOCKED_TEXT_PATTERNS.some(pattern => normalized.includes(pattern));

@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { COUNTRIES } from '@/data/countries';
 import { normalizeCountries, getAllSearchVariations, denormalizeCountryName, type CountryNormalization } from '@/services/countryNormalizer';
-import { normalizeKeywords, normalizeUsageContext, type UsageContext } from '@/services/languageNormalizer';
+import { normalizeKeywords, normalizeUsageContext, type UsageContext, expandKeywordsByLanguage, uniqueNonEmpty } from '@/services/languageNormalizer';
 import { validateUsageContext, calculateUsageContextScore } from '@/services/usageContextClassifier';
+import { generateSearchPlan, type SearchPlan } from '@/services/aiSearchPlanner';
 import { DealerDiscoveryForm, type DealerSearchParams } from '@/components/export/DealerDiscoveryForm';
 import { DealerCard, DealersEmptyState, type Dealer } from '@/components/export/DealerCard';
 import { DealersTable } from '@/components/export/DealersTable';
@@ -24,11 +25,17 @@ import {
   Save,
   Loader2,
   ArrowRight,
-  X
+  X,
+  Bookmark,
+  Search as SearchIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { saveDealersToCompanies } from '@/services/dealerToCompanyFlow';
+import { SaveSearchModal } from '@/components/export/SaveSearchModal';
+import { LoadSavedSearchModal } from '@/components/export/LoadSavedSearchModal';
+import { saveDealerSearch } from '@/services/savedDealerSearchesService';
+import { useTenant } from '@/contexts/TenantContext';
 
 // ============================================================================
 // MAIN PAGE
@@ -36,14 +43,28 @@ import { saveDealersToCompanies } from '@/services/dealerToCompanyFlow';
 
 export default function ExportDealersPage() {
   const navigate = useNavigate();
-  const { currentWorkspace } = useTenant();
+  const { currentWorkspace, currentTenant } = useTenant();
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [searchParams, setSearchParams] = useState<DealerSearchParams | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingDealerId, setSavingDealerId] = useState<string | null>(null);
   // Controle de cancelamento
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  // ✅ Modais de salvamento/carregamento de buscas
+  const [saveSearchModalOpen, setSaveSearchModalOpen] = useState(false);
+  const [loadSearchModalOpen, setLoadSearchModalOpen] = useState(false);
+  // ✅ ETAPA 7: Preview do plano IA (opcional)
+  const [searchPlan, setSearchPlan] = useState<SearchPlan | null>(null);
+  // ✅ ETAPA 2: Métricas visíveis
+  const [searchStats, setSearchStats] = useState<{
+    rawCandidatesCount?: number;
+    candidatesAfterSearchPlan?: number;
+    candidatesAfterStrictFilter?: number;
+    noiseAvoidedScore?: number;
+    searchPlanApplied?: boolean;
+  } | null>(null);
   
   // PROTEÇÃO CONTRA PERDA DE DADOS
   useUnsavedChanges(hasUnsavedChanges, 
@@ -135,6 +156,43 @@ export default function ExportDealersPage() {
         throw new Error('Contexto de uso final é obrigatório. Defina pelo menos 1 termo que descreve PARA QUE o produto será usado.');
       }
 
+      // ✅ ETAPA 2: IA SEARCH PLANNER (GPT-4o-mini) - ANTES DA BUSCA
+      let currentSearchPlan: SearchPlan | null = null;
+      if (requiredKeywords.length > 0 || hsCodes.length > 0) {
+        try {
+          currentSearchPlan = await generateSearchPlan({
+            hsCodes: hsCodes,
+            productKeywords: requiredKeywords,
+            usageContext: normalizedUsageContext,
+            countries: countryNames, // Nomes completos para IA
+            language: 'pt', // Idioma da interface
+          });
+          console.log('[EXPORT] 🧠 Plano de Busca IA gerado:', currentSearchPlan);
+          // ✅ Armazenar plano para exibir no formulário
+          setSearchPlan(currentSearchPlan);
+        } catch (aiError: any) {
+          console.warn('[EXPORT] ⚠️ Erro ao gerar plano de busca IA:', aiError.message);
+          toast.warning('Não foi possível gerar o plano de busca IA. Continuando sem ele.', {
+            description: aiError.message,
+          });
+          setSearchPlan(null);
+        }
+      }
+
+      // Combinar keywords e uso final com o plano da IA
+      const finalRequiredKeywords = uniqueNonEmpty([
+        ...requiredKeywords,
+        ...(currentSearchPlan?.mustIncludePhrases || []),
+      ]);
+      const finalUsageInclude = uniqueNonEmpty([
+        ...(normalizedUsageContext?.include || []),
+        ...(currentSearchPlan?.mustIncludePhrases || []),
+      ]);
+      const finalUsageExclude = uniqueNonEmpty([
+        ...(normalizedUsageContext?.exclude || []),
+        ...(currentSearchPlan?.mustExcludeTerms || []),
+      ]);
+
       // 4. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn) - MÚLTIPLAS VARIAÇÕES
       const allDealers: Dealer[] = [];
       
@@ -155,10 +213,20 @@ export default function ExportDealersPage() {
               hsCode: hsCodes[0] || null, // Usar primeiro HS Code (depois iterar todos)
               country: countryVariation, // ✅ USAR VARIAÇÃO (inglês ou nativo)
               keywords: allKeywords, // Combinado: HS + Custom - ✅ OBRIGATÓRIO para validação
-              requiredKeywords: requiredKeywords, // ✅ Keywords normalizadas para validação rigorosa
+              requiredKeywords: finalRequiredKeywords, // ✅ Keywords normalizadas + plano IA (se disponível)
               allowedCountryVariations: allCountryVariations, // ✅ Todas as variações válidas para validação cruzada
-              // ✅ NOVO: Contexto de uso final normalizado (CAMADA CRÍTICA)
-              usageContext: normalizedUsageContext, // ✅ OBRIGATÓRIO - busca não será executada sem isso
+              // ✅ NOVO: Contexto de uso final normalizado + plano IA (CAMADA CRÍTICA)
+              usageContext: {
+                include: finalUsageInclude,
+                exclude: finalUsageExclude,
+              }, // ✅ OBRIGATÓRIO - busca não será executada sem isso
+              // ✅ OBRIGATÓRIO: Plano IA (para refinar queries Apollo/Serper)
+              searchPlan: currentSearchPlan ? {
+                mustIncludePhrases: currentSearchPlan.mustIncludePhrases,
+                mustExcludeTerms: currentSearchPlan.mustExcludeTerms,
+                countryLanguageStrategy: currentSearchPlan.countryLanguageStrategy,
+                notes: currentSearchPlan.notes,
+              } : null,
               minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
               includeTypes: ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 'supplier', 'reseller', 'agent'], // ✅ TIPOS B2B OBRIGATÓRIOS
               excludeTypes: ['fitness studio', 'gym / fitness center', 'wellness center', 'personal training', 'yoga studio', 'spa', 'rehabilitation center', 'physiotherapy'], // ✅ TIPOS B2C BLOQUEADOS
@@ -184,6 +252,17 @@ export default function ExportDealersPage() {
 
           if (data?.dealers) {
             console.log(`[EXPORT] ✅ ${normalizedCountry.displayName} (${countryVariation}): ${data.dealers.length} dealers (Fit > 0)`);
+            
+            // ✅ ETAPA 2: Armazenar estatísticas visíveis
+            if (data.stats) {
+              setSearchStats({
+                rawCandidatesCount: data.stats.rawCandidatesCount || data.stats.total_bruto,
+                candidatesAfterSearchPlan: data.stats.candidatesAfterSearchPlan || data.stats.total_apos_searchplan,
+                candidatesAfterStrictFilter: data.stats.candidatesAfterStrictFilter || data.stats.total_apos_strict,
+                noiseAvoidedScore: data.stats.noiseAvoidedScore,
+                searchPlanApplied: data.stats.searchPlanApplied || false,
+              });
+            }
             
               // ✅ CONVERTER snake_case para camelCase (Edge Function → Frontend)
               const convertedDealers = data.dealers.map((d: any) => {
@@ -302,9 +381,68 @@ export default function ExportDealersPage() {
     searchMutation.mutate(params);
   };
 
+  // ✅ Salvar busca
+  const handleSaveSearch = async (name: string) => {
+    if (!searchParams || !currentTenant) {
+      throw new Error('Parâmetros de busca ou tenant não disponíveis');
+    }
+
+    await saveDealerSearch(
+      currentTenant.id,
+      currentWorkspace?.id || null,
+      {
+        name,
+        search_params: searchParams,
+        results_count: dealers.length,
+      }
+    );
+
+    toast.success(`Busca "${name}" salva com sucesso!`, {
+      description: 'Você pode carregá-la depois para reexecutar',
+    });
+  };
+
+  // ✅ Carregar busca salva
+  const handleLoadSavedSearch = (params: DealerSearchParams) => {
+    setSearchParams(params);
+    // Preencher formulário e executar busca
+    searchMutation.mutate(params);
+  };
+
   // ============================================================================
   // SALVAR DEALERS → COMPANIES → QUARENTENA
   // ============================================================================
+
+  // ✅ ETAPA 3: Salvar dealer individual
+  const handleSaveIndividualDealer = async (dealer: Dealer) => {
+    const dealerId = (dealer as any).id || dealer.name;
+    setSavingDealerId(dealerId);
+    
+    try {
+      console.log('[EXPORT] 💾 Salvando dealer individual:', dealer);
+      const result = await saveDealersToCompanies([dealer], currentWorkspace!);
+      
+      if (result.success) {
+        toast.success(`✅ ${dealer.name} salva com sucesso!`, {
+          description: 'Empresa adicionada à Base de Empresas',
+          duration: 3000,
+        });
+        
+        // Remover dealer da lista (opcional - pode manter se preferir)
+        // setDealers(dealers.filter(d => (d as any).id !== dealerId && d.name !== dealer.name));
+        
+      } else {
+        throw new Error(result.error || 'Erro desconhecido ao salvar');
+      }
+    } catch (error: any) {
+      console.error('[EXPORT] ❌ Erro ao salvar dealer individual:', error);
+      toast.error('Erro ao salvar empresa', {
+        description: error.message,
+      });
+    } finally {
+      setSavingDealerId(null);
+    }
+  };
 
   const handleSaveDealers = async () => {
     if (dealers.length === 0) {
@@ -388,11 +526,35 @@ export default function ExportDealersPage() {
           </p>
         </div>
 
-        {/* WORKSPACE BADGE */}
-        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-          <Globe className="h-3 w-3 mr-1" />
-          Export Workspace
-        </Badge>
+        <div className="flex items-center gap-2">
+          {/* ✅ Botão Carregar Busca Salva */}
+          <Button
+            variant="outline"
+            onClick={() => setLoadSearchModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <SearchIcon className="h-4 w-4" />
+            Buscar Buscas Salvas
+          </Button>
+
+          {/* ✅ Botão Salvar Busca (aparece apenas quando há resultados) */}
+          {dealers.length > 0 && searchParams && (
+            <Button
+              variant="outline"
+              onClick={() => setSaveSearchModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Bookmark className="h-4 w-4" />
+              Salvar Busca
+            </Button>
+          )}
+
+          {/* WORKSPACE BADGE */}
+          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+            <Globe className="h-3 w-3 mr-1" />
+            Export Workspace
+          </Badge>
+        </div>
       </div>
 
       {/* SEARCH FORM */}
@@ -401,12 +563,14 @@ export default function ExportDealersPage() {
         isSearching={searchMutation.isPending}
         onCancel={handleCancelSearch}
         isCancelling={isCancelling}
+        searchPlan={searchPlan}
       />
 
       {/* RESULTS STATS */}
       {dealers.length > 0 && (
         <Card className="bg-gradient-to-r from-blue-50 to-emerald-50 dark:from-blue-950/30 dark:to-emerald-950/30 border-2">
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-4">
+            {/* ✅ ETAPA 2: Métricas principais */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
@@ -426,7 +590,7 @@ export default function ExportDealersPage() {
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                   <span className="font-semibold text-lg">
-                    {dealers.filter((d) => (d.export_fit_score || 0) >= 60).length}
+                    {dealers.filter((d) => (d.fitScore || 0) >= 60).length}
                   </span>
                   <span className="text-sm text-muted-foreground">fit alto (60+)</span>
                 </div>
@@ -436,6 +600,39 @@ export default function ExportDealersPage() {
                 Busca: {searchParams?.hsCodes?.length || 0} HS Code(s) em {searchParams?.countries?.length || 0} {searchParams?.countries?.length === 1 ? 'país' : 'países'}
               </div>
             </div>
+
+            {/* ✅ ETAPA 2: Métricas de refino IA (discretas) */}
+            {searchStats && searchStats.rawCandidatesCount && searchStats.rawCandidatesCount > 0 && (
+              <div className="pt-3 border-t border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-6 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <span>Resultados brutos:</span>
+                    <span className="font-semibold text-blue-700 dark:text-blue-400">{searchStats.rawCandidatesCount}</span>
+                  </div>
+                  {searchStats.searchPlanApplied && searchStats.candidatesAfterSearchPlan && (
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-purple-600" />
+                      <span>Após refino IA:</span>
+                      <span className="font-semibold text-purple-700 dark:text-purple-400">{searchStats.candidatesAfterSearchPlan}</span>
+                    </div>
+                  )}
+                  {searchStats.candidatesAfterStrictFilter && (
+                    <div className="flex items-center gap-1">
+                      <span>Após filtro estrito:</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">{searchStats.candidatesAfterStrictFilter}</span>
+                    </div>
+                  )}
+                  {searchStats.noiseAvoidedScore !== undefined && searchStats.noiseAvoidedScore > 0 && (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <Badge variant="outline" className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700">
+                        <span>Ruído evitado:</span>
+                        <span className="font-semibold ml-1">{searchStats.noiseAvoidedScore}%</span>
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -444,7 +641,11 @@ export default function ExportDealersPage() {
       {dealers.length === 0 && !searchMutation.isPending ? (
         <DealersEmptyState />
       ) : (
-        <DealersTable dealers={dealers} />
+        <DealersTable 
+          dealers={dealers}
+          onSaveIndividual={handleSaveIndividualDealer}
+          savingDealerId={savingDealerId}
+        />
       )}
 
       {/* INFO FOOTER */}
@@ -493,6 +694,28 @@ export default function ExportDealersPage() {
             ⚠️ Não saia sem salvar!
           </p>
         </div>
+      )}
+
+      {/* ✅ Modal Salvar Busca */}
+      {searchParams && (
+        <SaveSearchModal
+          open={saveSearchModalOpen}
+          onOpenChange={setSaveSearchModalOpen}
+          searchParams={searchParams}
+          resultsCount={dealers.length}
+          onSave={handleSaveSearch}
+        />
+      )}
+
+      {/* ✅ Modal Carregar Busca Salva */}
+      {currentTenant && (
+        <LoadSavedSearchModal
+          open={loadSearchModalOpen}
+          onOpenChange={setLoadSearchModalOpen}
+          tenantId={currentTenant.id}
+          workspaceId={currentWorkspace?.id || null}
+          onLoad={handleLoadSavedSearch}
+        />
       )}
     </div>
   );

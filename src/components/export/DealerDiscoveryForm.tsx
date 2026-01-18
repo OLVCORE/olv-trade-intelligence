@@ -37,13 +37,22 @@ import {
   Check,
   X,
   ChevronsUpDown,
-  Users
+  Users,
+  Sparkles,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { COUNTRIES, getCountriesByRegion, TOP_EXPORT_MARKETS, type Country } from '@/data/countries';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { HSCodeAutocomplete } from './HSCodeAutocomplete';
+import { getAllPresets, type UsageContextPreset } from '@/services/usageContextPresets';
+import { PresetManagerModal } from './PresetManagerModal';
+import { getPresets, type UsageContextPresetDB, type HSCodeWithDescription } from '@/services/usageContextPresetsService';
+import { useTenant } from '@/contexts/TenantContext';
+import { useQuery } from '@tanstack/react-query';
+import { Edit2 } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -54,6 +63,12 @@ interface DealerDiscoveryFormProps {
   isSearching: boolean;
   onCancel?: () => void;
   isCancelling?: boolean;
+  searchPlan?: { // ✅ OPCIONAL: Plano de busca IA para preview
+    mustIncludePhrases: string[];
+    mustExcludeTerms: string[];
+    countryLanguageStrategy: Record<string, string[]>;
+    notes?: string;
+  } | null;
 }
 
 export interface DealerSearchParams {
@@ -103,12 +118,67 @@ const B2C_EXCLUDE_KEYWORDS = [
   'Physiotherapy',
 ];
 
-export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancelling }: DealerDiscoveryFormProps) {
+export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancelling, searchPlan }: DealerDiscoveryFormProps) {
+  const { currentTenant, currentWorkspace } = useTenant();
   const [hsCodes, setHsCodes] = useState<string[]>([]); // MÚLTIPLOS HS Codes
+  const [hsCodesWithDescriptions, setHsCodesWithDescriptions] = useState<HSCodeWithDescription[]>([]); // ✅ HS Codes com descrições
   const [hsCodeInput, setHsCodeInput] = useState(''); // Input temporário
   const [countries, setCountries] = useState<string[]>([]);
   const [minVolume, setMinVolume] = useState('');
   const [openCountryCombobox, setOpenCountryCombobox] = useState(false);
+  const [presetModalOpen, setPresetModalOpen] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<UsageContextPresetDB | null>(null);
+  
+  // ✅ Buscar presets do banco de dados (usa view otimizada v_usage_context_presets_active)
+  const { data: dbPresets = [], refetch: refetchPresets } = useQuery({
+    queryKey: ['usage-context-presets', currentTenant?.id, currentWorkspace?.id],
+    queryFn: async () => {
+      if (!currentTenant?.id) return [];
+      // ✅ Serviço usa view v_usage_context_presets_active quando workspace não é fornecido (melhor performance)
+      return await getPresets(currentTenant.id, currentWorkspace?.id);
+    },
+    enabled: !!currentTenant?.id,
+    staleTime: 1000 * 60 * 5, // Cache por 5 minutos (presets não mudam frequentemente)
+  });
+  
+  // ✅ Combinar presets do sistema (hardcoded) com presets do banco
+  // ✅ UNIFICAR: Remover duplicados por nome, priorizando presets do banco (mais atualizados)
+  const dbPresetsMap = new Map<string, UsageContextPresetDB>();
+  dbPresets.forEach((p: UsageContextPresetDB) => {
+    // Agrupar por nome (normalizado para comparar)
+    const normalizedName = p.name.trim().toLowerCase();
+    if (!dbPresetsMap.has(normalizedName)) {
+      dbPresetsMap.set(normalizedName, p);
+    }
+  });
+
+  // Remover hardcoded que já existem no banco (por nome)
+  const hardcodedPresets = getAllPresets().filter(p => {
+    const normalizedName = p.name.trim().toLowerCase();
+    return !dbPresetsMap.has(normalizedName);
+  });
+  
+  const allPresets: Array<UsageContextPreset | UsageContextPresetDB | any> = [
+    ...hardcodedPresets.map(p => ({
+      ...p,
+      _isFromDB: false,
+    })),
+    ...Array.from(dbPresetsMap.values()).map((p: UsageContextPresetDB) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description || '',
+      usageContext: {
+        include: p.usage_context_include || [],
+        exclude: p.usage_context_exclude || [],
+      },
+      commonHSCodes: p.hs_codes?.map((h: HSCodeWithDescription) => h.code) || [],
+      keywords: p.keywords || [],
+      sector: p.sector || undefined,
+      // ✅ Marcar como do banco para distinguir
+      _isFromDB: true,
+      _presetDB: p,
+    })),
+  ].sort((a, b) => a.name.localeCompare(b.name)); // ✅ ORDENAR ALFABETICAMENTE
   
   // Keywords selecionadas (todas marcadas por padrão)
   const [includeKeywords, setIncludeKeywords] = useState<string[]>(B2B_INCLUDE_KEYWORDS);
@@ -228,11 +298,47 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
     setCustomKeywords(customKeywords.filter(k => k !== keyword));
   };
 
-  // Adicionar HS Code (Tab ou Enter)
-  const handleAddHSCode = (code: string) => {
+  // ✅ Adicionar HS Code COM DESCRIÇÃO (Tab ou Enter)
+  const handleAddHSCode = async (code: string) => {
     const trimmed = code.trim();
-    if (trimmed && !hsCodes.includes(trimmed)) {
+    if (!trimmed || hsCodes.includes(trimmed)) return;
+
+    // ✅ Buscar descrição da API
+    try {
+      const response = await fetch('/hs-codes.json');
+      if (response.ok) {
+        const data = await response.json();
+        const allCodes = data.results || [];
+        const foundCode = allCodes.find((c: any) => c.id === trimmed);
+        
+        const hsCodeWithDesc: HSCodeWithDescription = {
+          code: trimmed,
+          description: foundCode?.text || '',
+        };
+        
+        setHsCodes([...hsCodes, trimmed]);
+        setHsCodesWithDescriptions((prev) => {
+          if (!prev.find(h => h.code === trimmed)) {
+            return [...prev, hsCodeWithDesc];
+          }
+          return prev;
+        });
+        setHsCodeInput('');
+      }
+    } catch (error) {
+      console.error('[DEALER-FORM] Erro ao buscar descrição do HS Code:', error);
+      // Adicionar mesmo sem descrição
+      const hsCodeWithDesc: HSCodeWithDescription = {
+        code: trimmed,
+        description: '',
+      };
       setHsCodes([...hsCodes, trimmed]);
+      setHsCodesWithDescriptions((prev) => {
+        if (!prev.find(h => h.code === trimmed)) {
+          return [...prev, hsCodeWithDesc];
+        }
+        return prev;
+      });
       setHsCodeInput('');
     }
   };
@@ -240,6 +346,176 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
   // Remover HS Code
   const handleRemoveHSCode = (code: string) => {
     setHsCodes(hsCodes.filter(c => c !== code));
+    setHsCodesWithDescriptions(hsCodesWithDescriptions.filter(h => h.code !== code));
+  };
+  
+  // ✅ Estado para busca/filtro de presets
+  const [presetSearchQuery, setPresetSearchQuery] = useState<string>('');
+  
+  // ✅ Filtrar presets por busca (nome, sector, descrição)
+  const filteredPresets = presetSearchQuery.trim()
+    ? allPresets.filter((preset) => {
+        const query = presetSearchQuery.toLowerCase().trim();
+        const nameMatch = preset.name.toLowerCase().includes(query);
+        const sectorMatch = preset.sector?.toLowerCase().includes(query);
+        const descriptionMatch = preset.description?.toLowerCase().includes(query);
+        return nameMatch || sectorMatch || descriptionMatch;
+      })
+    : allPresets;
+
+  // ✅ Limpar todos os campos do formulário (focado em Keywords)
+  const handleClearAll = () => {
+    setCustomKeywords([]);
+    setCustomKeywordInput('');
+    toast.success('Todas as keywords foram limpas!');
+  };
+  
+  // ✅ Limpar termos incluídos (uso final)
+  const handleClearUsageInclude = () => {
+    setUsageContextInclude([]);
+    setUsageContextIncludeInput('');
+    setUsageContextIncludeBulkInput('');
+    toast.success('Todos os termos incluídos foram limpos!');
+  };
+  
+  // ✅ Limpar termos excluídos (uso final)
+  const handleClearUsageExclude = () => {
+    setUsageContextExclude([]);
+    setUsageContextExcludeInput('');
+    setUsageContextExcludeBulkInput('');
+    toast.success('Todos os termos excluídos foram limpos!');
+  };
+  
+  // ✅ Limpar TODOS os campos (incluindo uso final e HS Codes) - função adicional se necessário
+  const handleClearAllFields = () => {
+    setUsageContextInclude([]);
+    setUsageContextExclude([]);
+    setHsCodes([]);
+    setHsCodesWithDescriptions([]);
+    setCustomKeywords([]);
+    setCustomKeywordInput('');
+    setHsCodeInput('');
+    toast.success('Todos os campos foram limpos!');
+  };
+
+  // ✅ Aplicar preset selecionado (ACUMULA - não limpa os campos existentes)
+  const handleApplyPreset = (preset: UsageContextPreset | UsageContextPresetDB | any) => {
+    if ('_isFromDB' in preset && preset._isFromDB) {
+      // Preset do banco de dados
+      const dbPreset = preset._presetDB as UsageContextPresetDB;
+      
+      // ✅ ACUMULAR (adicionar aos existentes, sem duplicatas)
+      setUsageContextInclude((prev) => {
+        const newIncludes = [...dbPreset.usage_context_include];
+        const combined = [...prev, ...newIncludes];
+        return [...new Set(combined)]; // Remove duplicatas
+      });
+      setUsageContextExclude((prev) => {
+        const newExcludes = [...(dbPreset.usage_context_exclude || [])];
+        const combined = [...prev, ...newExcludes];
+        return [...new Set(combined)]; // Remove duplicatas
+      });
+      
+      // ✅ Aplicar HS Codes com descrições (sem duplicatas)
+      if (dbPreset.hs_codes && dbPreset.hs_codes.length > 0) {
+        setHsCodesWithDescriptions((prev) => {
+          const newCodes = dbPreset.hs_codes as HSCodeWithDescription[];
+          const combined = [...prev];
+          newCodes.forEach((newCode) => {
+            if (!combined.find((h) => h.code === newCode.code)) {
+              combined.push(newCode);
+            }
+          });
+          setHsCodes(combined.map((h) => h.code));
+          return combined;
+        });
+      }
+      
+      // Aplicar keywords (sem duplicatas)
+      if (dbPreset.keywords && dbPreset.keywords.length > 0) {
+        setCustomKeywords((prev) => {
+          const newKeywords = dbPreset.keywords.filter((k: string) => !prev.includes(k));
+          return [...prev, ...newKeywords];
+        });
+      }
+      
+      toast.success(`Preset "${dbPreset.name}" aplicado!`, {
+        description: dbPreset.description || '',
+      });
+    } else {
+      // Preset do sistema (hardcoded)
+      const systemPreset = preset as UsageContextPreset;
+      
+      // ✅ ACUMULAR (adicionar aos existentes, sem duplicatas)
+      setUsageContextInclude((prev) => {
+        const combined = [...prev, ...systemPreset.usageContext.include];
+        return [...new Set(combined)]; // Remove duplicatas
+      });
+      setUsageContextExclude((prev) => {
+        const combined = [...prev, ...systemPreset.usageContext.exclude];
+        return [...new Set(combined)]; // Remove duplicatas
+      });
+      
+      // ✅ Buscar descrições dos HS Codes do sistema (sem duplicatas)
+      if (systemPreset.commonHSCodes && systemPreset.commonHSCodes.length > 0) {
+        systemPreset.commonHSCodes.forEach(async (code) => {
+          try {
+            const response = await fetch('/hs-codes.json');
+            if (response.ok) {
+              const data = await response.json();
+              const allCodes = data.results || [];
+              const foundCode = allCodes.find((c: any) => c.id === code);
+              
+              if (foundCode) {
+                const hsCodeWithDesc: HSCodeWithDescription = {
+                  code: code,
+                  description: foundCode.text || '',
+                };
+                
+                setHsCodesWithDescriptions((prev) => {
+                  if (!prev.find((h) => h.code === code)) {
+                    const updated = [...prev, hsCodeWithDesc];
+                    setHsCodes(updated.map((h) => h.code));
+                    return updated;
+                  }
+                  return prev;
+                });
+              }
+            }
+          } catch (error) {
+            console.error('[DEALER-FORM] Erro ao buscar descrição:', error);
+          }
+        });
+      }
+      
+      // Aplicar keywords (sem duplicatas)
+      if (systemPreset.keywords && systemPreset.keywords.length > 0) {
+        setCustomKeywords((prev) => {
+          const newKeywords = systemPreset.keywords.filter((k: string) => !prev.includes(k));
+          return [...prev, ...newKeywords];
+        });
+      }
+      
+      toast.success(`Preset "${systemPreset.name}" aplicado!`, {
+        description: systemPreset.description,
+      });
+    }
+  };
+  
+  // ✅ Abrir modal para criar novo preset
+  const handleCreatePreset = () => {
+    setEditingPreset(null);
+    setPresetModalOpen(true);
+  };
+  
+  // ✅ Abrir modal para editar preset
+  const handleEditPreset = (preset: UsageContextPreset | UsageContextPresetDB | any) => {
+    if ('_isFromDB' in preset && preset._isFromDB) {
+      setEditingPreset(preset._presetDB);
+      setPresetModalOpen(true);
+    } else {
+      toast.warning('Presets do sistema não podem ser editados. Crie um novo preset baseado neste.');
+    }
   };
 
   // Sugestões baseadas no país selecionado
@@ -532,20 +808,31 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                 placeholder="🔍 Digite código (ex: 1701) ou produto (ex: sugar, furniture, footwear)..."
               />
               
-              {/* HS Codes adicionados */}
-              {hsCodes.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 shadow-md bg-gradient-to-r from-indigo-50/50 to-indigo-100/30 dark:from-indigo-950/20 dark:to-indigo-900/10">
-                  {hsCodes.map((code) => (
-                    <Badge key={code} variant="secondary" className="gap-1 font-mono text-sm py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 border border-indigo-300/50 dark:border-indigo-700/50 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 hover:shadow-md transition-all duration-200">
-                      {code}
+              {/* HS Codes adicionados - NUMERAÇÃO E DESCRIÇÃO NA MESMA LINHA */}
+              {hsCodesWithDescriptions.length > 0 && (
+                <div className="flex flex-col gap-2 p-3 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 shadow-md bg-gradient-to-r from-indigo-50/50 to-indigo-100/30 dark:from-indigo-950/20 dark:to-indigo-900/10">
+                  {hsCodesWithDescriptions.map((hsCode) => (
+                    <div key={hsCode.code} className="flex items-center justify-between gap-2 p-2 rounded-md bg-white/50 dark:bg-slate-800/50 border border-indigo-200/30 dark:border-indigo-700/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-200">
+                      <div className="flex-1">
+                        <div className="text-sm text-indigo-900 dark:text-indigo-100 leading-relaxed">
+                          <span className="font-mono font-semibold">{hsCode.code}</span>
+                          {hsCode.description && (
+                            <>
+                              <span className="mx-2 text-slate-400 dark:text-slate-500">-</span>
+                              <span className="text-base font-medium text-slate-700 dark:text-slate-300">{hsCode.description}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => handleRemoveHSCode(code)}
-                        className="ml-1 hover:bg-indigo-600/20 dark:hover:bg-indigo-600/30 rounded-full p-0.5"
+                        onClick={() => handleRemoveHSCode(hsCode.code)}
+                        className="hover:bg-indigo-600/20 dark:hover:bg-indigo-600/30 rounded-full p-1 flex-shrink-0"
+                        title="Remover HS Code"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-4 w-4 text-indigo-700 dark:text-indigo-400" />
                       </button>
-                    </Badge>
+                    </div>
                   ))}
                 </div>
               )}
@@ -968,11 +1255,23 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
               {/* Keywords adicionadas - COM DESTAQUE VISUAL CORPORATIVO */}
               {customKeywords.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-sky-200/50 dark:border-sky-800/50 shadow-md bg-gradient-to-r from-sky-50/50 to-sky-100/30 dark:from-sky-950/20 dark:to-sky-900/10">
-                  <div className="w-full mb-2">
+                  <div className="w-full mb-2 flex items-center justify-between">
                     <span className="text-xs font-semibold text-sky-800 dark:text-sky-200 flex items-center gap-1">
                       <Package className="h-3 w-3 text-sky-700 dark:text-sky-500" />
                       Keywords Selecionadas ({customKeywords.length}):
                     </span>
+                    {/* ✅ Botão "Limpar Tudo" para Keywords */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs border-sky-300 dark:border-sky-700 hover:bg-sky-100 dark:hover:bg-sky-800 text-sky-700 dark:text-sky-300"
+                      onClick={handleClearAll}
+                      title="Limpar todas as keywords selecionadas"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Limpar Tudo
+                    </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {customKeywords.map((keyword) => (
@@ -1002,6 +1301,123 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
               Útil para: Dialetos regionais, nomes locais, marcas específicas do país
             </p>
           </div>
+
+          {/* ✅ ETAPA 4: PRESETS DE USO FINAL (COM SCROLL E BOTÕES +/EDITAR) */}
+          <Card className="border-l-4 border-l-slate-600/90 shadow-md bg-gradient-to-r from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:from-slate-50/60 hover:to-slate-100/40 dark:hover:from-slate-900/30 dark:hover:from-slate-800/20 transition-all duration-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-semibold text-sm">
+                    <Package className="h-4 w-4 text-slate-700 dark:text-slate-400" />
+                    Presets de Uso Final
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-700 dark:text-slate-300">
+                    Selecione um preset para preencher automaticamente o contexto de uso final
+                  </CardDescription>
+                </div>
+                {/* ✅ Botão "+" para criar novo preset */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={handleCreatePreset}
+                  title="Criar novo preset"
+                >
+                  <Plus className="h-4 w-4 text-slate-700 dark:text-slate-400" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {/* ✅ Campo de busca/filtro de presets */}
+              <div className="mb-3">
+                <Input
+                  placeholder="🔍 Buscar preset por nome, setor ou descrição (ex: pilates, aviação, construção)..."
+                  value={presetSearchQuery}
+                  onChange={(e) => setPresetSearchQuery(e.target.value)}
+                  className="border-slate-300 dark:border-slate-700 focus:border-slate-500 dark:focus:border-slate-500"
+                />
+                {presetSearchQuery.trim() && (
+                  <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                    Mostrando {filteredPresets.length} de {allPresets.length} presets
+                  </div>
+                )}
+              </div>
+              
+              {/* ✅ Card com scroll para muitos presets - ALINHADOS E UNIFORMES */}
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                {filteredPresets.length > 0 ? (
+                  filteredPresets.map((preset) => {
+                  const isSystemPreset = !('_isFromDB' in preset);
+                  return (
+                    <div
+                      key={preset.id}
+                      className="flex items-start gap-2"
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-auto min-h-[80px] py-3 px-4 justify-start border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        onClick={() => handleApplyPreset(preset)}
+                      >
+                        <div className="flex flex-col items-start gap-1 w-full">
+                          <div className="flex items-center gap-2 w-full flex-wrap">
+                            <span className="font-semibold text-sm">{preset.name}</span>
+                            {preset.sector && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {preset.sector}
+                              </Badge>
+                            )}
+                            {isSystemPreset && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                Sistema
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground text-left line-clamp-2">
+                            {preset.description}
+                          </span>
+                        </div>
+                      </Button>
+                      {/* ✅ Botão "Editar" - VISÍVEL E MAIS DESTACADO (para todos os presets) */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-[80px] w-10 flex-shrink-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditPreset(preset);
+                        }}
+                        title="Editar preset para adicionar mais keywords"
+                      >
+                        <Edit2 className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                      </Button>
+                    </div>
+                  );
+                  })
+                ) : (
+                  <div className="text-center py-6 text-sm text-muted-foreground">
+                    {presetSearchQuery.trim() 
+                      ? `Nenhum preset encontrado para "${presetSearchQuery}"`
+                      : 'Nenhum preset disponível. Clique no botão "+" para criar um.'}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* ✅ Modal de gerenciamento de presets */}
+          <PresetManagerModal
+            open={presetModalOpen}
+            onOpenChange={setPresetModalOpen}
+            preset={editingPreset}
+            onPresetSaved={() => {
+              refetchPresets();
+              setEditingPreset(null);
+            }}
+          />
 
           {/* ✅ NOVO: CONTEXTO DE USO FINAL (CAMADA CRÍTICA) */}
           <Card className="border-l-4 border-l-indigo-600/90 shadow-md bg-gradient-to-r from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:from-indigo-50/60 hover:to-indigo-100/40 dark:hover:from-indigo-950/30 dark:hover:to-indigo-900/20 transition-all duration-200">
@@ -1061,17 +1477,31 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                   Processar ({parseBulkUsageContext(usageContextIncludeBulkInput).length} encontrados)
                 </Button>
                 
-                {/* Input individual */}
+                {/* Input individual - SUPORTA TAB E ENTER */}
                 <Input
                   id="usage-include"
-                  placeholder="Digite termo individual e aperte TAB ou ENTER (ex: equipamento pilates)"
+                  placeholder="Digite termo individual e aperte TAB ou ENTER (ex: equipamento pilates). Para múltiplos: vírgula ou linha."
                   value={usageContextIncludeInput}
                   onChange={(e) => setUsageContextIncludeInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'Tab') {
                       e.preventDefault();
-                      if (usageContextIncludeInput.trim()) {
-                        handleAddUsageInclude(usageContextIncludeInput);
+                      const trimmed = usageContextIncludeInput.trim();
+                      if (trimmed) {
+                        // ✅ Verificar se contém vírgulas ou quebras de linha (bulk)
+                        if (trimmed.includes(',') || trimmed.includes('\n')) {
+                          // Processar como bulk
+                          const parsed = parseBulkUsageContext(trimmed);
+                          if (parsed.length > 0) {
+                            const newTerms = [...new Set([...usageContextInclude, ...parsed])];
+                            setUsageContextInclude(newTerms);
+                            setUsageContextIncludeInput('');
+                            toast.success(`${parsed.length} termo(s) adicionado(s)!`);
+                          }
+                        } else {
+                          // Processar como termo individual
+                          handleAddUsageInclude(trimmed);
+                        }
                       }
                     }
                   }}
@@ -1081,9 +1511,23 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                 {/* Badges dos termos incluídos */}
                 {usageContextInclude.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50 shadow-md bg-gradient-to-r from-emerald-50/50 to-emerald-100/30 dark:from-emerald-950/20 dark:to-emerald-900/10">
-                    <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 w-full mb-1">
-                      Termos Incluídos ({usageContextInclude.length}):
-                    </span>
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                        Termos Incluídos ({usageContextInclude.length}):
+                      </span>
+                      {/* ✅ Botão "Limpar Tudo" para termos incluídos */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-xs border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300"
+                        onClick={handleClearUsageInclude}
+                        title="Limpar todos os termos incluídos"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Limpar Tudo
+                      </Button>
+                    </div>
                     {usageContextInclude.map((term) => (
                       <Badge 
                         key={term} 
@@ -1148,17 +1592,31 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                   Processar ({parseBulkUsageContext(usageContextExcludeBulkInput).length} encontrados)
                 </Button>
                 
-                {/* Input individual */}
+                {/* Input individual - SUPORTA TAB E ENTER */}
                 <Input
                   id="usage-exclude"
-                  placeholder="Digite termo individual e aperte TAB ou ENTER (ex: uso doméstico)"
+                  placeholder="Digite termo individual e aperte TAB ou ENTER (ex: uso doméstico). Para múltiplos: vírgula ou linha."
                   value={usageContextExcludeInput}
                   onChange={(e) => setUsageContextExcludeInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'Tab') {
                       e.preventDefault();
-                      if (usageContextExcludeInput.trim()) {
-                        handleAddUsageExclude(usageContextExcludeInput);
+                      const trimmed = usageContextExcludeInput.trim();
+                      if (trimmed) {
+                        // ✅ Verificar se contém vírgulas ou quebras de linha (bulk)
+                        if (trimmed.includes(',') || trimmed.includes('\n')) {
+                          // Processar como bulk
+                          const parsed = parseBulkUsageContext(trimmed);
+                          if (parsed.length > 0) {
+                            const newTerms = [...new Set([...usageContextExclude, ...parsed])];
+                            setUsageContextExclude(newTerms);
+                            setUsageContextExcludeInput('');
+                            toast.success(`${parsed.length} termo(s) adicionado(s)!`);
+                          }
+                        } else {
+                          // Processar como termo individual
+                          handleAddUsageExclude(trimmed);
+                        }
                       }
                     }
                   }}
@@ -1168,9 +1626,23 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                 {/* Badges dos termos excluídos */}
                 {usageContextExclude.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-rose-200/50 dark:border-rose-800/50 shadow-md bg-gradient-to-r from-rose-50/50 to-rose-100/30 dark:from-rose-950/20 dark:to-rose-900/10">
-                    <span className="text-sm font-semibold text-rose-800 dark:text-rose-200 w-full mb-1">
-                      Termos Excluídos ({usageContextExclude.length}):
-                    </span>
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-sm font-semibold text-rose-800 dark:text-rose-200">
+                        Termos Excluídos ({usageContextExclude.length}):
+                      </span>
+                      {/* ✅ Botão "Limpar Tudo" para termos excluídos */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-xs border-rose-300 dark:border-rose-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300"
+                        onClick={handleClearUsageExclude}
+                        title="Limpar todos os termos excluídos"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Limpar Tudo
+                      </Button>
+                    </div>
                     {usageContextExclude.map((term) => (
                       <Badge 
                         key={term} 
@@ -1203,6 +1675,104 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
               )}
             </CardContent>
           </Card>
+
+          {/* ✅ ETAPA 7: PREVIEW DO PLANO DE BUSCA (IA) */}
+          {searchPlan && searchPlan.mustIncludePhrases.length > 0 && (
+            <Card className="border-l-4 border-l-slate-600/90 shadow-md bg-gradient-to-r from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:from-slate-50/60 hover:to-slate-100/40 dark:hover:from-slate-900/30 dark:hover:from-slate-800/20 transition-all duration-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-purple-800 dark:text-purple-100 font-semibold text-sm">
+                  <Sparkles className="h-4 w-4 text-purple-700 dark:text-purple-500" />
+                  Preview do Plano de Busca (IA)
+                  <Badge variant="outline" className="ml-auto text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700">
+                    GPT-4o-mini
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-xs text-purple-700 dark:text-purple-300">
+                  Plano gerado automaticamente para otimizar a busca
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Must Include Phrases */}
+                {searchPlan.mustIncludePhrases.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-purple-800 dark:text-purple-200">
+                      Frases obrigatórias ({searchPlan.mustIncludePhrases.length}):
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {searchPlan.mustIncludePhrases.slice(0, 10).map((phrase, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-900 dark:text-purple-100 border border-purple-300 dark:border-purple-700"
+                        >
+                          {phrase}
+                        </Badge>
+                      ))}
+                      {searchPlan.mustIncludePhrases.length > 10 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{searchPlan.mustIncludePhrases.length - 10} mais...
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Must Exclude Terms */}
+                {searchPlan.mustExcludeTerms && searchPlan.mustExcludeTerms.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-purple-800 dark:text-purple-200">
+                      Termos excluídos ({searchPlan.mustExcludeTerms.length}):
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {searchPlan.mustExcludeTerms.slice(0, 10).map((term, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs bg-rose-100 dark:bg-rose-900/50 text-rose-900 dark:text-rose-100 border border-rose-300 dark:border-rose-700"
+                        >
+                          {term}
+                        </Badge>
+                      ))}
+                      {searchPlan.mustExcludeTerms.length > 10 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{searchPlan.mustExcludeTerms.length - 10} mais...
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Country Language Strategy */}
+                {searchPlan.countryLanguageStrategy && Object.keys(searchPlan.countryLanguageStrategy).length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-purple-800 dark:text-purple-200">
+                      Idiomas por país:
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(searchPlan.countryLanguageStrategy).slice(0, 5).map(([country, langs]) => (
+                        <Badge
+                          key={country}
+                          variant="outline"
+                          className="text-xs bg-sky-100 dark:bg-sky-900/50 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700"
+                        >
+                          {country}: {Array.isArray(langs) ? langs.join(', ') : String(langs)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Notes */}
+                {searchPlan.notes && (
+                  <div className="pt-2 border-t border-purple-200 dark:border-purple-800">
+                    <p className="text-xs text-purple-700 dark:text-purple-300 italic">
+                      {searchPlan.notes}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* FILTROS AUTOMÁTICOS (Info) */}
           <div className="border-l-4 border-l-slate-600/90 shadow-md bg-gradient-to-r from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:from-slate-50/60 hover:to-slate-100/40 dark:hover:from-slate-950/30 dark:hover:to-slate-900/20 transition-all duration-200 p-4 rounded-lg space-y-2">
@@ -1246,9 +1816,10 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
           <div className="flex gap-2 flex-wrap">
             <Button
               type="submit"
-              disabled={!canSearch || isSearching}
+              disabled={!canSearch || isSearching || usageContextInclude.length === 0}
               className="flex-1 gap-2"
               size="lg"
+              title={usageContextInclude.length === 0 ? '⚠️ Uso final obrigatório: Defina pelo menos 1 termo que descreve PARA QUE o produto será usado' : undefined}
             >
               {isSearching ? (
                 <>

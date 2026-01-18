@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Clover, X, Minimize2, Maximize2, Trash2, Send, Loader2, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
+import { Bot, X, Minimize2, Maximize2, Trash2, Send, Loader2, Sparkles, ArrowRight, ExternalLink } from 'lucide-react';
 import { useTrevoAssistant, TrevoContext } from '@/hooks/useTrevoAssistant';
 import ReactMarkdown from 'react-markdown';
 
@@ -74,22 +74,20 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
   if (!isOpen) {
     return (
       <div className="fixed bottom-6 right-6 z-[999] group">
-        {/* 🟢 BOTÃO VERDE NEON PARA TESTE - IMPOSSÍVEL NÃO VER! */}
+        {/* ✅ ÍCONE IA - Simples e Elegante (sem círculo colorido) */}
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="h-20 w-20 rounded-full shadow-2xl bg-green-500 text-white border-4 border-green-300 relative overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-lg hover:bg-green-600 animate-pulse"
+          variant="ghost"
+          className="h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 bg-background/80 backdrop-blur-sm border border-border/50"
           aria-label="Abrir TREVO, assistente inteligente"
-          style={{ boxShadow: '0 0 30px rgba(34, 197, 94, 0.8)' }}
         >
-          {/* Ícone ENORME */}
-          <div className="relative z-10">
-            <Clover className="h-10 w-10 text-white font-bold" />
-          </div>
+          {/* Ícone IA - Apenas o ícone, sem decorações */}
+          <Bot className="h-8 w-8 text-primary" strokeWidth={2} />
           
-          {/* Tooltip VERDE */}
-          <div className="absolute bottom-full right-0 mb-3 px-4 py-3 bg-green-600 text-white rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap border-2 border-green-300">
-            <p className="text-base font-bold">🟢 NOVO TREVO ATUALIZADO!</p>
+          {/* Tooltip Discreto */}
+          <div className="absolute bottom-full right-0 mb-3 px-3 py-2 bg-popover text-popover-foreground rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap border border-border text-sm">
+            <p className="font-medium">Assistente IA</p>
           </div>
         </Button>
       </div>
@@ -111,7 +109,8 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
         <div className="flex items-center justify-between p-4 border-b bg-card relative">
           <div className="flex items-center gap-3 relative z-10">
             <div className="h-11 w-11 rounded-xl bg-accent flex items-center justify-center border border-border shadow-sm">
-              <Clover className="h-6 w-6 text-primary" />
+              <Bot className="h-6 w-6 text-primary" />
+            <Sparkles className="h-4 w-4 text-purple-500 animate-pulse ml-1" />
             </div>
             <div>
               <h3 className="font-bold text-foreground flex items-center gap-2 text-lg">

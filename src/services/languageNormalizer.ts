@@ -4,18 +4,34 @@
  * Normaliza texto, keywords e contexto de uso para múltiplos idiomas
  * (PT / EN / idioma nativo do país) ANTES das buscas.
  * Resultados são sempre exibidos em português (denormalização).
+ * 
+ * 🔒 BLINDADO: Normalização multilíngue do Export Dealers (não alterar sem autorização)
  */
 
 /**
- * Normaliza texto para comparação (lowercase + remove acentos + remove caracteres especiais)
+ * Normaliza texto para comparação (lowercase + remove acentos + colapsa espaços)
  */
 export function normalizeText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
   return text
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove acentos
     .replace(/[^\w\s-]/g, '') // Remove caracteres especiais (mantém letras, números, hífens, espaços)
+    .replace(/\s+/g, ' ') // Colapsa espaços múltiplos
     .trim();
+}
+
+/**
+ * Remove vazios, trim e remove duplicados
+ */
+export function uniqueNonEmpty(list: string[]): string[] {
+  return Array.from(new Set(
+    list
+      .map(item => typeof item === 'string' ? item.trim() : String(item).trim())
+      .filter(item => item.length > 0)
+  ));
 }
 
 /**
