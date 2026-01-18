@@ -21,9 +21,11 @@ export interface SearchPlan {
 interface SearchPlanParams {
   hsCodes: string[];
   productKeywords: string[];
-  usageInclude: string[];
-  usageExclude?: string[];
+  usageInclude: string[]; // Alias para usageContext.include
+  usageExclude?: string[]; // Alias para usageContext.exclude
+  usageContext?: { include: string[]; exclude?: string[] }; // Formato alternativo
   countries: string[];
+  language?: 'pt' | 'en' | 'native'; // Idioma da interface
 }
 
 /**
@@ -35,11 +37,15 @@ const searchPlanCache = new Map<string, SearchPlan>();
  * Gera chave de cache baseada nos parâmetros
  */
 function getCacheKey(params: SearchPlanParams): string {
+  // ✅ Normalizar formato para cache
+  const usageInclude = params.usageContext?.include || params.usageInclude || [];
+  const usageExclude = params.usageContext?.exclude || params.usageExclude || [];
+  
   return JSON.stringify({
     hs: params.hsCodes.sort().join(','),
     keywords: params.productKeywords.sort().join(','),
-    include: params.usageInclude.sort().join(','),
-    exclude: (params.usageExclude || []).sort().join(','),
+    include: usageInclude.sort().join(','),
+    exclude: usageExclude.sort().join(','),
     countries: params.countries.sort().join(','),
   });
 }
@@ -51,8 +57,12 @@ function getCacheKey(params: SearchPlanParams): string {
  * - IA NÃO pode remover "required keywords"; apenas sugerir reforços/combinações
  */
 export async function generateSearchPlan(params: SearchPlanParams): Promise<SearchPlan | null> {
+  // ✅ Normalizar formato: aceitar usageContext OU usageInclude/usageExclude
+  const usageInclude = params.usageContext?.include || params.usageInclude || [];
+  const usageExclude = params.usageContext?.exclude || params.usageExclude || [];
+  
   // ✅ Validação obrigatória
-  if (!params.usageInclude || params.usageInclude.length === 0) {
+  if (!usageInclude || usageInclude.length === 0) {
     console.warn('[AI-PLANNER] ⚠️ Uso final obrigatório não fornecido. Abortando planejamento.');
     return null;
   }
@@ -78,8 +88,13 @@ export async function generateSearchPlan(params: SearchPlanParams): Promise<Sear
   }
   
   try {
-    // ✅ Construir prompt fixo (imutável)
-    const prompt = buildSearchPlanPrompt(params);
+    // ✅ Construir prompt fixo (imutável) com parâmetros normalizados
+    const normalizedParams = {
+      ...params,
+      usageInclude: usageInclude,
+      usageExclude: usageExclude,
+    };
+    const prompt = buildSearchPlanPrompt(normalizedParams);
     
     // ✅ Chamar OpenAI GPT-4o-mini
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

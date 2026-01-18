@@ -16,7 +16,9 @@ import { QuarantineActionsMenu } from '@/components/icp/QuarantineActionsMenu';
 import { STCAgent } from '@/components/intelligence/STCAgent';
 import { StrategicIntelligenceDialog } from '@/components/intelligence/SimpleTOTVSCheckDialog';
 import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
-import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource, getRegionDisplay } from '@/lib/utils/leadSourceHelpers';
+import { getLocationDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
+import { CommercialBlockBadge } from '@/components/shared/CommercialBlockBadge';
+import { RegionBadge } from '@/components/shared/RegionBadge';
 import { 
   CheckCircle2, 
   Rocket, 
@@ -144,6 +146,9 @@ export default function ApprovedLeads() {
   };
   
   // 🔍 FILTROS INTELIGENTES POR COLUNA
+  const [filterCompany, setFilterCompany] = useState<string[]>([]); // ✅ NOVO: Filtro por Empresa
+  const [filterLocation, setFilterLocation] = useState<string[]>([]); // ✅ NOVO: Filtro por Localização
+  const [filterRegion, setFilterRegion] = useState<string[]>([]); // ✅ NOVO: Filtro por Região
   const [filterCNPJStatus, setFilterCNPJStatus] = useState<string[]>([]);
   const [filterSector, setFilterSector] = useState<string[]>([]);
   const [filterUF, setFilterUF] = useState<string[]>([]);
@@ -151,6 +156,8 @@ export default function ApprovedLeads() {
   const [filterBlock, setFilterBlock] = useState<string[]>([]);
   const [filterLeadSource, setFilterLeadSource] = useState<string[]>([]);
   const [filterOrigin, setFilterOrigin] = useState<string[]>([]);
+  const [filterICPScore, setFilterICPScore] = useState<string[]>([]); // ✅ NOVO: Filtro por Score ICP
+  const [filterWebsite, setFilterWebsite] = useState<string[]>([]); // ✅ NOVO: Filtro por Website
 
   useEffect(() => {
     console.log('[APPROVED-LEADS] 🔄 useEffect disparado - carregando leads...');
@@ -159,7 +166,7 @@ export default function ApprovedLeads() {
 
   useEffect(() => {
     filterLeads();
-  }, [searchTerm, temperatureFilter, sourceFilter, leads, filterCNPJStatus, filterSector, filterUF, filterAnalysisStatus, filterBlock, filterLeadSource, filterOrigin]);
+  }, [searchTerm, temperatureFilter, sourceFilter, leads, filterCompany, filterLocation, filterRegion, filterCNPJStatus, filterSector, filterUF, filterAnalysisStatus, filterBlock, filterLeadSource, filterOrigin, filterICPScore, filterWebsite]);
 
   useEffect(() => {
     // Extrair origens únicas dos leads
@@ -254,6 +261,28 @@ export default function ApprovedLeads() {
 
     // 🔍 FILTROS INTELIGENTES ADICIONAIS
     
+    // ✅ NOVO: Filtro por Empresa (nome)
+    if (filterCompany.length > 0) {
+      filtered = filtered.filter(lead => {
+        const name = (lead.razao_social || lead.nome_fantasia || '').toLowerCase();
+        return filterCompany.some(filterName => name.includes(filterName.toLowerCase()));
+      });
+    }
+    
+    // ✅ NOVO: Filtro por Localização (país/cidade)
+    if (filterLocation.length > 0) {
+      filtered = filtered.filter(lead => {
+        const location = getLocationDisplay(lead).toLowerCase();
+        return filterLocation.some(filterLoc => location.includes(filterLoc.toLowerCase()));
+      });
+    }
+    
+    // ✅ NOVO: Filtro por Região (será preenchido dinamicamente)
+    if (filterRegion.length > 0) {
+      // Filtro de região será implementado dinamicamente via API
+      // Por enquanto, não filtrar (será implementado com busca assíncrona)
+    }
+    
     // Filtro por Status CNPJ
     if (filterCNPJStatus.length > 0) {
       filtered = filtered.filter(lead => {
@@ -313,6 +342,32 @@ export default function ApprovedLeads() {
         else if (percentage > 25) statusLabel = '26-50%';
         
         return filterAnalysisStatus.includes(statusLabel);
+      });
+    }
+    
+    // ✅ NOVO: Filtro por Score ICP
+    if (filterICPScore.length > 0) {
+      filtered = filtered.filter(lead => {
+        const score = lead.icp_score || 0;
+        return filterICPScore.some(range => {
+          if (range === '80-100') return score >= 80;
+          if (range === '60-79') return score >= 60 && score < 80;
+          if (range === '40-59') return score >= 40 && score < 60;
+          if (range === '0-39') return score < 40;
+          return false;
+        });
+      });
+    }
+    
+    // ✅ NOVO: Filtro por Website
+    if (filterWebsite.length > 0) {
+      filtered = filtered.filter(lead => {
+        const hasWebsite = !!(lead.website || (lead as any).website_url);
+        return filterWebsite.some(val => {
+          if (val === 'Tem Website') return hasWebsite;
+          if (val === 'Sem Website') return !hasWebsite;
+          return false;
+        });
       });
     }
 
@@ -781,17 +836,28 @@ export default function ApprovedLeads() {
 
       toast.info('🔍 Buscando decisores no Apollo.io...');
 
+      // ✅ VALIDAR: Garantir que company_name não seja vazio antes de chamar
+      const companyName = lead.razao_social || rawData.company_name || analysis.razao_social;
+      const domainValue = (lead as any).website || rawData.domain || rawData.website || analysis.website;
+      
+      if (!companyName || typeof companyName !== 'string' || companyName.trim().length < 2) {
+        toast.error('Nome da empresa inválido', {
+          description: 'O nome da empresa deve ter pelo menos 2 caracteres para buscar decisores no Apollo.'
+        });
+        return;
+      }
+
       const { error } = await supabase.functions.invoke('enrich-apollo-decisores', {
         body: {
           company_id: targetCompanyId,
-          company_name: lead.razao_social || rawData.company_name || analysis.razao_social,
-          domain: (lead as any).website || rawData.domain || rawData.website || analysis.website,
+          company_name: companyName.trim(),
+          domain: domainValue || undefined, // Só enviar se existir
           modes: ['people', 'company'],
-          city: receitaData?.municipio || rawData.city || analysis.city || analysis.municipio,
-          state: receitaData?.uf || rawData.state || analysis.state || analysis.uf,
-          cep: receitaData?.cep || rawData.cep || analysis.zip_code,
-          fantasia: receitaData?.fantasia || rawData.fantasia || rawData.nome_fantasia || analysis.nome_fantasia,
-          industry: analysis.segmento || rawData.setor_amigavel || rawData.atividade_economica
+          city: receitaData?.municipio || rawData.city || analysis.city || analysis.municipio || undefined,
+          state: receitaData?.uf || rawData.state || analysis.state || analysis.uf || undefined,
+          cep: receitaData?.cep || rawData.cep || analysis.zip_code || undefined,
+          fantasia: receitaData?.fantasia || rawData.fantasia || rawData.nome_fantasia || analysis.nome_fantasia || undefined,
+          industry: analysis.segmento || rawData.setor_amigavel || rawData.atividade_economica || undefined
         }
       });
 
@@ -1216,43 +1282,43 @@ export default function ApprovedLeads() {
                     />
                   </TableHead>
                   <TableHead className="min-w-[180px] max-w-[200px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('empresa')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Empresa</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'empresa' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="empresa"
+                      title="Empresa"
+                      values={filteredLeads.map(l => l.razao_social || (l as any).nome_fantasia || 'N/A')}
+                      selectedValues={filterCompany}
+                      onFilterChange={setFilterCompany}
+                      onSort={() => handleSort('empresa')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[140px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('location')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Localização</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'location' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="location"
+                      title="Localização"
+                      values={filteredLeads.map(l => getLocationDisplay(l))}
+                      selectedValues={filterLocation}
+                      onFilterChange={setFilterLocation}
+                      onSort={() => handleSort('location')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[110px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('region')}
-                      className="h-8 flex items-center gap-1 px-2 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold">Região</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'region' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="region"
+                      title="Região"
+                      values={filteredLeads.map(() => 'N/A')} // Será preenchido dinamicamente
+                      selectedValues={filterRegion}
+                      onFilterChange={setFilterRegion}
+                      onSort={() => handleSort('region')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[110px]">
                     <ColumnFilter
                       column="commercial_block"
                       title="Bloco"
-                      values={filteredLeads.map(l => getCommercialBlockDisplay(l))}
+                      values={filteredLeads.map(l => {
+                        const country = (l as any).country || (l as any).raw_data?.country || 'N/A';
+                        return country !== 'N/A' ? 'Carregando...' : 'N/A';
+                      })}
                       selectedValues={filterBlock}
                       onFilterChange={setFilterBlock}
                       onSort={() => handleSort('commercial_block')}
@@ -1292,15 +1358,20 @@ export default function ApprovedLeads() {
                     />
                   </TableHead>
                   <TableHead className="min-w-[70px]">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSort('score')}
-                      className="h-8 flex items-center gap-1 px-1 hover:bg-primary/10 transition-colors group"
-                    >
-                      <span className="font-semibold text-[10px]">Score</span>
-                      <ArrowUpDown className={`h-4 w-4 transition-colors ${sortColumn === 'score' ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'}`} />
-                    </Button>
+                    <ColumnFilter
+                      column="icp_score"
+                      title="Score"
+                      values={filteredLeads.map(l => {
+                        const score = l.icp_score || 0;
+                        if (score >= 80) return '80-100';
+                        if (score >= 60) return '60-79';
+                        if (score >= 40) return '40-59';
+                        return '0-39';
+                      })}
+                      selectedValues={filterICPScore}
+                      onFilterChange={setFilterICPScore}
+                      onSort={() => handleSort('score')}
+                    />
                   </TableHead>
                   <TableHead className="min-w-[80px]">
                     <ColumnFilter
@@ -1325,7 +1396,15 @@ export default function ApprovedLeads() {
                       onFilterChange={setFilterAnalysisStatus}
                     />
                   </TableHead>
-                  <TableHead className="min-w-[90px]"><span className="font-semibold text-[10px]">Website</span></TableHead>
+                  <TableHead className="min-w-[90px]">
+                    <ColumnFilter
+                      column="website"
+                      title="Website"
+                      values={filteredLeads.map(l => (l.website || (l as any).website_url) ? 'Tem Website' : 'Sem Website')}
+                      selectedValues={filterWebsite}
+                      onFilterChange={setFilterWebsite}
+                    />
+                  </TableHead>
                   <TableHead className="min-w-[50px]"><span className="font-semibold text-[10px]">SCI</span></TableHead>
                   <TableHead className="w-[40px]"><span className="font-semibold text-[10px]">⚙️</span></TableHead>
                 </TableRow>
@@ -1445,14 +1524,10 @@ export default function ApprovedLeads() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <Badge variant="outline" className="w-fit text-[10px]">
-                        {getRegionDisplay(lead)}
-                      </Badge>
+                      <RegionBadge company={lead} variant="outline" className="w-fit text-[10px]" />
                     </TableCell>
                     <TableCell className="py-4">
-                      <Badge variant="outline" className="w-fit text-[10px]">
-                        {getCommercialBlockDisplay(lead)}
-                      </Badge>
+                      <CommercialBlockBadge company={lead} variant="outline" className="text-[10px]" />
                     </TableCell>
                     <TableCell className="py-4">
                       <Badge variant="secondary" className="w-fit">
@@ -1772,9 +1847,7 @@ export default function ApprovedLeads() {
                             </div>
                             <div className="flex items-start gap-2">
                               <span className="text-muted-foreground min-w-[100px]">Bloco:</span>
-                              <Badge variant="outline" className="flex-1 justify-start w-fit">
-                                {getCommercialBlockDisplay(lead)}
-                              </Badge>
+                              <CommercialBlockBadge company={lead} variant="outline" className="flex-1 justify-start w-fit" />
                             </div>
                           </div>
                         </div>

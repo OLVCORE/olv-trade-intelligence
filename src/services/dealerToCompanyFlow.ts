@@ -80,7 +80,7 @@ export interface SaveResult {
  * @param currentWorkspace - Workspace atual (opcional)
  * @returns Resultado do save
  */
-export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace?: any): Promise<SaveResult> {
+export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace?: any, savedSearchId?: string | null): Promise<SaveResult> {
   const result: SaveResult = {
     success: false,
     saved: 0,
@@ -225,6 +225,7 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
         source: 'dealer_discovery_realtime',
         lead_source: 'Export Dealers (B2B)', // ✅ NOVO: Registro de Lead Source
         search_date: new Date().toISOString(),
+        saved_search_id: savedSearchId || null, // ✅ NOVO: Associar à busca salva
         validated: true,
         type: dealer.b2bType ? `${dealer.b2bType[0].toUpperCase()}${dealer.b2bType.slice(1)}` : 'Distributor',
         notes: `Importado via busca B2B - Fit Score ${dealer.fitScore || 50}`,
@@ -242,20 +243,113 @@ export async function saveDealersToCompanies(dealers: Dealer[], currentWorkspace
       },
     }));
     
-    // ETAPA 2: Inserir em companies (sem upsert por enquanto - insert simples)
-    const { data: companies, error: companyError } = await supabase
-      .from('companies')
-      .insert(companiesToInsert)
-      .select('id, company_name, country');
+    // ETAPA 2: Inserir em companies - tratar duplicatas (erro 409)
+    // ✅ Verificar quais empresas já existem antes de inserir (por website ou nome)
+    console.log('[FLOW] 🔍 Verificando empresas existentes antes de inserir...');
     
-    if (companyError) {
-      console.error('❌ [FLOW] Erro ao salvar companies:', companyError);
-      result.errors.push(`Companies: ${companyError.message}`);
-      throw companyError;
+    // Buscar empresas existentes (por website e nome) em lotes
+    const websitesToCheck = companiesToInsert
+      .filter(c => c.website)
+      .map(c => c.website?.toLowerCase().trim())
+      .filter(Boolean);
+    
+    const existingCompanies = new Set<string>();
+    
+    if (websitesToCheck.length > 0) {
+      // Buscar empresas existentes por website (em lotes de 100)
+      const batchSize = 100;
+      for (let i = 0; i < websitesToCheck.length; i += batchSize) {
+        const batch = websitesToCheck.slice(i, i + batchSize);
+        const { data: existing, error: checkError } = await supabase
+          .from('companies')
+          .select('website, company_name')
+          .in('website', batch.map(w => `http://${w}`).concat(batch.map(w => `https://${w}`)).concat(batch));
+        
+        if (!checkError && existing) {
+          existing.forEach(c => {
+            if (c.website) {
+              const websiteLower = c.website.toLowerCase().trim().replace(/^https?:\/\//, '');
+              existingCompanies.add(websiteLower);
+            }
+          });
+        }
+      }
     }
     
-    result.companiesCreated = companies?.length || 0;
-    console.log(`✅ [FLOW] ${result.companiesCreated} companies salvas/atualizadas`);
+    // Filtrar apenas empresas novas (não existem)
+    const newCompanies = companiesToInsert.filter(c => {
+      if (!c.website) return true; // Sem website, tentar inserir
+      const websiteLower = c.website.toLowerCase().trim().replace(/^https?:\/\//, '');
+      return !existingCompanies.has(websiteLower);
+    });
+    
+    console.log(`[FLOW] 📊 Empresas novas: ${newCompanies.length} / Total: ${companiesToInsert.length}`);
+    result.companiesSkipped = companiesToInsert.length - newCompanies.length;
+    
+    // Inserir apenas empresas novas
+    let companies: any[] = [];
+    if (newCompanies.length > 0) {
+      const { data: insertedCompanies, error: companyError } = await supabase
+        .from('companies')
+        .insert(newCompanies)
+        .select('id, company_name, country');
+      
+      if (companyError) {
+        console.error('❌ [FLOW] Erro ao salvar companies:', companyError);
+        
+        // ✅ Se for erro 409 (conflict) ou 23505 (unique violation), tentar inserir uma por uma
+        if (companyError.code === '23505' || companyError.code === 'PGRST204' || companyError.message?.includes('duplicate') || companyError.message?.includes('conflict')) {
+          console.log('[FLOW] ⚠️ Duplicata detectada em lote, tentando inserir uma por uma...');
+          
+          let successCount = 0;
+          let errorCount = 0;
+          
+          for (const company of newCompanies) {
+            try {
+              const { data: singleCompany, error: singleError } = await supabase
+                .from('companies')
+                .insert(company)
+                .select('id, company_name, country')
+                .single();
+              
+              if (!singleError && singleCompany) {
+                companies.push(singleCompany);
+                successCount++;
+              } else if (singleError && (singleError.code === '23505' || singleError.code === 'PGRST204')) {
+                // Duplicata - pular
+                errorCount++;
+                console.log(`[FLOW] ⚠️ Empresa duplicada pulada: ${company.company_name}`);
+              } else {
+                errorCount++;
+                console.error(`[FLOW] ❌ Erro ao inserir empresa individual: ${singleError?.message}`);
+              }
+            } catch (err) {
+              errorCount++;
+              console.error(`[FLOW] ❌ Erro ao inserir empresa individual: ${err}`);
+            }
+          }
+          
+          result.companiesCreated = successCount;
+          result.companiesSkipped = companiesToInsert.length - successCount;
+          
+          if (errorCount > 0 && successCount === 0) {
+            throw new Error(`Nenhuma empresa foi inserida. ${errorCount} erro(s) encontrado(s).`);
+          }
+          
+          console.log(`✅ [FLOW] ${successCount} empresas inseridas (${errorCount} duplicatas puladas)`);
+        } else {
+          result.errors.push(`Companies: ${companyError.message}`);
+          throw companyError;
+        }
+      } else {
+        companies = insertedCompanies || [];
+        result.companiesCreated = companies.length;
+        console.log(`✅ [FLOW] ${result.companiesCreated} empresas novas salvas`);
+      }
+    } else {
+      result.companiesCreated = 0;
+      console.log('[FLOW] ⚠️ Todas as empresas já existem no banco de dados');
+    }
     
     // ETAPA 3: Calcular totais finais
     result.success = result.errors.length === 0;

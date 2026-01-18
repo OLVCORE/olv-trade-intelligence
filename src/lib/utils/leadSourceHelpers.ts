@@ -11,8 +11,6 @@
 
 import { 
   LEAD_SOURCES, 
-  getCommercialBlock, 
-  getContinent, 
   normalizeLeadSource 
 } from '@/data/leadSources';
 
@@ -363,23 +361,60 @@ export function getLocationDisplay(company: any): { city: string; country: strin
 /**
  * Função: getCommercialBlockDisplay(company: any): string
  * 
- * Extrai Bloco Comercial baseado no país
+ * ⚠️ DEPRECATED (SÍNCRONA): Esta função retorna "Carregando..." ou "N/A"
+ * Para obter bloco comercial REAL, use getCommercialBlockDisplayAsync() que busca de APIs
+ * 
+ * Extrai Bloco Comercial baseado no país (versão síncrona - retorna placeholder)
  */
 export function getCommercialBlockDisplay(company: any): string {
   const country = getCountryWithFallback(company);
-  return getCommercialBlock(country);
+  // ⚠️ NÃO USAR HARDCODE - retornar placeholder enquanto busca de API
+  if (!country || country === 'N/A') {
+    return 'N/A';
+  }
+  // Retornar placeholder - bloco será carregado assincronamente
+  return 'Carregando...';
+}
+
+/**
+ * Função: getCommercialBlockDisplayAsync(company: any): Promise<string>
+ * 
+ * Extrai Bloco Comercial baseado no país BUSCANDO DE APIs EXTERNAS
+ * Usa REST Countries API para buscar região e bloco comercial dinamicamente
+ * 
+ * ✅ SEM HARDCODE - busca real de APIs gratuitas
+ */
+export async function getCommercialBlockDisplayAsync(company: any): Promise<string> {
+  const country = getCountryWithFallback(company);
+  if (!country || country === 'N/A') {
+    return 'N/A';
+  }
+  try {
+    const block = await getCommercialBlock(country);
+    return block || 'N/A';
+  } catch (error) {
+    console.error('[BLOCK] ❌ Erro ao buscar bloco comercial de API:', error);
+    return 'N/A';
+  }
 }
 
 /**
  * Função: getContinentDisplay(company: any): string
  * 
- * Extrai Continente baseado no país (FALLBACK ESTÁTICO - usar apenas se API falhar)
+ * ⚠️ DEPRECATED: Esta função retorna "N/A"
  * 
- * ⚠️ DEPRECATED: Preferir getRegionDisplay() que usa API dinâmica
+ * Para obter região REAL, use getRegionDisplayAsync() que busca de APIs
+ * ou use o hook useCountryRegion() para componentes React
  */
 export function getContinentDisplay(company: any): string {
+  // ⚠️ SEM HARDCODE - retornar placeholder
+  // Região será carregada dinamicamente via API
   const country = getCountryWithFallback(company);
-  return getContinent(country);
+  if (!country || country === 'N/A') {
+    return 'N/A';
+  }
+  // Retornar placeholder - região será carregada assincronamente
+  return 'N/A';
 }
 
 /**
@@ -413,12 +448,16 @@ export async function getRegionDisplayAsync(company: any): Promise<string> {
 /**
  * Função: getRegionDisplay(company: any): string
  * 
- * Versão SÍNCRONA (usa cache ou fallback estático)
+ * ⚠️ DEPRECATED (SÍNCRONA): Esta função retorna "N/A"
  * 
- * ⚠️ Para uso em renderização React, use getRegionDisplayAsync() em useEffect
+ * Para obter região REAL em componentes React, use:
+ * - Hook: useCountryRegion(company) - recomendado
+ * - Async: getRegionDisplayAsync(company) - em useEffect
+ * 
+ * ✅ SEM HARDCODE - busca real de APIs externas (REST Countries)
  */
 export function getRegionDisplay(company: any): string {
-  // Por enquanto, usar fallback estático
-  // TODO: Implementar cache síncrono ou usar React Query para cache
-  return getContinentDisplay(company);
+  // ⚠️ SEM HARDCODE - retornar placeholder
+  // Região será carregada dinamicamente via API (useCountryRegion hook)
+  return 'N/A';
 }

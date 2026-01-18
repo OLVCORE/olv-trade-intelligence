@@ -11,99 +11,40 @@
  */
 
 // ============================================================================
-// MAPEAMENTO CIDADE → PAÍS (baseado em conhecimento geográfico real)
+// MAPEAMENTO CIDADE → PAÍS - REMOVIDO (hardcoded)
 // ============================================================================
-
-const CITY_TO_COUNTRY_MAP: Record<string, string> = {
-  // China
-  'guangzhou': 'China',
-  'guangdong': 'China',
-  'beijing': 'China',
-  'shanghai': 'China',
-  'shenzhen': 'China',
-  'hong kong': 'China',
-  'xiamen': 'China',
-  'hangzhou': 'China',
-  'ningbo': 'China',
-  'foshan': 'China',
-  'dongguan': 'China',
-  
-  // USA
-  'new york': 'United States',
-  'los angeles': 'United States',
-  'chicago': 'United States',
-  'miami': 'United States',
-  'san francisco': 'United States',
-  'houston': 'United States',
-  'boston': 'United States',
-  'seattle': 'United States',
-  
-  // Europe
-  'london': 'United Kingdom',
-  'paris': 'France',
-  'berlin': 'Germany',
-  'madrid': 'Spain',
-  'milan': 'Italy',
-  'amsterdam': 'Netherlands',
-  'dublin': 'Ireland',
-  
-  // Latin America
-  'são paulo': 'Brasil',
-  'rio de janeiro': 'Brasil',
-  'buenos aires': 'Argentina',
-  'santiago': 'Chile',
-  'bogotá': 'Colombia',
-  'bogota': 'Colombia',
-  'lima': 'Peru',
-  'méxico': 'Mexico',
-  'mexico city': 'Mexico',
-  'montevideo': 'Uruguay',
-  'caracas': 'Venezuela',
-  
-  // Asia
-  'tokyo': 'Japan',
-  'seoul': 'South Korea',
-  'singapore': 'Singapore',
-  'bangkok': 'Thailand',
-  'jakarta': 'Indonesia',
-  'manila': 'Philippines',
-  'kuala lumpur': 'Malaysia',
-  'mumbai': 'India',
-  'delhi': 'India',
-  'bangalore': 'India',
-  
-  // Middle East
-  'dubai': 'United Arab Emirates',
-  'riyadh': 'Saudi Arabia',
-  'doha': 'Qatar',
-  'tel aviv': 'Israel',
-  
-  // Oceania
-  'sydney': 'Australia',
-  'melbourne': 'Australia',
-  'auckland': 'New Zealand',
-};
+// 
+// ⚠️ REMOVIDO: CITY_TO_COUNTRY_MAP hardcoded foi REMOVIDO
+// 
+// ✅ AGORA: País é buscado DINAMICAMENTE de APIs externas:
+// - REST Countries API: busca país por nome
+// - GeoNames API: busca país por cidade/coordenadas
+// - Scraping de website: extrai país do conteúdo
+// 
+// Nenhuma cidade ou país está hardcoded.
+// Todos os dados vêm de APIs externas gratuitas.
+// 
+// ============================================================================
 
 // ============================================================================
 // EXTRAIR PAÍS DO NOME DA EMPRESA
 // ============================================================================
 
 /**
- * Extrai país do nome da empresa baseado em cidades conhecidas
+ * Extrai país do nome da empresa
+ * 
+ * ⚠️ DEPRECATED: Esta função foi desabilitada - hardcodes removidos
+ * 
+ * Para extrair país do nome da empresa, use APIs externas:
+ * - GeoNames API (busca cidade → país)
+ * - REST Countries API (busca país por nome)
+ * 
+ * NÃO HARDCODE: País deve ser buscado de APIs ou fontes reais (Apollo, scraping, etc.)
  */
 export function extractCountryFromCompanyName(companyName: string): string | null {
-  if (!companyName || typeof companyName !== 'string') return null;
-  
-  const nameLower = companyName.toLowerCase();
-  
-  // Buscar cidades no nome
-  for (const [city, country] of Object.entries(CITY_TO_COUNTRY_MAP)) {
-    if (nameLower.includes(city)) {
-      console.log(`[COUNTRY-EXTRACT] ✅ País extraído do nome: "${city}" → "${country}" para "${companyName}"`);
-      return country;
-    }
-  }
-  
+  // ⚠️ REMOVIDO: Hardcode de cidade → país
+  // País deve ser buscado de APIs externas ou fontes reais
+  console.warn(`[COUNTRY-EXTRACT] ⚠️ extractCountryFromCompanyName() está deprecated. Use APIs externas (GeoNames, REST Countries).`);
   return null;
 }
 

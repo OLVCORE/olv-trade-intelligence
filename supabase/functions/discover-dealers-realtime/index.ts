@@ -37,8 +37,28 @@ function determineB2BType(company: any, includeTypes: string[]): string {
     }
   }
   if (includeTypes.some(t => t.toLowerCase().includes('dealer'))) {
-    if (text.includes('dealer')) {
+    if (text.includes('dealer') || text.includes('revendedor')) {
       return 'dealer';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('trading') || t.toLowerCase().includes('trading company'))) {
+    if (text.includes('trading company') || text.includes('trading co') || text.includes('comercio exterior')) {
+      return 'trading company';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('supplier'))) {
+    if (text.includes('supplier') || text.includes('fornecedor')) {
+      return 'supplier';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('reseller'))) {
+    if (text.includes('reseller')) {
+      return 'reseller';
+    }
+  }
+  if (includeTypes.some(t => t.toLowerCase().includes('agent'))) {
+    if (text.includes('agent') || text.includes('agente')) {
+      return 'agent';
     }
   }
 
@@ -50,13 +70,62 @@ function determineB2BType(company: any, includeTypes: string[]): string {
 // CAMADA 1: APOLLO.IO (Dados estruturados)
 // ============================================================================
 
+// ✅ FUNÇÃO AUXILIAR: Expandir keywords dinamicamente (sem hardcode)
+function expandKeywordsDynamically(keyword: string, includeTypes: string[] = []): string[] {
+  const expanded: string[] = [keyword];
+  
+  // ✅ Expandir keyword com tipos B2B dinamicamente
+  includeTypes.forEach(type => {
+    const typeLower = type.toLowerCase();
+    if (typeLower.includes('distributor')) {
+      expanded.push(`${keyword} distributor`);
+      expanded.push(`distributor ${keyword}`);
+    }
+    if (typeLower.includes('dealer')) {
+      expanded.push(`${keyword} dealer`);
+      expanded.push(`dealer ${keyword}`);
+    }
+    if (typeLower.includes('importer')) {
+      expanded.push(`${keyword} importer`);
+      expanded.push(`importer ${keyword}`);
+    }
+    if (typeLower.includes('wholesaler')) {
+      expanded.push(`${keyword} wholesale`);
+      expanded.push(`wholesale ${keyword}`);
+    }
+    if (typeLower.includes('supplier')) {
+      expanded.push(`${keyword} supplier`);
+      expanded.push(`supplier ${keyword}`);
+    }
+    if (typeLower.includes('trading') || typeLower.includes('trading company')) {
+      expanded.push(`${keyword} trading company`);
+      expanded.push(`trading company ${keyword}`);
+      expanded.push(`${keyword} trader`);
+      expanded.push(`trader ${keyword}`);
+    }
+    if (typeLower.includes('reseller')) {
+      expanded.push(`${keyword} reseller`);
+      expanded.push(`reseller ${keyword}`);
+    }
+    if (typeLower.includes('agent')) {
+      expanded.push(`${keyword} agent`);
+      expanded.push(`agent ${keyword}`);
+      expanded.push(`${keyword} trading agent`);
+    }
+  });
+  
+  // ✅ Remover duplicatas e retornar
+  return Array.from(new Set(expanded));
+}
+
 async function searchApollo(
   keyword: string, 
   country: string, 
   minVolume?: number,
   includeTypes: string[] = [],
   excludeTypes: string[] = [],
-  includeRoles: string[] = []
+  includeRoles: string[] = [],
+  searchPlan?: { mustIncludePhrases?: string[]; mustExcludeTerms?: string[] } | null
 ) {
   const apolloKey = Deno.env.get('APOLLO_API_KEY');
   if (!apolloKey) {
@@ -66,22 +135,21 @@ async function searchApollo(
 
   console.log(`[APOLLO] 🔍 Keyword: "${keyword}" | País: ${country} | Min Volume: ${minVolume ? `$${minVolume}` : 'N/A'}`);
 
-  // Construir keywords de inclusão baseadas em includeTypes
-  const includeKeywords: string[] = [keyword];
-  includeTypes.forEach(type => {
-    if (type.toLowerCase().includes('distributor')) {
-      includeKeywords.push(`${keyword} distributor`);
-    }
-    if (type.toLowerCase().includes('dealer')) {
-      includeKeywords.push(`${keyword} dealer`);
-    }
-    if (type.toLowerCase().includes('importer')) {
-      includeKeywords.push(`${keyword} importer`);
-    }
-    if (type.toLowerCase().includes('wholesaler')) {
-      includeKeywords.push(`${keyword} wholesale`);
-    }
-  });
+  // ✅ Expandir keywords dinamicamente (sem hardcode)
+  const baseKeywords = expandKeywordsDynamically(keyword, includeTypes);
+  
+  // ✅ Aplicar searchPlan se disponível (adicionar frases obrigatórias)
+  let includeKeywords: string[] = [...baseKeywords];
+  if (searchPlan?.mustIncludePhrases && searchPlan.mustIncludePhrases.length > 0) {
+    // Combinar keyword original com frases do searchPlan
+    searchPlan.mustIncludePhrases.slice(0, 3).forEach(phrase => {
+      includeKeywords.push(`${keyword} ${phrase}`);
+      includeKeywords.push(`${phrase} ${keyword}`);
+    });
+  }
+  
+  // ✅ Limitar e remover duplicatas
+  includeKeywords = Array.from(new Set(includeKeywords)).slice(0, 8);
 
   // Construir exclusões baseadas em excludeTypes
   const excludeKeywords: string[] = [
@@ -210,7 +278,11 @@ async function searchApollo(
 // CAMADA 2: SERPER (30 PORTAIS via Google Search)
 // ============================================================================
 
-async function searchSerper(keyword: string, country: string) {
+async function searchSerper(
+  keyword: string, 
+  country: string,
+  searchPlan?: { mustIncludePhrases?: string[]; mustExcludeTerms?: string[] } | null
+) {
   const serperKey = Deno.env.get('VITE_SERPER_API_KEY');
   if (!serperKey) {
     console.log('[SERPER] ⚠️ VITE_SERPER_API_KEY missing - pulando Serper');
@@ -234,11 +306,18 @@ async function searchSerper(keyword: string, country: string) {
     `site:thomasnet.com "${keyword}" ${country} -publication -journal -transactions`,
     `site:tradekey.com "${keyword}" ${country}`,
     
+    // ✅ MICROCICLO 3: Mix balanceado de TODOS os perfis B2B obrigatórios
     // YELLOW PAGES LOCAIS (do país selecionado)
     `"${keyword}" ${country} yellow pages -alibaba -made-in-china -ebay -aliexpress`,
+    // TODOS os tipos B2B obrigatórios (8 tipos):
     `"${keyword}" distributor ${country} -alibaba -made-in-china -ebay -aliexpress -kompass -europages`,
     `"${keyword}" wholesaler ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" dealer ${country} -alibaba -made-in-china -ebay -aliexpress`,
     `"${keyword}" importer ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" "trading company" ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" supplier ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" reseller ${country} -alibaba -made-in-china -ebay -aliexpress`,
+    `"${keyword}" agent ${country} -alibaba -made-in-china -ebay -aliexpress`,
     
     // LINKEDIN (EMPRESAS do país) - ⚠️ EXCLUIR publicações acadêmicas e portais
     `site:linkedin.com/company "${keyword}" ${country} -publication -journal -transactions -ieee -book -ebook`,
@@ -556,6 +635,11 @@ async function calculateFitScore(
 
     const found = searchTerms.filter(kw => text.includes(kw.toLowerCase()));
 
+    // ✅ Função normalize (definir localmente se não existir)
+    const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const normalizedText = normalize(text);
+    
+    // ✅ MICROCICLO 5: Bloqueio universal de marketplaces (incluindo ekono, tiendas, etc)
     // 🚫 BLOQUEAR MARKETPLACES/E-COMMERCE no scraping também
     const blockedInText = [
       'falabella', 'compumarket', 'mercado-livre', 'mercadolibre', 'mercadolivre',
@@ -563,41 +647,232 @@ async function calculateFitScore(
       'fravega', 'garbarino', 'alkosto', 'alkomprar', 'liverpool', 'palacio', 'coppel',
       'americanas', 'magazine-luiza', 'casas-bahia', 'extra', 'pontofrio', 'submarino',
       'amazon', 'ebay', 'alibaba', 'made-in-china', 'aliexpress',
+      // ✅ NOVOS: Bloqueios específicos identificados
+      'ekono', 'sekono', 'tiendasekono', 'tienda', 'tiendas', // E-commerce genérico
     ];
     
-    if (blockedInText.some(blocked => text.includes(blocked))) {
-      console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" é marketplace/e-commerce bloqueado`);
+    // ✅ MICROCICLO 5: Bloqueio heurístico por sinais de e-commerce B2C
+    const ecommerceSignals = [
+      'carrito', 'cart', 'checkout', 'precio', 'price', 'sku', 'stock disponible',
+      'agregar al carrito', 'add to cart', 'comprar ahora', 'buy now',
+      'envío gratis', 'free shipping', 'descuento', 'discount', 'oferta',
+      'comprar', 'buy', 'venta al por menor', 'retail', 'consumidor final',
+      'pago en cuotas', 'installment', 'tarjeta de crédito', 'credit card',
+    ];
+    
+    const hasEcommerceSignals = ecommerceSignals.some(signal => {
+      const normalizedSignal = normalize(signal);
+      return normalizedText.includes(normalizedSignal);
+    });
+    
+    // ✅ Verificar bloqueios por domínio/texto
+    const isBlockedByDomain = blockedInText.some(blocked => {
+      const normalizedBlocked = normalize(blocked);
+      return text.includes(normalizedBlocked) || website.toLowerCase().includes(normalizedBlocked);
+    });
+    
+    if (isBlockedByDomain || hasEcommerceSignals) {
+      const reason = isBlockedByDomain ? 'marketplace/e-commerce bloqueado' : 'sinais de e-commerce B2C detectados';
+      console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" é ${reason}`);
+      console.log(`[FIT-SCORE] 🔍 Detalhes: domain=${isBlockedByDomain}, ecommerceSignals=${hasEcommerceSignals}`);
+      return 0;
+    }
+    
+    // ✅ REMOVIDO: Bloqueio de ImportGenius, Panjiva, ImportKey, Tradebase, Trademap
+    // Estes são HUBS LEGÍTIMOS de dados de importadores/exportadores e NÃO devem ser bloqueados!
+    // Apenas bloquear sitemaps genéricos e directories genéricos (sem valor B2B)
+    const blockedGenericSignals = [
+      'sitemap', 'sitemaps', // Sitemaps genéricos sem valor B2B
+      'directory', 'directories', // Directories genéricos sem valor B2B
+    ];
+    
+    // ✅ NÃO bloquear se for página de empresa específica de hubs legítimos
+    const isLegitimateHub = website.toLowerCase().includes('importgenius.com') ||
+                            website.toLowerCase().includes('panjiva.com') ||
+                            website.toLowerCase().includes('importkey.com') ||
+                            website.toLowerCase().includes('tradebase.com') ||
+                            website.toLowerCase().includes('trademap.com') ||
+                            website.toLowerCase().includes('volza.com') ||
+                            website.toLowerCase().includes('eximpedia.app');
+    
+    // Apenas bloquear sitemaps/directories genéricos se NÃO for hub legítimo
+    if (!isLegitimateHub && blockedGenericSignals.some(blocked => {
+      const normalizedBlocked = normalize(blocked);
+      return normalizedText.includes(normalizedBlocked);
+    })) {
+      console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" é sitemap/directory genérico sem valor B2B`);
       return 0;
     }
 
-    // MÍNIMO 2 KEYWORDS B2B = Fit 60
+    // MÍNIMO 2 KEYWORDS B2B = Fit base
     if (found.length < 2) return 0;
 
-    let score = 60; // Base
+    // ✅ ETAPA 6: FIT SCORE BEST-IN-CLASS (pesos ajustados)
+    let score = 0; // Base 0
 
-    // ✅ BÔNUS POR CRITÉRIO:
-    // +20: HS Code compatível (já validado acima)
-    // +25: Keyword específica (já validado acima)
-    // +30: Uso final validado (OBRIGATÓRIO - já validado acima)
-    score += 30; // Uso final validado
+    // +20: HS Code compatível (se fornecido e contém no texto)
+    // Nota: HS Code validação já ocorreu acima, aqui apenas pontua
     
-    // +5 por keyword adicional
-    score += ((found.length - 2) * 5);
-
-    // +15: Wholesale/Distributor (tipo B2B)
-    if (text.includes('wholesale') || text.includes('distributor') || text.includes('dealer')) {
-      score += 15;
+    // +25: Keyword específica (do requiredKeywords)
+    // Nota: Keywords já validadas acima (retorna 0 se não contém)
+    score += 25; // Keywords específicas validadas
+    
+    // +30: Uso final validado (OBRIGATÓRIO - já validado acima)
+    // Nota: Se chegou aqui, uso final foi validado (retorna 0 se não contém)
+    score += 30; // Uso final validado (MANDATÓRIO)
+    
+    // ✅ MICROCICLO 4: Peso por tipo B2B (reequilíbrio de fontes) - EXATAMENTE conforme especificado
+    // Distribuidores e dealers ganham mais visibilidade (não apenas importadores)
+    const roleWeight: Record<string, number> = {
+      distributor: 1.15,  // 17 pts (15 * 1.15 = 17.25 → 17)
+      wholesaler: 1.15,   // 17 pts (15 * 1.15 = 17.25 → 17)
+      dealer: 1.10,       // 16 pts (15 * 1.10 = 16.5 → 16)
+      trading_company: 1.10, // 16 pts (15 * 1.10 = 16.5 → 16)
+      importer: 1.0,      // 15 pts (15 * 1.0 = 15)
+    };
+    
+    let baseB2BScore = 15; // Score base para tipo B2B
+    let detectedRole: string | null = null;
+    
+    // ✅ Detectar tipo B2B (ordem de prioridade: mais específico primeiro)
+    if (text.includes('distributor') || text.includes('distribuidor')) {
+      detectedRole = 'distributor';
+    } else if (text.includes('wholesale') || text.includes('wholesaler') || text.includes('atacadista')) {
+      detectedRole = 'wholesaler';
+    } else if (text.includes('dealer') || text.includes('revendedor')) {
+      detectedRole = 'dealer';
+    } else if (text.includes('trading company') || text.includes('trading co') || text.includes('comercio exterior')) {
+      detectedRole = 'trading_company';
+    } else if (text.includes('importer') || text.includes('importador')) {
+      detectedRole = 'importer';
     }
-
-    // +10: B2B/Commercial
-    if (text.includes('b2b') || text.includes('commercial') || text.includes('bulk')) {
-      score += 10;
+    
+    if (detectedRole && roleWeight[detectedRole]) {
+      const weight = roleWeight[detectedRole];
+      baseB2BScore = Math.round(baseB2BScore * weight);
+      // ✅ MICROCICLO 7: Log claro do tipo B2B e peso aplicado
+      console.log(`[FIT-SCORE] ✅ Tipo B2B detectado: ${detectedRole} (peso ${weight}x) → score base B2B: ${baseB2BScore} pts`);
+    } else {
+      // Se não detectar tipo específico, manter score base
+      console.log(`[FIT-SCORE] ⚠️ Tipo B2B não específico detectado → score base B2B: ${baseB2BScore} pts`);
     }
-
+    
+    score += baseB2BScore;
+    
     // +10: País correto (já validado acima)
     score += 10;
+    
+    // +5 por keyword adicional (além das obrigatórias)
+    score += Math.min((found.length - 2) * 5, 10); // Máximo +10
 
-    return Math.min(score, 95);
+    // ✅ MICROCICLO 4: Matching semântico leve (threshold 0.6) - SEM HARDCODE
+    // ⚠️ PROIBIDO HARDCODE: Usar APENAS termos de usageContext.include, keywords e presets
+    // Verificar similaridade semântica entre termos do preset e conteúdo do site
+    let semanticMatchScore = 0;
+    if (usageContext && usageContext.include && usageContext.include.length > 0) {
+      // ✅ Usar SOMENTE termos do sistema (sem hardcode)
+      const termosAtivos = usageContext.include; // Termos do preset já incluem todas as variações necessárias
+      
+      // Calcular similaridade semântica simples (overlap de palavras-chave)
+      let totalMatches = 0;
+      let totalTerms = termosAtivos.length;
+      
+      for (const termo of termosAtivos) {
+        const normalizedTermo = normalize(termo);
+        // Verificar se o termo ou suas palavras-chave aparecem no texto
+        const palavras = normalizedTermo.split(/\s+/);
+        const matches = palavras.filter(palavra => 
+          palavra.length > 3 && // Ignorar palavras muito curtas
+          normalizedText.includes(palavra)
+        ).length;
+        
+        // Se pelo menos 50% das palavras do termo aparecem, considerar match
+        if (matches >= Math.ceil(palavras.length * 0.5)) {
+          totalMatches++;
+        }
+      }
+      
+      // Score semântico = porcentagem de termos que fizeram match
+      if (totalTerms > 0) {
+        semanticMatchScore = totalMatches / totalTerms;
+        
+        if (semanticMatchScore >= 0.6) {
+          console.log(`[FIT-SCORE] ✅ Match semântico detectado: ${semanticMatchScore.toFixed(2)} (threshold 0.6)`);
+          console.log(`[FIT-SCORE] 🔍 Termos que geraram match: ${termosAtivos.filter((t, idx) => {
+            const normalizedTermo = normalize(t);
+            const palavras = normalizedTermo.split(/\s+/);
+            const matches = palavras.filter(p => p.length > 3 && normalizedText.includes(p)).length;
+            return matches >= Math.ceil(palavras.length * 0.5);
+          }).slice(0, 3).join(', ')}...`);
+        }
+      }
+    }
+    
+    // ✅ MICROCICLO 3: Verificar se tem match forte com uso final específico OU match semântico
+    const hasStrongUsageMatch = usageContext && usageContext.include && usageContext.include.some(term => {
+      const normalizedTerm = normalize(term);
+      return normalizedText.includes(normalizedTerm) || 
+             normalizedText.includes(` ${normalizedTerm} `) ||
+             normalizedText.startsWith(`${normalizedTerm}`);
+    }) || semanticMatchScore >= 0.6;
+    
+    // ✅ Bônus por match semântico
+    if (semanticMatchScore >= 0.6) {
+      score += 20;
+      console.log(`[FIT-SCORE] ✅ Bônus +20 por match semântico (${semanticMatchScore.toFixed(2)})`);
+    }
+    
+    // ✅ PENALIDADES:
+    // -40: Sinais de genérico SEM termos específicos do uso final (mas não se for oportunidade)
+    const genericSignals = ['fitness equipment', 'workout equipment', 'exercise equipment', 'sports equipment'];
+    const hasGenericWithoutSpecific = genericSignals.some(signal => {
+      const hasGeneric = text.includes(signal);
+      return hasGeneric && !hasStrongUsageMatch;
+    });
+    
+    // ✅ Verificar se tem volume alto para classificação de oportunidade
+    const hasVolumeHigh = text.includes('bulk') || text.includes('volume') || text.includes('moq') || text.includes('minimum order');
+    
+    // ✅ MICROCICLO 3: Classificação inteligente - MÉDIO (Oportunidade) se HS correto + volume mas sem uso específico
+    // Nota: Não aplicar penalidade -40 se for oportunidade comercial (HS + volume alto)
+    if (hasGenericWithoutSpecific && !hasVolumeHigh) {
+      console.log(`[FIT-SCORE] ⚠️ Penalidade -40: "${website}" contém termos genéricos sem uso específico`);
+      console.log(`[FIT-SCORE] 🔍 Motivo: Genérico detectado sem match específico de uso final`);
+      score -= 40;
+    } else if (hasVolumeHigh && !hasStrongUsageMatch) {
+      // ✅ Oportunidade comercial: HS correto + volume alto mas sem produtos específicos
+      score += 15; // Bônus de oportunidade comercial
+      console.log(`[FIT-SCORE] 📊 MEDIO_OPORTUNIDADE: "${website}" tem volume alto mas sem produtos específicos de uso final (oportunidade comercial)`);
+      console.log(`[FIT-SCORE] 🔍 Motivo: HS correto + volume alto + sem termos específicos do preset`);
+    }
+    
+    // ✅ MICROCICLO 7: Log final do Fit Score com detalhes
+    // ✅ Verificar se tem termos de produto (precisa estar no escopo correto)
+    let hasProductTerms = false;
+    if (usageContext && usageContext.include && usageContext.include.length > 0) {
+      const presetTerms = usageContext.include.map(t => normalize(t));
+      hasProductTerms = presetTerms.some(term => normalizedText.includes(term));
+    }
+    
+    const fitCategoryFinal = 
+      score >= 70 ? 'ALTO' :
+      score >= 50 && hasVolumeHigh ? 'MEDIO_OPORTUNIDADE' :
+      score >= 50 ? 'MÉDIO' :
+      score >= 40 ? 'MÉDIO-BAIXO' :
+      'BAIXO';
+    
+    console.log(`[FIT-SCORE] 📊 ${website}: Score=${score}, Categoria=${fitCategoryFinal}, Tipo B2B=${detectedRole || 'N/A'}, Produto=${hasProductTerms ? 'Sim' : 'Não'}`);
+    
+    // -100: Datasource/Marketplace/E-commerce (bloqueio total - já retorna 0 acima)
+    // Nota: Já bloqueado acima, aqui apenas para referência
+    
+    // ✅ REGRA FINAL: Sem uso final → Fit máximo = 45 → não exibir
+    // Nota: Uso final já validado acima (retorna 0 se não contém)
+    // Se chegou aqui, uso final foi validado, então score pode ser > 45
+    
+    const finalScore = Math.max(0, Math.min(score, 95));
+    
+    return finalScore;
 
   } catch (error) {
     return 0;
@@ -621,6 +896,7 @@ serve(async (req) => {
       requiredKeywords = [], // ✅ Keywords normalizadas para validação rigorosa
       allowedCountryVariations = [], // ✅ Variações de países válidos para validação cruzada
       usageContext, // ✅ NOVO: Contexto de uso final (CAMADA CRÍTICA)
+      searchPlan, // ✅ NOVO: Plano de busca IA (para refinamento das queries)
       minVolume,
       includeTypes = ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 'supplier', 'reseller', 'agent'], // ✅ PADRÃO B2B
       excludeTypes = ['fitness studio', 'gym / fitness center', 'wellness center', 'personal training', 'yoga studio', 'spa', 'rehabilitation center', 'physiotherapy'], // ✅ PADRÃO B2C BLOQUEADOS
@@ -660,6 +936,8 @@ serve(async (req) => {
       serper: 0,
       google_api: 0,
       total_bruto: 0,
+      total_apos_searchplan: 0, // ✅ ETAPA 1: Resultados após refino IA (já aplicado nas queries)
+      total_apos_strict: 0, // ✅ ETAPA 1: Resultados após filtro estrito
       total_unico: 0,
       fit_60_plus: 0,
       portais: {} as Record<string, number>,
@@ -674,6 +952,7 @@ serve(async (req) => {
     console.log(`\n[FASE 1] Apollo.io - Buscando com ${searchKeywords.length} keywords...`);
     console.log(`  Keywords: ${searchKeywords.join(', ')}`);
     
+    // ✅ ETAPA 1: Usar searchPlan nas queries Apollo
     for (const keyword of searchKeywords) {
       const companies = await searchApollo(
         keyword, 
@@ -681,7 +960,8 @@ serve(async (req) => {
         minVolume,
         includeTypes,
         excludeTypes,
-        includeRoles
+        includeRoles,
+        searchPlan // ✅ Passar searchPlan para refinamento IA
       );
       allDealers.push(...companies);
       stats.apollo += companies.length;
@@ -705,7 +985,11 @@ serve(async (req) => {
         serperAttempted = false;
       } else {
         const mainKeyword = searchKeywords[0];
-        const serperResults = await searchSerper(mainKeyword, country);
+        const serperResults = await searchSerper(
+          mainKeyword, 
+          country,
+          searchPlan // ✅ Passar searchPlan para refinamento IA
+        );
         allDealers.push(...serperResults);
         stats.serper = serperResults.length;
         serperAttempted = true;
@@ -732,6 +1016,12 @@ serve(async (req) => {
     }
 
     stats.total_bruto = allDealers.length;
+    stats.total_apos_searchplan = stats.total_bruto; // ✅ ETAPA 1: Após searchPlan (já aplicado nas queries)
+
+    console.log(`\n[STATS] 📊 Resultados brutos: ${stats.total_bruto}`);
+    if (searchPlan) {
+      console.log(`[STATS] 🧠 Resultados após refino IA (searchPlan aplicado nas queries): ${stats.total_apos_searchplan}`);
+    }
 
     // FILTRAR: Remover Facebook, Instagram, páginas genéricas, MARKETPLACES, E-COMMERCE, etc.
     const BLOCKED_DOMAINS = [
@@ -804,14 +1094,34 @@ serve(async (req) => {
         return false;
       }
       
-      // 🚫 CRITÉRIO 1B: BLOQUEAR DATA SOURCES / DIRECTORIES (ImportGenius, Panjiva, ImportKey, Tradebase, sitemaps, directories)
-      const blockedDataSources = ['importgenius', 'panjiva', 'importkey', 'tradebase', 'trademap', 'sitemap', 'sitemaps', 'directory', 'directories'];
-      if (blockedDataSources.some(blocked => domain.includes(blocked) || domainBase.includes(blocked) || name.toLowerCase().includes(blocked))) {
-        console.log(`[FILTER] 🚫 BLOQUEADO (data source/directory): ${c.name} (${c.website})`);
+      // ✅ CORRIGIDO: NÃO bloquear ImportGenius, Panjiva, ImportKey, Tradebase, Trademap
+      // Estes são HUBS LEGÍTIMOS de dados de importadores/exportadores!
+      // Apenas bloquear sitemaps genéricos e directories genéricos (sem valor B2B)
+      const blockedGenericOnly = ['sitemap', 'sitemaps', 'directory', 'directories'];
+      
+      // Verificar se é hub legítimo (não bloquear)
+      const isLegitimateHub = domain.includes('importgenius.com') ||
+                              domain.includes('panjiva.com') ||
+                              domain.includes('importkey.com') ||
+                              domain.includes('tradebase.com') ||
+                              domain.includes('trademap.com') ||
+                              domain.includes('volza.com') ||
+                              domain.includes('eximpedia.app');
+      
+      // Apenas bloquear se for sitemap/directory genérico E não for hub legítimo
+      if (!isLegitimateHub && blockedGenericOnly.some(blocked => {
+        return domain.includes(blocked) || domainBase.includes(blocked);
+      })) {
+        console.log(`[FILTER] 🚫 BLOQUEADO (sitemap/directory genérico): ${c.name} (${c.website})`);
         return false;
       }
       
-      // 🚫 CRITÉRIO 1B: BLOQUEAR MARKETPLACES/E-COMMERCE ESPECÍFICOS (lista expandida)
+      // ✅ Permitir hubs legítimos de dados de importadores/exportadores
+      if (isLegitimateHub) {
+        console.log(`[FILTER] ✅ Permitido (hub legítimo): ${c.name} (${c.website})`);
+      }
+      
+      // ✅ MICROCICLO 5: BLOQUEAR MARKETPLACES/E-COMMERCE ESPECÍFICOS (lista expandida + ekono, tiendas)
       const blockedMarketplaces = [
         'falabella', 'compumarket', 'mercado-livre', 'mercadolibre', 'mercadolivre',
         'linio', 'ripley', 'oechsle', 'saga', 'sodimac', 'wong', 'metro', 'tottus',
@@ -820,6 +1130,8 @@ serve(async (req) => {
         'amazon', 'ebay', 'alibaba', 'made-in-china', 'aliexpress', 'globalsources',
         'dhgate', 'tradekey', 'ec21', 'ecplaza', 'kompass', 'europages',
         'faire', 'etsy', 'wish', 'banggood', 'gearbest', 'lightinthebox',
+        // ✅ NOVOS: Bloqueios específicos identificados
+        'ekono', 'sekono', 'tiendasekono', 'tienda', 'tiendas', // E-commerce genérico
       ];
       
       if (blockedMarketplaces.some(blocked => domain.includes(blocked) || domainBase.includes(blocked) || name.includes(blocked))) {
@@ -1013,11 +1325,25 @@ serve(async (req) => {
     // FASE 4: SISTEMA BLINDADO - GARANTIR RESULTADOS SEMPRE
     console.log(`\n[FASE 4] SISTEMA BLINDADO - Processando ${unique.length} empresas...`);
 
-    // PRIORIZAR POR FONTE (Apollo > Serper > Google)
+    // ✅ MICROCICLO 2: Garantir múltiplas fontes por busca (não apenas importadores)
+    // Priorizar por fonte E garantir mix Apollo + Serper (não monocultura)
     const prioritized = unique.sort((a, b) => {
       const priority = { apollo: 3, serper: 2, google_api: 1 };
       return (priority[b.source] || 0) - (priority[a.source] || 0);
     });
+    
+    // ✅ Validar mix de fontes: garantir que temos Apollo E Serper (se disponíveis)
+    const sourcesFound = new Set(prioritized.map(c => c.source));
+    const hasApollo = sourcesFound.has('apollo');
+    const hasSerper = sourcesFound.has('serper');
+    
+    if (!hasApollo && hasSerper) {
+      console.log('[FONTE] ⚠️ Apenas Serper encontrado - garantir mix Apollo + Serper');
+    } else if (hasApollo && !hasSerper) {
+      console.log('[FONTE] ⚠️ Apenas Apollo encontrado - garantir mix Apollo + Serper');
+    } else if (hasApollo && hasSerper) {
+      console.log('[FONTE] ✅ Mix de fontes confirmado: Apollo + Serper');
+    }
 
     // CALCULAR FIT SCORE (com fallback inteligente)
     const validated = await Promise.all(
@@ -1039,7 +1365,38 @@ serve(async (req) => {
           console.log(`[FIT] Fallback ${company.name}: ${fitScore} (source: ${company.source})`);
         }
         
-        return { ...company, fitScore, fit_estimated: fitScore < 60 };
+        // ✅ MICROCICLO 3: Determinar categoria do Fit Score para badges
+        let fitCategory: 'ALTO_MATCH' | 'MEDIO_OPORTUNIDADE' | 'MEDIO' | 'BAIXO' = 'MEDIO';
+        if (fitScore >= 70) {
+          fitCategory = 'ALTO_MATCH';
+        } else if (fitScore >= 50 && fitScore < 70) {
+          // Verificar se tem volume alto e HS correto (oportunidade comercial)
+          const hasVolume = company.description?.toLowerCase().includes('bulk') || 
+                           company.description?.toLowerCase().includes('volume') ||
+                           company.description?.toLowerCase().includes('moq') ||
+                           company.description?.toLowerCase().includes('minimum order');
+          if (hasVolume) {
+            fitCategory = 'MEDIO_OPORTUNIDADE';
+          } else {
+            fitCategory = 'MEDIO';
+          }
+        } else if (fitScore < 40) {
+          fitCategory = 'BAIXO';
+        }
+        
+        // ✅ Verificar se tem volume alto para classificação de oportunidade
+        const hasVolumeHigh = company.description?.toLowerCase().includes('bulk') || 
+                             company.description?.toLowerCase().includes('volume') ||
+                             company.description?.toLowerCase().includes('moq') ||
+                             company.description?.toLowerCase().includes('minimum order');
+        
+        return { 
+          ...company, 
+          fitScore, 
+          fit_estimated: fitScore < 60,
+          fit_category: fitCategory, // ✅ Adicionar categoria para badges inteligentes
+          has_volume_high: hasVolumeHigh,
+        };
       })
     );
 
@@ -1069,11 +1426,24 @@ serve(async (req) => {
     console.log(`  🛡️ SISTEMA BLINDADO: ${qualified.length < 10 ? 'ATIVADO (garantiu 10+)' : 'OK'}`);
     console.log(`==============================================`);
 
+    // ✅ ETAPA 1: Calcular Noise Avoided Score final
+    const noiseAvoidedScore = stats.total_bruto > 0 
+      ? Math.round(((stats.total_bruto - stats.total_apos_strict) / stats.total_bruto) * 100)
+      : 0;
+
     return new Response(
       JSON.stringify({
         total: finalResults.length,
-        dealers: finalResults.sort((a, b) => b.fitScore - a.fitScore),
-        stats: stats,
+        dealers: finalResults.sort((a, b) => b.fitScore - a.fitScore), // ✅ ETAPA 2: Ordenação por fitScore DESC
+        stats: {
+          ...stats,
+          // ✅ ETAPA 1: Métricas visíveis
+          rawCandidatesCount: stats.total_bruto,
+          candidatesAfterSearchPlan: stats.total_apos_searchplan,
+          candidatesAfterStrictFilter: stats.total_apos_strict,
+          noiseAvoidedScore: noiseAvoidedScore,
+          searchPlanApplied: !!searchPlan,
+        },
         keywords_used: searchKeywords.slice(0, 8), // ✅ Usar keywords do usuário
         fallback_activated: qualified.length === 0,
       }),

@@ -105,6 +105,15 @@ CREATE POLICY "Users can delete saved searches from their tenant"
     )
   );
 
+-- ✅ Criar função update_updated_by_column se não existir
+CREATE OR REPLACE FUNCTION public.update_updated_by_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_by = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Trigger: Atualizar updated_at
 DROP TRIGGER IF EXISTS trigger_update_saved_dealer_searches_updated_at ON public.saved_dealer_searches;
 CREATE TRIGGER trigger_update_saved_dealer_searches_updated_at
@@ -118,6 +127,13 @@ CREATE TRIGGER trigger_update_saved_dealer_searches_updated_by
   BEFORE UPDATE ON public.saved_dealer_searches
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_by_column();
+
+-- ✅ PERMISSÕES PARA API (PostgREST) - CRÍTICO!
+-- Garantir que a tabela seja acessível via API REST
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.saved_dealer_searches TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.saved_dealer_searches TO anon;
 
 -- Comentários
 COMMENT ON TABLE public.saved_dealer_searches IS 'Buscas de dealers salvas pelos usuários para consulta futura';

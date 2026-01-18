@@ -57,7 +57,9 @@ import { ColumnFilter } from '@/components/companies/ColumnFilter';
 import { consultarReceitaFederal } from '@/services/receitaFederal';
 import { QuarantineCNPJStatusBadge } from '@/components/icp/QuarantineCNPJStatusBadge';
 import { QuarantineEnrichmentStatusBadge } from '@/components/icp/QuarantineEnrichmentStatusBadge';
-import { getLocationDisplay, getCommercialBlockDisplay, getLeadSource, getRegionDisplay } from '@/lib/utils/leadSourceHelpers';
+import { getLocationDisplay, getLeadSource } from '@/lib/utils/leadSourceHelpers';
+import { CommercialBlockBadge } from '@/components/shared/CommercialBlockBadge';
+import { RegionBadge } from '@/components/shared/RegionBadge';
 import { EnrichmentProgressModal, type EnrichmentProgress } from '@/components/companies/EnrichmentProgressModal';
 import { PartnerSearchModal } from '@/components/companies/PartnerSearchModal';
 import { ExpandableCompaniesTable } from '@/components/companies/ExpandableCompaniesTable';
@@ -80,6 +82,8 @@ export default function CompaniesManagementPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // 🔍 FILTROS POR COLUNA (tipo Excel)
+  const [filterCompany, setFilterCompany] = useState<string[]>([]); // ✅ NOVO: Filtro por Empresa (nome)
+  const [filterLocation, setFilterLocation] = useState<string[]>([]); // ✅ NOVO: Filtro por Localização (país/cidade)
   const [filterOrigin, setFilterOrigin] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterSector, setFilterSector] = useState<string[]>([]);
@@ -88,6 +92,9 @@ export default function CompaniesManagementPage() {
   const [filterLeadSource, setFilterLeadSource] = useState<string[]>([]); // ✅ NOVO: Filtro por Lead Source
   const [filterAnalysisStatus, setFilterAnalysisStatus] = useState<string[]>([]);
   const [filterEnrichment, setFilterEnrichment] = useState<string[]>([]); // ✅ NOVO: Filtro por enriquecimento
+  const [filterICPScore, setFilterICPScore] = useState<string[]>([]); // ✅ NOVO: Filtro por Score ICP
+  const [filterTOTVS, setFilterTOTVS] = useState<string[]>([]); // ✅ NOVO: Filtro por TOTVS Check
+  const [filterWebsite, setFilterWebsite] = useState<string[]>([]); // ✅ NOVO: Filtro por Website (tem/não tem)
   
   // ✅ EXPANSÃO DE LINHAS (card dropdown)
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -131,6 +138,34 @@ export default function CompaniesManagementPage() {
     
     let filtered = [...allCompanies];
     console.log('🔍 [CompaniesManagement] Filtered inicial:', filtered.length);
+    
+    // ✅ NOVO: Filtro por Empresa (nome)
+    if (filterCompany.length > 0) {
+      filtered = filtered.filter(c => {
+        const name = (c.company_name || c.name || '').toLowerCase();
+        return filterCompany.some(filterName => name.includes(filterName.toLowerCase()));
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Empresa:', filtered.length);
+    }
+    
+    // ✅ CORRIGIDO: Filtro por Localização (país/cidade)
+    if (filterLocation.length > 0) {
+      filtered = filtered.filter(c => {
+        const location = getLocationDisplay(c); // Retorna { city: string, country: string }
+        const locationString = `${location.city || ''}, ${location.country || ''}`.toLowerCase();
+        const country = (c.country || location.country || '').toLowerCase();
+        const city = (c.city || location.city || '').toLowerCase();
+        return filterLocation.some(filterLoc => {
+          const filterLower = filterLoc.toLowerCase();
+          return locationString.includes(filterLower) ||
+                 country.includes(filterLower) ||
+                 city.includes(filterLower) ||
+                 location.country?.toLowerCase().includes(filterLower) ||
+                 location.city?.toLowerCase().includes(filterLower);
+        });
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Localização:', filtered.length);
+    }
     
     // Filtro por Origem
     if (filterOrigin.length > 0) {
@@ -177,20 +212,68 @@ export default function CompaniesManagementPage() {
       console.log('🔍 [CompaniesManagement] Após filtro Setor:', filtered.length);
     }
     
-    // Filtro por UF (apenas estado, sem cidade)
+    // ✅ CORRIGIDO: Filtro por Região (busca dinâmica via API com cache)
     if (filterRegion.length > 0) {
       filtered = filtered.filter(c => {
-        const uf = (c as any).raw_data?.uf || '';
-        return filterRegion.includes(uf);
+        // Buscar país primeiro
+        const country = getLocationDisplay(c).country || c.country || '';
+        if (!country || country === 'N/A') {
+          return filterRegion.includes('N/A');
+        }
+        
+        // ✅ Buscar região via cache do raw_data primeiro
+        const cachedRegion = (c as any).raw_data?.region || (c as any).region;
+        if (cachedRegion && cachedRegion !== 'N/A' && cachedRegion !== 'Carregando...') {
+          return filterRegion.includes(cachedRegion);
+        }
+        
+        // ✅ Buscar do React Query cache (se disponível)
+        const cachedData = queryClient.getQueryData(['country-region', country]) as { region?: string; commercialBlock?: string } | undefined;
+        if (cachedData?.region) {
+          return filterRegion.includes(cachedData.region);
+        }
+        
+        // Se não tiver cache ainda, verificar se o filtro inclui "Carregando..." com o país
+        const loadingPattern = `Carregando... (${country})`;
+        if (filterRegion.includes(loadingPattern)) {
+          return true;
+        }
+        
+        // Se não tiver cache e não estiver carregando, não incluir
+        return false;
       });
       console.log('🔍 [CompaniesManagement] Após filtro Região:', filtered.length);
     }
     
-    // ✅ NOVO: Filtro por Bloco
+    // ✅ CORRIGIDO: Filtro por Bloco (busca dinâmica via API com cache)
     if (filterBlock.length > 0) {
       filtered = filtered.filter(c => {
-        const block = getCommercialBlockDisplay(c);
-        return filterBlock.includes(block);
+        // Buscar país primeiro
+        const country = getLocationDisplay(c).country || c.country || '';
+        if (!country || country === 'N/A') {
+          return filterBlock.includes('N/A');
+        }
+        
+        // ✅ Buscar bloco via cache do raw_data primeiro
+        const cachedBlock = (c as any).raw_data?.commercial_block || (c as any).commercial_block;
+        if (cachedBlock && cachedBlock !== 'N/A' && cachedBlock !== 'Carregando...' && cachedBlock !== 'Outros') {
+          return filterBlock.includes(cachedBlock);
+        }
+        
+        // ✅ Buscar do React Query cache (se disponível)
+        const cachedData = queryClient.getQueryData(['country-region', country]) as { region?: string; commercialBlock?: string } | undefined;
+        if (cachedData?.commercialBlock && cachedData.commercialBlock !== 'Outros') {
+          return filterBlock.includes(cachedData.commercialBlock);
+        }
+        
+        // Se não tiver cache ainda, verificar se o filtro inclui "Carregando..." com o país
+        const loadingPattern = `Carregando... (${country})`;
+        if (filterBlock.includes(loadingPattern)) {
+          return true;
+        }
+        
+        // Se não tiver cache e não estiver carregando, não incluir
+        return false;
       });
       console.log('🔍 [CompaniesManagement] Após filtro Bloco:', filtered.length);
     }
@@ -249,9 +332,50 @@ export default function CompaniesManagementPage() {
       console.log('🔍 [CompaniesManagement] Após filtro Enriquecimento:', filtered.length);
     }
     
+    // ✅ NOVO: Filtro por Score ICP
+    if (filterICPScore.length > 0) {
+      filtered = filtered.filter(c => {
+        const score = (c as any).icp_score || 0;
+        return filterICPScore.some(range => {
+          if (range === '80-100') return score >= 80;
+          if (range === '60-79') return score >= 60 && score < 80;
+          if (range === '40-59') return score >= 40 && score < 60;
+          if (range === '0-39') return score < 40;
+          return false;
+        });
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Score ICP:', filtered.length);
+    }
+    
+    // ✅ NOVO: Filtro por TOTVS Check
+    if (filterTOTVS.length > 0) {
+      filtered = filtered.filter(c => {
+        const hasTOTVS = !!(c as any).raw_data?.totvs_report;
+        return filterTOTVS.some(val => {
+          if (val === 'Sim') return hasTOTVS;
+          if (val === 'Não') return !hasTOTVS;
+          return false;
+        });
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro TOTVS:', filtered.length);
+    }
+    
+    // ✅ NOVO: Filtro por Website
+    if (filterWebsite.length > 0) {
+      filtered = filtered.filter(c => {
+        const hasWebsite = !!(c.website || c.website_url);
+        return filterWebsite.some(val => {
+          if (val === 'Tem Website') return hasWebsite;
+          if (val === 'Sem Website') return !hasWebsite;
+          return false;
+        });
+      });
+      console.log('🔍 [CompaniesManagement] Após filtro Website:', filtered.length);
+    }
+    
     console.log('🔍 [CompaniesManagement] FINAL filtered.length:', filtered.length);
     return filtered;
-  }, [allCompanies, filterOrigin, filterStatus, filterSector, filterRegion, filterBlock, filterLeadSource, filterAnalysisStatus, filterEnrichment]);
+  }, [allCompanies, filterCompany, filterLocation, filterOrigin, filterStatus, filterSector, filterRegion, filterBlock, filterLeadSource, filterAnalysisStatus, filterEnrichment, filterICPScore, filterTOTVS, filterWebsite]);
   
   // 🔢 ALIASES PARA COMPATIBILIDADE COM QUARENTENA
   const filteredCompanies = companies;
@@ -2142,43 +2266,84 @@ export default function CompaniesManagementPage() {
                       />
                     </TableHead>
                     <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSort('name')}
-                        className="h-8 flex items-center gap-1"
-                      >
-                        Empresa
-                        <ArrowUpDown className="h-3 w-3" />
-                      </Button>
+                      <ColumnFilter
+                        column="company_name"
+                        title="Empresa"
+                        values={allCompanies.map(c => c.company_name || c.name || 'N/A')}
+                        selectedValues={filterCompany}
+                        onFilterChange={setFilterCompany}
+                        onSort={() => handleSort('name')}
+                      />
                     </TableHead>
                     <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSort('country')}
-                        className="h-8 flex items-center gap-1"
-                      >
-                        Localização
-                        <ArrowUpDown className="h-3 w-3" />
-                      </Button>
+                      <ColumnFilter
+                        column="location"
+                        title="Localização"
+                        values={Array.from(new Set(allCompanies.map(c => {
+                          const location = getLocationDisplay(c);
+                          if (location.city && location.city !== 'N/A' && location.country && location.country !== 'N/A') {
+                            return `${location.city}, ${location.country}`;
+                          }
+                          return location.country || 'N/A';
+                        })))}
+                        selectedValues={filterLocation}
+                        onFilterChange={setFilterLocation}
+                        onSort={() => handleSort('country')}
+                      />
                     </TableHead>
                     <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSort('region')}
-                        className="h-8 flex items-center gap-1"
-                      >
-                        Região
-                        <ArrowUpDown className="h-3 w-3" />
-                      </Button>
+                      <ColumnFilter
+                        column="region"
+                        title="Região"
+                        values={Array.from(new Set(allCompanies.map(c => {
+                          // ✅ Buscar região via raw_data primeiro (cache)
+                          const cachedRegion = (c as any).raw_data?.region || (c as any).region;
+                          if (cachedRegion && cachedRegion !== 'N/A' && cachedRegion !== 'Carregando...') {
+                            return cachedRegion;
+                          }
+                          
+                          // ✅ Se não tiver cache, buscar do React Query cache (se disponível)
+                          const country = getLocationDisplay(c).country || c.country || '';
+                          if (country && country !== 'N/A') {
+                            // Tentar buscar do cache do React Query
+                            const cachedData = queryClient.getQueryData(['country-region', country]) as { region?: string; commercialBlock?: string } | undefined;
+                            if (cachedData?.region) {
+                              return cachedData.region;
+                            }
+                            // Se não tiver no cache, usar país como fallback temporário
+                            return `Carregando... (${country})`;
+                          }
+                          return 'N/A';
+                        })))}
+                        selectedValues={filterRegion}
+                        onFilterChange={setFilterRegion}
+                        onSort={() => handleSort('region')}
+                      />
                     </TableHead>
                     <TableHead>
                       <ColumnFilter
                         column="commercial_block"
                         title="Bloco"
-                        values={allCompanies.map(c => getCommercialBlockDisplay(c))}
+                        values={Array.from(new Set(allCompanies.map(c => {
+                          // ✅ Buscar bloco via raw_data primeiro (cache)
+                          const cachedBlock = (c as any).raw_data?.commercial_block || (c as any).commercial_block;
+                          if (cachedBlock && cachedBlock !== 'N/A' && cachedBlock !== 'Carregando...' && cachedBlock !== 'Outros') {
+                            return cachedBlock;
+                          }
+                          
+                          // ✅ Se não tiver cache, buscar do React Query cache (se disponível)
+                          const country = getLocationDisplay(c).country || c.country || '';
+                          if (country && country !== 'N/A') {
+                            // Tentar buscar do cache do React Query
+                            const cachedData = queryClient.getQueryData(['country-region', country]) as { region?: string; commercialBlock?: string } | undefined;
+                            if (cachedData?.commercialBlock && cachedData.commercialBlock !== 'Outros') {
+                              return cachedData.commercialBlock;
+                            }
+                            // Se não tiver no cache, usar país como fallback temporário
+                            return `Carregando... (${country})`;
+                          }
+                          return 'N/A';
+                        })))}
                         selectedValues={filterBlock}
                         onFilterChange={setFilterBlock}
                         onSort={() => handleSort('commercial_block')}
@@ -2254,7 +2419,21 @@ export default function CompaniesManagementPage() {
                         onFilterChange={setFilterRegion}
                       />
                      </TableHead>
-                     <TableHead>Score ICP</TableHead>
+                     <TableHead>
+                      <ColumnFilter
+                        column="icp_score"
+                        title="Score ICP"
+                        values={allCompanies.map(c => {
+                          const score = (c as any).icp_score || 0;
+                          if (score >= 80) return '80-100';
+                          if (score >= 60) return '60-79';
+                          if (score >= 40) return '40-59';
+                          return '0-39';
+                        })}
+                        selectedValues={filterICPScore}
+                        onFilterChange={setFilterICPScore}
+                      />
+                     </TableHead>
                      <TableHead>
                       <ColumnFilter
                         column="analysis_status"
@@ -2278,8 +2457,24 @@ export default function CompaniesManagementPage() {
                         onFilterChange={setFilterAnalysisStatus}
                       />
                      </TableHead>
-                     <TableHead>TOTVS Check</TableHead>
-                     <TableHead>Website</TableHead>
+                     <TableHead>
+                      <ColumnFilter
+                        column="totvs_check"
+                        title="TOTVS Check"
+                        values={allCompanies.map(c => (c as any).raw_data?.totvs_report ? 'Sim' : 'Não')}
+                        selectedValues={filterTOTVS}
+                        onFilterChange={setFilterTOTVS}
+                      />
+                     </TableHead>
+                     <TableHead>
+                      <ColumnFilter
+                        column="website"
+                        title="Website"
+                        values={allCompanies.map(c => (c.website || c.website_url) ? 'Tem Website' : 'Sem Website')}
+                        selectedValues={filterWebsite}
+                        onFilterChange={setFilterWebsite}
+                      />
+                     </TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2362,14 +2557,10 @@ export default function CompaniesManagementPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="w-fit text-[10px]">
-                          {getRegionDisplay(company)}
-                        </Badge>
+                        <RegionBadge company={company} variant="outline" className="w-fit text-[10px]" />
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="w-fit text-[10px]">
-                          {getCommercialBlockDisplay(company)}
-                        </Badge>
+                        <CommercialBlockBadge company={company} variant="outline" className="text-[10px]" />
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="w-fit">

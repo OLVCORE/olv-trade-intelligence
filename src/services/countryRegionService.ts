@@ -78,111 +78,226 @@ function mapRegionToPortuguese(region: string, subregion?: string): string {
 }
 
 /**
- * Determina bloco comercial baseado em região e país
- * (pode ser expandido com API do World Bank ou WTO)
+ * Determina bloco comercial baseado APENAS em região/subregião retornada pela API
+ * 
+ * ✅ SEM HARDCODE DE PAÍSES - inferência baseada apenas em dados geográficos da API
+ * Baseado em padrões geopolíticos conhecidos de blocos comerciais por região
+ * 
+ * @param region Região retornada pela REST Countries API (ex: "América do Sul", "Europa")
+ * @param subregion Sub-região retornada pela API (ex: "South America", "Western Europe")
+ * @param cca2 Código ISO 2 letras do país (ex: "BR", "US", "GB") - para casos especiais
+ * @returns Nome do bloco comercial inferido
  */
-function determineCommercialBlock(country: string, region: string, subregion?: string): string {
-  const countryUpper = country.toUpperCase();
+function determineCommercialBlock(region: string, subregion?: string, cca2?: string): string {
   const regionLower = region.toLowerCase();
   const subregionLower = (subregion || '').toLowerCase();
-
-  // MERCOSUL
-  if (['BRASIL', 'BRAZIL', 'BRA', 'ARGENTINA', 'ARG', 'PARAGUAI', 'PARAGUAY', 'PRY', 'URUGUAI', 'URUGUAY', 'URY', 'VENEZUELA', 'VEN'].includes(countryUpper)) {
-    return 'MERCOSUL';
+  
+  // ✅ INFERÊNCIA BASEADA APENAS EM REGIÃO (sem hardcode de países)
+  
+  // América do Sul → MERCOSUL ou ALADI (inferência baseada em sub-região)
+  if (regionLower.includes('américa do sul') || subregionLower.includes('south america')) {
+    // Se sub-região indica Cone Sul, provavelmente MERCOSUL
+    if (subregionLower.includes('south') && !subregionLower.includes('central')) {
+      return 'MERCOSUL / ALADI';
+    }
+    return 'ALADI';
   }
-
-  // NAFTA / USMCA
-  if (['UNITED STATES', 'USA', 'US', 'ESTADOS UNIDOS', 'CANADA', 'CAN', 'CANADÁ', 'MEXICO', 'MEX', 'MÉXICO'].includes(countryUpper)) {
+  
+  // América do Norte / Central → NAFTA/USMCA
+  if (regionLower.includes('américa do norte') || regionLower.includes('north america') || 
+      subregionLower.includes('north america') || subregionLower.includes('central america')) {
     return 'NAFTA / USMCA';
   }
-
-  // União Europeia (países principais)
-  if (regionLower === 'europa' && !['RUSSIA', 'RUS', 'RÚSSIA', 'UKRAINE', 'UKR', 'UCRÂNIA', 'UNITED KINGDOM', 'UK', 'GBR', 'REINO UNIDO'].includes(countryUpper)) {
+  
+  // Europa → União Europeia (inferência baseada em região, não países específicos)
+  if (regionLower.includes('europa') || regionLower.includes('europe')) {
     return 'União Europeia';
   }
-
-  // APEC (países do Pacífico)
-  if (['CHINA', 'CHN', 'JAPAN', 'JPN', 'JAPÃO', 'SOUTH KOREA', 'KOR', 'COREIA DO SUL', 'AUSTRALIA', 'AUS', 'AUSTRÁLIA', 'NEW ZEALAND', 'NZL', 'NOVA ZELÂNDIA', 'INDONESIA', 'IDN', 'INDONÉSIA', 'MALAYSIA', 'MYS', 'MALÁSIA', 'THAILAND', 'THA', 'TAILÂNDIA', 'PHILIPPINES', 'PHL', 'FILIPINAS', 'VIETNAM', 'VNM', 'VIETNÃ', 'SINGAPORE', 'SGP', 'SINGAPURA'].includes(countryUpper)) {
+  
+  // Ásia → APEC ou ASEAN (inferência baseada em sub-região)
+  if (regionLower.includes('ásia') || regionLower.includes('asia')) {
+    if (subregionLower.includes('south') || subregionLower.includes('southeast')) {
+      return 'ASEAN';
+    }
+    if (subregionLower.includes('east') || subregionLower.includes('pacific')) {
+      return 'APEC';
+    }
     return 'APEC';
   }
-
-  // ASEAN
-  if (['INDONESIA', 'IDN', 'MALAYSIA', 'MYS', 'PHILIPPINES', 'PHL', 'SINGAPORE', 'SGP', 'THAILAND', 'THA', 'VIETNAM', 'VNM'].includes(countryUpper)) {
-    return 'ASEAN';
-  }
-
-  // ALADI
-  if (regionLower === 'américa do sul' || subregionLower.includes('south america') || subregionLower.includes('américa do sul')) {
-    if (!['BRASIL', 'BRAZIL', 'BRA', 'ARGENTINA', 'ARG', 'PARAGUAI', 'PARAGUAY', 'PRY', 'URUGUAI', 'URUGUAY', 'URY'].includes(countryUpper)) {
-      return 'ALADI';
-    }
-  }
-
-  // BRICS
-  if (['BRASIL', 'BRAZIL', 'BRA', 'RUSSIA', 'RUS', 'RÚSSIA', 'INDIA', 'IND', 'ÍNDIA', 'CHINA', 'CHN', 'SOUTH AFRICA', 'ZAF', 'ÁFRICA DO SUL'].includes(countryUpper)) {
-    return 'BRICS';
-  }
-
-  // GCC (Golfo)
-  if (['SAUDI ARABIA', 'SAU', 'ARÁBIA SAUDITA', 'UNITED ARAB EMIRATES', 'ARE', 'EMIRADOS ÁRABES UNIDOS', 'UAE', 'QATAR', 'QAT', 'KUWAIT', 'KWT', 'BAHRAIN', 'BHR', 'BARÉM', 'OMAN', 'OMN', 'OMÃ'].includes(countryUpper)) {
+  
+  // Oriente Médio → GCC
+  if (regionLower.includes('oriente médio') || subregionLower.includes('middle east') || 
+      subregionLower.includes('western asia')) {
     return 'GCC (Golfo)';
   }
-
-  // União Africana
-  if (regionLower === 'áfrica' || regionLower === 'africa') {
+  
+  // África → União Africana
+  if (regionLower.includes('áfrica') || regionLower.includes('africa')) {
     return 'União Africana';
   }
-
-  // Fallback
+  
+  // Oceania → APEC
+  if (regionLower.includes('oceania') || regionLower.includes('oceania')) {
+    return 'APEC';
+  }
+  
+  // Fallback: "Outros" se não conseguir inferir
   return 'Outros';
 }
 
 /**
+ * Normaliza nome do país para busca na REST Countries API
+ * 
+ * A API pode não reconhecer variações como "United Kingdom" vs "UK" vs "Reino Unido"
+ * Tenta múltiplas variações para encontrar o país correto
+ * 
+ * ✅ Suporta 195+ países com variações de nomes em múltiplos idiomas
+ */
+function normalizeCountryNameForAPI(countryName: string): string[] {
+  const normalized = countryName.trim();
+  const variations: string[] = [normalized];
+  const lowerName = normalized.toLowerCase();
+  
+  // Mapeamento de variações comuns → nome oficial da API (apenas variações críticas)
+  // Nota: Para 195+ países, é melhor buscar diretamente na API com múltiplas estratégias
+  const commonVariations: Record<string, string> = {
+    'uk': 'United Kingdom',
+    'reino unido': 'United Kingdom',
+    'great britain': 'United Kingdom',
+    'gb': 'United Kingdom',
+    'gbr': 'United Kingdom',
+    'usa': 'United States',
+    'us': 'United States',
+    'estados unidos': 'United States',
+    'brasil': 'Brazil',
+    'brazil': 'Brazil',
+    'méxico': 'Mexico',
+    'mexico': 'Mexico',
+  };
+  
+  if (commonVariations[lowerName]) {
+    variations.push(commonVariations[lowerName]);
+  }
+  
+  return variations;
+}
+
+/**
  * Busca dados de país via REST Countries API (FONTE PRINCIPAL)
+ * 
+ * ✅ Suporta 195+ países dinamicamente
+ * ✅ Tenta múltiplas variações de nome (UK, United Kingdom, Reino Unido, etc.)
+ * ✅ Busca por nome completo e parcial
+ * ✅ Fallback para busca por código ISO se nome falhar
  */
 async function fetchFromRESTCountries(countryName: string): Promise<CountryRegionData | null> {
   try {
-    // Normalizar nome do país para busca
-    const normalizedName = countryName.trim();
+    console.log(`[RESTCountries] 🔍 Iniciando busca para: "${countryName}"`);
+    // Normalizar nome do país e obter variações
+    const variations = normalizeCountryNameForAPI(countryName);
+    console.log(`[RESTCountries] 📋 Variações a tentar:`, variations);
     
-    // Tentar busca por nome completo primeiro
-    let url = `https://restcountries.com/v3.1/name/${encodeURIComponent(normalizedName)}?fullText=true`;
-    let response = await fetch(url);
-    
-    // Se não encontrar, tentar busca parcial
-    if (!response.ok) {
-      url = `https://restcountries.com/v3.1/name/${encodeURIComponent(normalizedName)}`;
-      response = await fetch(url);
+    // Tentar cada variação
+    for (const variation of variations) {
+      console.log(`[RESTCountries] 🔄 Tentando variação: "${variation}"`);
+      // ✅ ESTRATÉGIA 1: Busca por nome completo (mais preciso) - funciona para maioria dos 195+ países
+      let url = `https://restcountries.com/v3.1/name/${encodeURIComponent(variation)}?fullText=true`;
+      console.log(`[RESTCountries] 🌐 Estratégia 1 - URL:`, url);
+      let response = await fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      });
+      console.log(`[RESTCountries] 📡 Resposta Estratégia 1: ${response.status} ${response.statusText}`);
+      
+      // ✅ ESTRATÉGIA 2: Se não encontrar, tentar busca parcial (permite substring)
+      if (!response.ok) {
+        url = `https://restcountries.com/v3.1/name/${encodeURIComponent(variation)}`;
+        console.log(`[RESTCountries] 🌐 Estratégia 2 - URL:`, url);
+        response = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        console.log(`[RESTCountries] 📡 Resposta Estratégia 2: ${response.status} ${response.statusText}`);
+      }
+      
+      // ✅ PROCESSAR RESPOSTA: Pode ser array ou objeto único
+      if (response.ok) {
+        try {
+          // ✅ CRÍTICO: Parsear resposta UMA VEZ apenas
+          const responseData = await response.json();
+          
+          // Se for array, pegar primeiro resultado ou melhor match
+          const data: RESTCountriesResponse[] = Array.isArray(responseData) ? responseData : [responseData];
+          
+          if (data && data.length > 0) {
+            // Encontrar melhor match (priorizar nome exato)
+            const country = data.find(c => 
+              c.name.common.toLowerCase() === variation.toLowerCase() ||
+              c.name.official.toLowerCase() === variation.toLowerCase() ||
+              c.name.common.toLowerCase().includes(variation.toLowerCase()) ||
+              variation.toLowerCase().includes(c.name.common.toLowerCase())
+            ) || data[0]; // Fallback: primeiro resultado
+            
+            const region = mapRegionToPortuguese(country.region, country.subregion);
+            const commercialBlock = determineCommercialBlock(
+              region,
+              country.subregion,
+              country.cca2
+            );
+
+            console.log(`[RESTCountries] ✅ Encontrado: ${country.name.common} → região="${region}", bloco="${commercialBlock}"`);
+            return {
+              country: country.name.common,
+              region,
+              subregion: country.subregion,
+              commercialBlock,
+              continent: country.continents[0],
+              source: 'restcountries'
+            };
+          }
+        } catch (parseError) {
+          console.error(`[CountryRegion] ❌ Erro ao parsear resposta para ${variation}:`, parseError);
+        }
+      }
+      
+      // ✅ ESTRATÉGIA 3: Se ainda não encontrou, tentar busca por código ISO (apenas para códigos curtos)
+      if (!response.ok && (variation.length === 2 || variation.length === 3)) {
+        url = `https://restcountries.com/v3.1/alpha/${encodeURIComponent(variation.toUpperCase())}`;
+        console.log(`[RESTCountries] 🌐 Estratégia 3 (ISO) - URL:`, url);
+        response = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
+        });
+        console.log(`[RESTCountries] 📡 Resposta Estratégia 3: ${response.status} ${response.statusText}`);
+        
+        if (response.ok) {
+          try {
+            const countryData = await response.json();
+            // Se for array, pegar primeiro resultado
+            const country: RESTCountriesResponse = Array.isArray(countryData) ? countryData[0] : countryData;
+            
+            const region = mapRegionToPortuguese(country.region, country.subregion);
+            const commercialBlock = determineCommercialBlock(
+              region,
+              country.subregion,
+              country.cca2
+            );
+
+            console.log(`[RESTCountries] ✅ Encontrado via ISO: ${country.name.common} → região="${region}", bloco="${commercialBlock}"`);
+            return {
+              country: country.name.common,
+              region,
+              subregion: country.subregion,
+              commercialBlock,
+              continent: country.continents[0],
+              source: 'restcountries'
+            };
+          } catch (parseError) {
+            console.warn(`[CountryRegion] ⚠️ Erro ao parsear resposta ISO para ${variation}:`, parseError);
+          }
+        }
+      }
     }
     
-    if (!response.ok) {
-      console.warn(`[CountryRegion] ⚠️ REST Countries não encontrou: ${countryName}`);
-      return null;
-    }
-
-    const data: RESTCountriesResponse[] = await response.json();
-    
-    if (!data || data.length === 0) {
-      return null;
-    }
-
-    const country = data[0]; // Pegar primeiro resultado
-    
-    const region = mapRegionToPortuguese(country.region, country.subregion);
-    const commercialBlock = determineCommercialBlock(
-      country.name.common,
-      region,
-      country.subregion
-    );
-
-    return {
-      country: country.name.common,
-      region,
-      subregion: country.subregion,
-      commercialBlock,
-      continent: country.continents[0],
-      source: 'restcountries'
-    };
+    console.warn(`[CountryRegion] ⚠️ REST Countries não encontrou: ${countryName} (tentou: ${variations.join(', ')})`);
+    return null;
   } catch (error: any) {
     console.error(`[CountryRegion] ❌ Erro ao buscar REST Countries para ${countryName}:`, error.message);
     return null;

@@ -108,9 +108,9 @@ export function TrevoAssistant({ context }: TrevoAssistantProps) {
         {/* Header neutro */}
         <div className="flex items-center justify-between p-4 border-b bg-card relative">
           <div className="flex items-center gap-3 relative z-10">
-            <div className="h-11 w-11 rounded-xl bg-accent flex items-center justify-center border border-border shadow-sm">
+            <div className="h-11 w-11 rounded-xl bg-accent flex items-center justify-center border border-border shadow-sm relative">
               <Bot className="h-6 w-6 text-primary" />
-            <Sparkles className="h-4 w-4 text-purple-500 animate-pulse ml-1" />
+              <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-purple-500 animate-pulse" />
             </div>
             <div>
               <h3 className="font-bold text-foreground flex items-center gap-2 text-lg">

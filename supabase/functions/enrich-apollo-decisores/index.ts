@@ -177,20 +177,32 @@ serve(async (req) => {
           per_page: 5
         };
         
-        const orgResponse = await fetch(
-          'https://api.apollo.io/v1/organizations/search',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Api-Key': apolloKey
-            },
-            body: JSON.stringify(orgSearchPayload)
-          }
-        );
+        let orgResponse;
+        try {
+          orgResponse = await fetch(
+            'https://api.apollo.io/v1/organizations/search',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': apolloKey
+              },
+              body: JSON.stringify(orgSearchPayload)
+            }
+          );
+        } catch (fetchError: any) {
+          console.warn(`[ENRICH-APOLLO-DECISORES] ⚠️ Erro ao buscar organização "${name}":`, fetchError.message);
+          continue; // Tentar próximo nome
+        }
         
         if (orgResponse.ok) {
-          const orgData = await orgResponse.json();
+          let orgData;
+          try {
+            orgData = await orgResponse.json();
+          } catch (parseError: any) {
+            console.warn(`[ENRICH-APOLLO-DECISORES] ⚠️ Erro ao parsear resposta para "${name}":`, parseError.message);
+            continue; // Tentar próximo nome
+          }
           if (orgData.organizations && orgData.organizations.length > 0) {
             console.log('[ENRICH-APOLLO-DECISORES] 🔍 Encontradas', orgData.organizations.length, 'empresas com nome', name);
             
@@ -329,13 +341,16 @@ serve(async (req) => {
     }
     
     // PASSO 3: Buscar TODAS as pessoas da empresa (não filtrar por cargo)
-    // ✅ VALIDAR: Precisamos de organizationId OU domain válido
-    if (!organizationId && !domain && !companyName) {
-      console.warn('[ENRICH-APOLLO] ⚠️ Nenhum parâmetro válido para buscar pessoas (organizationId, domain ou companyName)');
+    // ✅ VALIDAR: Precisamos de organizationId OU domain válido OU companyName válido
+    const hasValidDomain = domain && typeof domain === 'string' && domain.trim().length > 0;
+    const hasValidCompanyName = companyName && typeof companyName === 'string' && companyName.trim().length >= 2;
+    
+    if (!organizationId && !hasValidDomain && !hasValidCompanyName) {
+      console.warn('[ENRICH-APOLLO] ⚠️ Nenhum parâmetro válido para buscar pessoas:', { organizationId, domain: hasValidDomain, companyName: hasValidCompanyName });
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Nenhum parâmetro válido para buscar pessoas. Forneça organizationId, domain ou companyName.',
+          error: 'Nenhum parâmetro válido para buscar pessoas. Forneça organizationId, domain válido ou companyName (mínimo 2 caracteres).',
           decisores: [],
           decisores_salvos: 0
         }),
@@ -374,17 +389,32 @@ serve(async (req) => {
     } else if (cleanDomain) {
       searchPayload.q_organization_domains = cleanDomain;
       console.log('[ENRICH-APOLLO] 🌐 Usando q_organization_domains:', cleanDomain);
-    } else if (companyName) {
+    } else if (hasValidCompanyName) {
       // ✅ VALIDAR: q_keywords requer pelo menos 2 caracteres e não pode ser muito genérico
       const cleanName = companyName.trim();
       if (cleanName.length < 2) {
-        throw new Error('Nome da empresa muito curto para busca na Apollo');
+        console.warn('[ENRICH-APOLLO] ⚠️ companyName muito curto, ignorando q_keywords');
+      } else {
+        searchPayload.q_keywords = cleanName;
+        console.log('[ENRICH-APOLLO] 🔍 Usando q_keywords (fallback):', cleanName);
       }
-      searchPayload.q_keywords = cleanName;
-      console.log('[ENRICH-APOLLO] 🔍 Usando q_keywords (fallback):', cleanName);
     }
 
     console.log('[ENRICH-APOLLO] 📦 Payload pessoas:', JSON.stringify(searchPayload));
+    
+    // ✅ VALIDAR: Payload não pode estar vazio
+    if (!searchPayload.organization_ids && !searchPayload.q_organization_domains && !searchPayload.q_keywords) {
+      console.warn('[ENRICH-APOLLO] ⚠️ Payload vazio - nenhum parâmetro válido para busca de pessoas');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Nenhum parâmetro válido para buscar pessoas na Apollo. Forneça organizationId, domain válido ou companyName (mínimo 2 caracteres).',
+          decisores: [],
+          decisores_salvos: 0
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const apolloResponse = await fetch(
       'https://api.apollo.io/v1/mixed_people/search',
@@ -659,11 +689,17 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('[ENRICH-APOLLO] ❌ Erro crítico:', error);
     console.error('[ENRICH-APOLLO] ❌ Stack:', error.stack);
-    console.error('[ENRICH-APOLLO] ❌ Error details:', JSON.stringify(error, null, 2));
+    console.error('[ENRICH-APOLLO] ❌ Error type:', error?.constructor?.name);
+    console.error('[ENRICH-APOLLO] ❌ Error message:', error?.message);
+    console.error('[ENRICH-APOLLO] ❌ Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     
     // ✅ Determinar status HTTP apropriado baseado no erro
     let statusCode = 500;
-    let errorMessage = error.message || 'Erro ao buscar decisores no Apollo';
+    let errorMessage = error?.message || 'Erro ao buscar decisores no Apollo';
+    let errorDetails: any = {
+      type: error?.constructor?.name || 'UnknownError',
+      message: errorMessage
+    };
     
     // ✅ Se for erro 422 da Apollo, retornar como 400 (Bad Request) com mensagem mais clara
     if (errorMessage.includes('422') || errorMessage.includes('Apollo API falhou: 422')) {
@@ -671,11 +707,23 @@ serve(async (req) => {
       errorMessage = 'Apollo rejeitou os parâmetros. Verifique se o nome da empresa ou domínio são válidos. Se o erro persistir, forneça um Apollo Organization ID manual.';
     }
     
+    // ✅ Se for erro de validação, retornar 400
+    if (errorMessage.includes('inválido') || errorMessage.includes('ausente') || errorMessage.includes('insuficientes')) {
+      statusCode = 400;
+    }
+    
+    // ✅ Se for erro de configuração (API key faltando), retornar 500 mas com mensagem clara
+    if (errorMessage.includes('API_KEY') || errorMessage.includes('SERVICE_ROLE_KEY') || errorMessage.includes('configurada')) {
+      statusCode = 500;
+      errorMessage = 'Erro de configuração do servidor. Verifique as variáveis de ambiente.';
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: errorDetails,
+        stack: Deno.env.get('DENO_ENV') === 'development' ? error?.stack : undefined
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

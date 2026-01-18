@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,8 @@ interface DealerDiscoveryFormProps {
     countryLanguageStrategy: Record<string, string[]>;
     notes?: string;
   } | null;
+  initialParams?: DealerSearchParams | null; // ✅ NOVO: Parâmetros iniciais para preencher formulário
+  onInitialParamsLoaded?: () => void; // ✅ NOVO: Callback quando parâmetros foram carregados
 }
 
 export interface DealerSearchParams {
@@ -118,7 +120,7 @@ const B2C_EXCLUDE_KEYWORDS = [
   'Physiotherapy',
 ];
 
-export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancelling, searchPlan }: DealerDiscoveryFormProps) {
+export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancelling, searchPlan, initialParams, onInitialParamsLoaded }: DealerDiscoveryFormProps) {
   const { currentTenant, currentWorkspace } = useTenant();
   const [hsCodes, setHsCodes] = useState<string[]>([]); // MÚLTIPLOS HS Codes
   const [hsCodesWithDescriptions, setHsCodesWithDescriptions] = useState<HSCodeWithDescription[]>([]); // ✅ HS Codes com descrições
@@ -254,6 +256,71 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
     setUsageContextExclude(usageContextExclude.filter(t => t !== term));
   };
 
+  // ✅ Preencher formulário quando initialParams mudar (carregar busca salva)
+  useEffect(() => {
+    if (initialParams) {
+      console.log('[DEALER-FORM] 📂 Preenchendo formulário com busca salva:', initialParams);
+      
+      // Preencher HS Codes
+      if (initialParams.hsCodes && initialParams.hsCodes.length > 0) {
+        setHsCodes(initialParams.hsCodes);
+        // Buscar descrições dos HS Codes
+        initialParams.hsCodes.forEach(async (code) => {
+          try {
+            const response = await fetch('/hs-codes.json');
+            if (response.ok) {
+              const data = await response.json();
+              const allCodes = data.results || [];
+              const foundCode = allCodes.find((c: any) => c.id === code);
+              if (foundCode) {
+                setHsCodesWithDescriptions((prev) => {
+                  if (!prev.find(h => h.code === code)) {
+                    return [...prev, { code, description: foundCode.text || '' }];
+                  }
+                  return prev;
+                });
+              }
+            }
+          } catch (error) {
+            console.error('[DEALER-FORM] Erro ao buscar descrição do HS Code:', error);
+          }
+        });
+      }
+      
+      // Preencher países
+      if (initialParams.countries && initialParams.countries.length > 0) {
+        setCountries(initialParams.countries);
+      }
+      
+      // Preencher keywords
+      if (initialParams.keywords && initialParams.keywords.length > 0) {
+        setCustomKeywords(initialParams.keywords);
+      }
+      
+      // Preencher contexto de uso final
+      if (initialParams.usageContext) {
+        if (initialParams.usageContext.include && initialParams.usageContext.include.length > 0) {
+          setUsageContextInclude(initialParams.usageContext.include);
+        }
+        if (initialParams.usageContext.exclude && initialParams.usageContext.exclude.length > 0) {
+          setUsageContextExclude(initialParams.usageContext.exclude);
+        }
+      }
+      
+      // Preencher minVolume
+      if (initialParams.minVolumeUSD) {
+        setMinVolume(initialParams.minVolumeUSD);
+      }
+      
+      // Notificar que os parâmetros foram carregados
+      if (onInitialParamsLoaded) {
+        onInitialParamsLoaded();
+      }
+      
+      toast.success('✅ Formulário preenchido com busca salva! Clique em "Buscar Dealers" para executar.');
+    }
+  }, [initialParams, onInitialParamsLoaded]);
+
   // ✅ NOVA: Função para parsear keywords em massa (vírgula, linha, etc.)
   const parseBulkKeywords = (input: string): string[] => {
     if (!input || !input.trim()) return [];
@@ -316,7 +383,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
           description: foundCode?.text || '',
         };
         
-        setHsCodes([...hsCodes, trimmed]);
+      setHsCodes([...hsCodes, trimmed]);
         setHsCodesWithDescriptions((prev) => {
           if (!prev.find(h => h.code === trimmed)) {
             return [...prev, hsCodeWithDesc];
@@ -1097,9 +1164,9 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {countries.map((code) => {
-                    const country = COUNTRIES.find((c) => c.code === code);
-                    return (
+                {countries.map((code) => {
+                  const country = COUNTRIES.find((c) => c.code === code);
+                  return (
                       <Badge 
                         key={code} 
                         variant="secondary" 
@@ -1107,16 +1174,16 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                       >
                         <span className="text-lg">{country?.flag}</span>
                         <span>{country?.name}</span>
-                        <button
-                          onClick={() => toggleCountry(code)}
+                      <button
+                        onClick={() => toggleCountry(code)}
                           className="ml-1 hover:bg-sky-600/20 dark:hover:bg-sky-600/30 rounded-full p-0.5 transition-colors duration-150"
                           title="Remover"
-                        >
+                      >
                           <X className="h-3 w-3 text-sky-700 dark:text-sky-400" />
-                        </button>
-                      </Badge>
-                    );
-                  })}
+                      </button>
+                    </Badge>
+                  );
+                })}
                 </div>
               </div>
             )}
@@ -1274,16 +1341,16 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {customKeywords.map((keyword) => (
+                  {customKeywords.map((keyword) => (
                       <Badge 
                         key={keyword} 
                         variant="secondary" 
                         className="gap-1 px-3 py-1.5 text-sm font-medium bg-sky-100 dark:bg-sky-900/40 text-sky-900 dark:text-sky-100 border border-sky-300/50 dark:border-sky-700/50 shadow-sm hover:shadow-md hover:bg-sky-200 dark:hover:bg-sky-900/60 transition-all duration-200 cursor-default"
                       >
                         <span className="font-semibold">{keyword}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCustomKeyword(keyword)}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomKeyword(keyword)}
                           className="ml-1 hover:bg-sky-600/20 dark:hover:bg-sky-600/30 rounded-full p-0.5 transition-colors duration-150"
                           title="Remover"
                         >
@@ -1539,15 +1606,15 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                           type="button"
                           onClick={() => handleRemoveUsageInclude(term)}
                           className="ml-1 hover:bg-emerald-600/20 dark:hover:bg-emerald-600/30 rounded-full p-0.5"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            
               {/* EXCLUIR - Uso Final Bloqueado */}
               <div className="space-y-2 p-4 rounded-lg border-l-4 border-l-rose-600/90 bg-gradient-to-r from-slate-50/30 to-slate-100/20 dark:from-slate-900/30 dark:to-slate-800/15">
                 <Label htmlFor="usage-exclude" className="text-sm font-semibold text-rose-800 dark:text-rose-100 flex items-center gap-2">
@@ -1661,7 +1728,7 @@ export function DealerDiscoveryForm({ onSearch, isSearching, onCancel, isCancell
                     ))}
                   </div>
                 )}
-              </div>
+          </div>
               
               {/* Alerta se não houver uso final */}
               {usageContextInclude.length === 0 && (

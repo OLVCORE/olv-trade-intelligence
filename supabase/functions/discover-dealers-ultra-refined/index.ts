@@ -235,7 +235,19 @@ serve(async (req) => {
   }
 
   try {
-    const { country = 'United States' } = await req.json();
+    const body = await req.json();
+    const { country } = body;
+
+    // ✅ VALIDAR: country é obrigatório (não usar default implícito)
+    if (!country || typeof country !== 'string' || country.trim() === '') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Parâmetro "country" é obrigatório. Não é permitido usar default implícito.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`[ULTRA-REFINED] 🚀 Descoberta ultra-refinada: ${country}`);
 

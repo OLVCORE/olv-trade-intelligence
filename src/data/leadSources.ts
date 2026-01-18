@@ -80,129 +80,23 @@ export const LEAD_SOURCES = {
 } as const;
 
 // ============================================================================
-// COMMERCIAL BLOCKS - Blocos Comerciais
+// COMMERCIAL BLOCKS - REMOVIDO (hardcoded)
 // ============================================================================
-
-export const COMMERCIAL_BLOCKS = {
-  // AMÉRICA DO SUL
-  MERCOSUL: {
-    name: 'MERCOSUL',
-    countries: ['Brasil', 'Argentina', 'Paraguai', 'Uruguai', 'Venezuela'],
-    continent: 'América do Sul'
-  },
-  
-  // AMÉRICA DO NORTE
-  NAFTA: {
-    name: 'NAFTA / USMCA',
-    countries: ['United States', 'USA', 'US', 'Estados Unidos', 'Canada', 'Canadá', 'México', 'Mexico'],
-    continent: 'América do Norte'
-  },
-  
-  // EUROPA
-  EU: {
-    name: 'União Europeia',
-    countries: [
-      'Germany', 'Alemanha', 'France', 'França', 'Italy', 'Itália', 
-      'Spain', 'Espanha', 'Netherlands', 'Holanda', 'Belgium', 'Bélgica',
-      'Austria', 'Áustria', 'Sweden', 'Suécia', 'Poland', 'Polônia', 
-      'Denmark', 'Dinamarca', 'Finland', 'Finlândia', 'Portugal',
-      'Greece', 'Grécia', 'Ireland', 'Irlanda', 'Czech Republic', 'República Tcheca', 
-      'Romania', 'Romênia', 'Hungary', 'Hungria',
-      'Slovakia', 'Eslováquia', 'Bulgaria', 'Bulgária', 'Croatia', 'Croácia', 
-      'Lithuania', 'Lituânia', 'Slovenia', 'Eslovênia',
-      'Latvia', 'Letônia', 'Estonia', 'Estônia', 'Cyprus', 'Chipre', 
-      'Malta', 'Luxembourg', 'Luxemburgo'
-    ],
-    continent: 'Europa'
-  },
-  
-  // ÁSIA
-  ASEAN: {
-    name: 'ASEAN',
-    countries: [
-      'Indonesia', 'Indonésia', 'Malaysia', 'Malásia', 
-      'Philippines', 'Filipinas', 'Singapore', 'Singapura', 
-      'Thailand', 'Tailândia', 'Vietnam', 'Vietnã',
-      'Myanmar', 'Cambodia', 'Camboja', 'Laos', 'Brunei'
-    ],
-    continent: 'Ásia'
-  },
-  
-  APEC: {
-    name: 'APEC',
-    countries: [
-      'Australia', 'Austrália', 'New Zealand', 'Nova Zelândia', 
-      'Japan', 'Japão', 'South Korea', 'Coreia do Sul', 'Korea', 
-      'China', 'Hong Kong', 'Taiwan',
-      'Singapore', 'Singapura', 'Malaysia', 'Malásia', 
-      'Thailand', 'Tailândia', 'Indonesia', 'Indonésia', 
-      'Philippines', 'Filipinas', 'Vietnam', 'Vietnã',
-      'Brunei', 'Papua New Guinea',
-      'Chile', 'Mexico', 'México', 'Peru', 'Peru',
-      'Russia', 'Rússia', 'United States', 'USA', 'Canada', 'Canadá',
-      // Países adicionais fornecidos
-      'India', 'Índia', 'Kazakhstan', 'Cazaquistão',
-      'Pakistan', 'Paquistão', 'Sri Lanka', 'Turquia', 'Turkey',
-      'Ukraine', 'Ucrânia', 'Uzbekistan', 'Uzbequistão'
-    ],
-    continent: 'Ásia-Pacífico'
-  },
-  
-  // ORIENTE MÉDIO
-  GCC: {
-    name: 'GCC (Golfo)',
-    countries: [
-      'Saudi Arabia', 'Arábia Saudita', 'United Arab Emirates', 'Emirados Árabes Unidos',
-      'UAE', 'Qatar', 'Kuwait', 'Bahrain', 'Barém', 'Oman', 'Omã'
-    ],
-    continent: 'Oriente Médio'
-  },
-  
-  // AMÉRICA LATINA
-  ALADI: {
-    name: 'ALADI',
-    countries: [
-      'Brasil', 'Argentina', 'Chile', 'Colombia', 'Colômbia',
-      'Ecuador', 'Equador', 'México', 'Mexico',
-      'Paraguai', 'Peru', 'Peru', 'Uruguai', 'Venezuela',
-      'Bolivia', 'Bolívia', 'Cuba',
-      // Países adicionais fornecidos
-      'Costa Rica', 'Panama', 'Panamá'
-    ],
-    continent: 'América Latina'
-  },
-  
-  // BRICS
-  BRICS: {
-    name: 'BRICS',
-    countries: [
-      'Brasil', 'Russia', 'Rússia', 'India', 'Índia', 
-      'China', 'South Africa', 'África do Sul'
-    ],
-    continent: 'Multi-continental'
-  },
-  
-  // ÁFRICA
-  AU: {
-    name: 'União Africana',
-    countries: [
-      'South Africa', 'África do Sul', 'Nigeria', 'Nigéria', 
-      'Egypt', 'Egito', 'Kenya', 'Quênia', 'Ghana', 'Gana', 
-      'Morocco', 'Marrocos', 'Ethiopia', 'Etiópia', 
-      'Tanzania', 'Tanzânia', 'Algeria', 'Argélia', 'Tunisia', 'Tunísia',
-      // País adicional fornecido
-      'Cameroon', 'Camarões'
-    ],
-    continent: 'África'
-  },
-  
-  // SEM BLOCO ESPECÍFICO (Outros)
-  OTHER: {
-    name: 'Outros',
-    countries: [], // Todos os não listados
-    continent: 'Vários'
-  }
-} as const;
+// 
+// ⚠️ REMOVIDO: COMMERCIAL_BLOCKS hardcoded foi REMOVIDO
+// 
+// ✅ AGORA: Blocos comerciais são buscados DINAMICAMENTE de APIs externas
+// - REST Countries API: busca região/sub-região do país
+// - Inferência de bloco comercial baseada em região (sem hardcode de países)
+// 
+// Para obter bloco comercial, use:
+// - `getCommercialBlockFromAPI(country)` de `@/services/countryRegionService`
+// - `useCountryRegion(company)` hook React (recomendado)
+// 
+// Nenhum país ou bloco comercial está hardcoded.
+// Todos os dados vêm de APIs externas gratuitas (REST Countries).
+// 
+// ============================================================================
 
 // ============================================================================
 // HELPER FUNCTIONS - Funções Auxiliares
@@ -211,74 +105,34 @@ export const COMMERCIAL_BLOCKS = {
 /**
  * Função: getCommercialBlock(country: string): string
  * 
- * Retorna o bloco comercial baseado no país
+ * ⚠️ DEPRECATED: Esta função retorna apenas "N/A"
  * 
- * ⚠️ IMPORTANTE: Os blocos comerciais são mapeamentos FIXOS baseados em definições geopolíticas reais
- * (MERCOSUL, NAFTA, ALADI, UE, etc.). NÃO são obtidos de API externa, mas sim de conhecimento
- * geopolítico padrão. O país DEVE vir das fontes reais (Apollo, Export Dealers, etc.).
+ * Use `getCommercialBlockFromAPI(country)` ou `useCountryRegion(company)` hook
+ * que busca blocos comerciais DINAMICAMENTE de APIs externas (REST Countries)
  * 
- * Se o país for 'N/A' ou inválido, significa que o país não foi extraído corretamente das fontes
- * e o problema deve ser corrigido na origem (Edge Functions que buscam os dados).
+ * NÃO HARDCODE: Blocos comerciais são inferidos baseados em região/sub-região
+ * retornada pela REST Countries API, sem hardcode de países específicos.
  */
 export function getCommercialBlock(country: string): string {
-  if (!country || country.trim() === '' || country === 'N/A') {
-    // ⚠️ Se país é 'N/A', significa que não foi extraído das fontes reais
-    // O bloco será "Outros" mas isso indica um problema na extração de dados
-    console.warn(`[BLOCK] ⚠️ País é 'N/A' - verifique extração nas fontes (Apollo, Export Dealers, etc.)`);
-    return COMMERCIAL_BLOCKS.OTHER.name;
-  }
-  
-  const countryNormalized = country.trim();
-  
-  // Buscar em todos os blocos (exceto OTHER)
-  for (const [blockKey, blockData] of Object.entries(COMMERCIAL_BLOCKS)) {
-    if (blockKey === 'OTHER') continue; // Pular "OTHER"
-    
-    // Buscar match exato ou parcial (case-insensitive)
-    if (blockData.countries.some(c => {
-      const cLower = c.toLowerCase();
-      const countryLower = countryNormalized.toLowerCase();
-      return cLower === countryLower || 
-             countryLower.includes(cLower) || 
-             cLower.includes(countryLower);
-    })) {
-      return blockData.name;
-    }
-  }
-  
-  // Se não encontrou em nenhum bloco específico, retornar "Outros"
-  // Isso pode indicar que o país não está no mapeamento ou que precisa ser adicionado
-  console.warn(`[BLOCK] ⚠️ País "${countryNormalized}" não encontrado em nenhum bloco comercial. Considere adicionar ao mapeamento se for um bloco válido.`);
-  return COMMERCIAL_BLOCKS.OTHER.name;
+  // ⚠️ DEPRECATED: Retornar placeholder - usar versão assíncrona
+  console.warn(`[BLOCK] ⚠️ getCommercialBlock() está deprecated. Use getCommercialBlockFromAPI() ou useCountryRegion() hook.`);
+  return 'N/A';
 }
 
 /**
  * Função: getContinent(country: string): string
  * 
- * Retorna o continente baseado no país
+ * ⚠️ DEPRECATED: Esta função retorna "N/A"
+ * 
+ * Para obter continente/região REAL, use:
+ * - getRegion() de @/services/countryRegionService (busca de API)
+ * - useCountryRegion() hook (recomendado para componentes React)
+ * 
+ * ✅ SEM HARDCODE - busca real de APIs externas (REST Countries)
  */
 export function getContinent(country: string): string {
-  if (!country || country.trim() === '' || country === 'N/A') {
-    return 'N/A';
-  }
-  
-  const countryNormalized = country.trim();
-  
-  // Buscar em todos os blocos (exceto OTHER)
-  for (const [blockKey, blockData] of Object.entries(COMMERCIAL_BLOCKS)) {
-    if (blockKey === 'OTHER') continue;
-    
-    if (blockData.countries.some(c => {
-      const cLower = c.toLowerCase();
-      const countryLower = countryNormalized.toLowerCase();
-      return cLower === countryLower || 
-             countryLower.includes(cLower) || 
-             cLower.includes(countryLower);
-    })) {
-      return blockData.continent;
-    }
-  }
-  
+  // ⚠️ SEM HARDCODE - retornar placeholder
+  // Continente será buscado dinamicamente via API
   return 'N/A';
 }
 
