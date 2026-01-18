@@ -236,12 +236,12 @@ export default function CommandCenter() {
         </div>
 
         {/* Funil Visual Corporativo */}
-        <Card className="border border-border">
+        <Card className="border-l-4 border-l-sky-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-sky-800 dark:text-sky-100 font-semibold">
+                  <TrendingUp className="h-5 w-5 text-sky-700 dark:text-sky-500" />
                   Funil de Conversão
                 </CardTitle>
                 <CardDescription>
@@ -250,133 +250,132 @@ export default function CommandCenter() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Conversão Global</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-sky-600">
                   {metrics.conversionRate.overall}%
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-2 items-center">
-              {/* ETAPA 1: IMPORTADAS */}
+            <div className="grid grid-cols-4 gap-6">
+              {/* ETAPA 1: IMPORTADAS - Sky */}
               <div 
-                className="relative group cursor-pointer border border-border rounded-lg hover:border-blue-600/50 transition-all bg-card"
+                className="relative group cursor-pointer border-l-4 border-l-sky-600/90 shadow-md rounded-lg bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200"
                 onClick={() => navigate('/companies')}
               >
-                <div className="p-4 space-y-3">
+                <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Database className="h-6 w-6 text-blue-600" />
-                    <Badge variant="secondary" className="text-base">
+                    <Database className="h-7 w-7 text-sky-700 dark:text-sky-500" />
+                    <Badge variant="secondary" className="text-xl font-bold px-2.5 py-1">
                       {metrics.totalImported}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Importadas</h3>
+                    <h3 className="text-lg font-semibold text-sky-800 dark:text-sky-100">Importadas</h3>
                     <p className="text-xs text-muted-foreground">Total no sistema</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-600/10">
+                  <div className="pt-1">
+                    <p className="text-xs text-muted-foreground mb-1">Base completa:</p>
+                    <Progress value={100} className="h-1.5" />
+                    <p className="text-xs font-semibold text-sky-600 mt-0.5">100%</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="w-full text-sky-600 hover:text-sky-700 hover:bg-sky-600/10 mt-2">
                     Ver Todas
                     <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
 
-              {/* SETA */}
-              <div className="flex items-center justify-center">
-                <ArrowRight className="h-8 w-8 text-muted-foreground" />
-              </div>
-
-              {/* ETAPA 2: QUARENTENA */}
+              {/* ETAPA 2: QUARENTENA - Orange */}
               <div 
-                className="relative group cursor-pointer border border-border rounded-lg hover:border-yellow-600/50 transition-all bg-card"
+                className="relative group cursor-pointer border-l-4 border-l-orange-600/90 shadow-md rounded-lg bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-orange-50/60 hover:to-orange-100/40 transition-all duration-200"
                 onClick={() => navigate('/leads/icp-quarantine')}
               >
-                <div className="p-4 space-y-3">
+                <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Filter className="h-6 w-6 text-yellow-600" />
-                    <Badge variant="secondary" className="text-base">
+                    <Filter className="h-7 w-7 text-orange-700 dark:text-orange-500" />
+                    <Badge variant="secondary" className="text-xl font-bold px-2.5 py-1">
                       {metrics.inQuarantine}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Quarentena ICP</h3>
+                    <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-100">Quarentena ICP</h3>
                     <p className="text-xs text-muted-foreground">Análise pendente</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Taxa aprovação:</span>
-                    <span className="font-semibold text-yellow-600">
-                      {metrics.conversionRate.quarantineToApproved}%
-                    </span>
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Taxa aprovação:</span>
+                      <span className="font-semibold text-orange-600">
+                        {metrics.conversionRate.quarantineToApproved}%
+                      </span>
+                    </div>
+                    <Progress value={metrics.conversionRate.quarantineToApproved} className="h-1.5" />
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-yellow-600 hover:text-yellow-700 hover:bg-yellow-600/10">
+                  <Button variant="ghost" size="sm" className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-600/10 mt-2">
                     Analisar
                     <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
 
-              {/* SETA */}
-              <div className="flex items-center justify-center">
-                <ArrowRight className="h-8 w-8 text-muted-foreground" />
-              </div>
-
-              {/* ETAPA 3: APROVADAS */}
+              {/* ETAPA 3: APROVADAS - Emerald */}
               <div 
-                className="relative group cursor-pointer border border-border rounded-lg hover:border-green-600/50 transition-all bg-card"
+                className="relative group cursor-pointer border-l-4 border-l-emerald-600/90 shadow-md rounded-lg bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-emerald-50/60 hover:to-emerald-100/40 transition-all duration-200"
                 onClick={() => navigate('/leads/approved')}
               >
-                <div className="p-4 space-y-3">
+                <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
-                    <Badge variant="secondary" className="text-base">
+                    <CheckCircle2 className="h-7 w-7 text-emerald-700 dark:text-emerald-500" />
+                    <Badge variant="secondary" className="text-xl font-bold px-2.5 py-1">
                       {metrics.approved}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Aprovadas</h3>
+                    <h3 className="text-lg font-semibold text-emerald-800 dark:text-emerald-100">Aprovadas</h3>
                     <p className="text-xs text-muted-foreground">Prontas para vendas</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Conv. Pipeline:</span>
-                    <span className="font-semibold text-green-600">
-                      {metrics.conversionRate.approvedToPipeline}%
-                    </span>
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Conv. Pipeline:</span>
+                      <span className="font-semibold text-emerald-600">
+                        {metrics.conversionRate.approvedToPipeline}%
+                      </span>
+                    </div>
+                    <Progress value={metrics.conversionRate.approvedToPipeline} className="h-1.5" />
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-green-600 hover:text-green-700 hover:bg-green-600/10">
+                  <Button variant="ghost" size="sm" className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-600/10 mt-2">
                     Criar Deals
                     <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
                 </div>
               </div>
 
-              {/* SETA */}
-              <div className="flex items-center justify-center">
-                <ArrowRight className="h-8 w-8 text-muted-foreground" />
-              </div>
-
-              {/* ETAPA 4: PIPELINE */}
+              {/* ETAPA 4: PIPELINE - Indigo */}
               <div 
-                className="relative group cursor-pointer border border-border rounded-lg hover:border-blue-600/50 transition-all bg-card"
+                className="relative group cursor-pointer border-l-4 border-l-indigo-600/90 shadow-md rounded-lg bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-indigo-100/40 transition-all duration-200"
                 onClick={() => navigate('/sdr/workspace')}
               >
-                <div className="p-4 space-y-3">
+                <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <Zap className="h-6 w-6 text-blue-600" />
-                    <Badge variant="secondary" className="text-base">
+                    <Zap className="h-7 w-7 text-indigo-700 dark:text-indigo-500" />
+                    <Badge variant="secondary" className="text-xl font-bold px-2.5 py-1">
                       {metrics.inPipeline}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Pipeline Ativo</h3>
+                    <h3 className="text-lg font-semibold text-indigo-800 dark:text-indigo-100">Pipeline Ativo</h3>
                     <p className="text-xs text-muted-foreground">Em negociação</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Taxa global:</span>
-                    <span className="font-semibold text-blue-600">
-                      {metrics.conversionRate.overall}%
-                    </span>
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Taxa global:</span>
+                      <span className="font-semibold text-indigo-600">
+                        {metrics.conversionRate.overall}%
+                      </span>
+                    </div>
+                    <Progress value={metrics.conversionRate.overall} className="h-1.5" />
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-600/10">
+                  <Button variant="ghost" size="sm" className="w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-600/10 mt-2">
                     Abrir Workspace
                     <ArrowRight className="ml-2 h-3 w-3" />
                   </Button>
@@ -388,10 +387,10 @@ export default function CommandCenter() {
 
         {/* Ações Rápidas */}
         <div className="grid grid-cols-3 gap-6">
-          <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => navigate('/search')}>
+          <Card className="border-l-4 border-l-sky-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200 cursor-pointer" onClick={() => navigate('/search')}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Upload className="h-5 w-5 text-blue-500" />
+              <CardTitle className="flex items-center gap-2 text-lg text-sky-800 dark:text-sky-100 font-semibold">
+                <Upload className="h-5 w-5 text-sky-700 dark:text-sky-500" />
                 Importar Empresas
               </CardTitle>
             </CardHeader>
@@ -405,10 +404,10 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => navigate('/leads/icp-quarantine')}>
+          <Card className="border-l-4 border-l-orange-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-orange-50/60 hover:to-orange-100/40 transition-all duration-200 cursor-pointer" onClick={() => navigate('/leads/icp-quarantine')}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Filter className="h-5 w-5 text-yellow-500" />
+              <CardTitle className="flex items-center gap-2 text-lg text-orange-800 dark:text-orange-100 font-semibold">
+                <Filter className="h-5 w-5 text-orange-700 dark:text-orange-500" />
                 Quarentena ICP
               </CardTitle>
             </CardHeader>
@@ -419,16 +418,16 @@ export default function CommandCenter() {
               <Button className="w-full" variant="outline">
                 Abrir Quarentena
                 {metrics.inQuarantine > 0 && (
-                  <Badge className="ml-2 bg-yellow-500">{metrics.inQuarantine}</Badge>
+                  <Badge className="ml-2 bg-orange-500">{metrics.inQuarantine}</Badge>
                 )}
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-primary/50 transition-all" onClick={() => navigate('/leads/approved')}>
+          <Card className="border-l-4 border-l-emerald-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-emerald-50/60 hover:to-emerald-100/40 transition-all duration-200 cursor-pointer" onClick={() => navigate('/leads/approved')}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Target className="h-5 w-5 text-green-500" />
+              <CardTitle className="flex items-center gap-2 text-lg text-emerald-800 dark:text-emerald-100 font-semibold">
+                <Target className="h-5 w-5 text-emerald-700 dark:text-emerald-500" />
                 Leads Aprovados
               </CardTitle>
             </CardHeader>
@@ -439,7 +438,7 @@ export default function CommandCenter() {
               <Button className="w-full" variant="outline">
                 Ver Aprovados
                 {metrics.approved > 0 && (
-                  <Badge className="ml-2 bg-green-500">{metrics.approved}</Badge>
+                  <Badge className="ml-2 bg-emerald-500">{metrics.approved}</Badge>
                 )}
               </Button>
             </CardContent>
@@ -448,38 +447,38 @@ export default function CommandCenter() {
 
         {/* KPIs CRÍTICOS EM TEMPO REAL */}
         <div className="grid grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-blue-600">
+          <Card className="border-l-4 border-l-sky-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Valor Pipeline</p>
-                <DollarSign className="h-5 w-5 text-blue-600" />
+                <DollarSign className="h-5 w-5 text-sky-700 dark:text-sky-500" />
               </div>
-              <p className="text-2xl font-bold">R$ {(metrics.dealsValue / 1000).toFixed(0)}k</p>
+              <p className="text-2xl font-bold text-sky-800 dark:text-sky-100">R$ {(metrics.dealsValue / 1000).toFixed(0)}k</p>
               <Progress value={metrics.conversionRate.overall} className="mt-2 h-1.5" />
               <p className="text-xs text-muted-foreground mt-1">{metrics.conversionRate.overall}% conversão</p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-600">
+          <Card className="border-l-4 border-l-rose-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-rose-50/60 hover:to-rose-100/40 transition-all duration-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Leads Quentes</p>
-                <TrendingUp className="h-5 w-5 text-red-600" />
+                <TrendingUp className="h-5 w-5 text-rose-700 dark:text-rose-500" />
               </div>
-              <p className="text-2xl font-bold text-red-600">{metrics.hotLeads}</p>
+              <p className="text-2xl font-bold text-rose-800 dark:text-rose-100">{metrics.hotLeads}</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Potencial: R$ {((metrics.hotLeads * 50000) / 1000).toFixed(0)}k
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-600">
+          <Card className="border-l-4 border-l-emerald-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-emerald-50/60 hover:to-emerald-100/40 transition-all duration-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Win Rate</p>
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-emerald-500" />
               </div>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-100">
                 {metrics.dealsWon + metrics.dealsLost > 0
                   ? Math.round((metrics.dealsWon / (metrics.dealsWon + metrics.dealsLost)) * 100)
                   : 0}%
@@ -490,13 +489,13 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-slate-600">
+          <Card className="border-l-4 border-l-indigo-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-indigo-100/40 transition-all duration-200">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Ciclo Médio</p>
-                <Clock className="h-5 w-5 text-slate-600" />
+                <Clock className="h-5 w-5 text-indigo-700 dark:text-indigo-500" />
               </div>
-              <p className="text-2xl font-bold text-slate-600">{metrics.avgDealCycle}d</p>
+              <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-100">{metrics.avgDealCycle}d</p>
               <p className="text-xs text-muted-foreground mt-2">
                 Tempo médio para fechar
               </p>
@@ -506,12 +505,12 @@ export default function CommandCenter() {
 
         {/* SUGESTÕES INTELIGENTES COM IA - ACIONÁVEIS */}
         {metrics.aiSuggestions.length > 0 && (
-          <Card className="border border-blue-600/30">
+          <Card className="border-l-4 border-l-purple-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-purple-50/60 hover:to-purple-100/40 transition-all duration-200">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Brain className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="flex items-center gap-2 text-purple-800 dark:text-purple-100 font-semibold">
+                    <Brain className="h-5 w-5 text-purple-700 dark:text-purple-500" />
                     Recomendações Estratégicas (IA)
                   </CardTitle>
                   <CardDescription>
@@ -574,9 +573,9 @@ export default function CommandCenter() {
 
         {/* ESTATÍSTICAS E AÇÕES */}
         <div className="grid grid-cols-2 gap-6">
-          <Card>
+          <Card className="border-l-4 border-l-sky-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200">
             <CardHeader>
-              <CardTitle>Performance do Funil</CardTitle>
+              <CardTitle className="text-sky-800 dark:text-sky-100 font-semibold">Performance do Funil</CardTitle>
               <CardDescription>Acompanhamento de conversão por etapa</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -617,9 +616,9 @@ export default function CommandCenter() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-indigo-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-indigo-100/40 transition-all duration-200">
             <CardHeader>
-              <CardTitle>Ações Priorizadas</CardTitle>
+              <CardTitle className="text-indigo-800 dark:text-indigo-100 font-semibold">Ações Priorizadas</CardTitle>
               <CardDescription>O que fazer agora para acelerar vendas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -703,10 +702,10 @@ export default function CommandCenter() {
         </div>
 
         {/* STATUS DO SISTEMA EM TEMPO REAL */}
-        <Card>
+        <Card className="border-l-4 border-l-purple-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-purple-50/60 hover:to-purple-100/40 transition-all duration-200">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-purple-800 dark:text-purple-100 font-semibold">
+              <Activity className="h-5 w-5 text-purple-700 dark:text-purple-500" />
               Status do Sistema
             </CardTitle>
           </CardHeader>
@@ -748,9 +747,9 @@ export default function CommandCenter() {
         </Card>
 
         {/* ATALHOS RÁPIDOS PARA TODAS AS ÁREAS */}
-        <Card>
+        <Card className="border-l-4 border-l-sky-600/90 shadow-md bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-900/40 dark:to-slate-800/20 hover:bg-gradient-to-br hover:from-sky-50/60 hover:to-sky-100/40 transition-all duration-200">
           <CardHeader>
-            <CardTitle>Acesso Rápido</CardTitle>
+            <CardTitle className="text-sky-800 dark:text-sky-100 font-semibold">Acesso Rápido</CardTitle>
             <CardDescription>Navegue para qualquer área da plataforma</CardDescription>
           </CardHeader>
           <CardContent>
