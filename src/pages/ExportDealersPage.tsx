@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { COUNTRIES } from '@/data/countries';
 import { normalizeCountries, getAllSearchVariations, denormalizeCountryName, type CountryNormalization } from '@/services/countryNormalizer';
+import { normalizeKeywords, normalizeUsageContext, type UsageContext } from '@/services/languageNormalizer';
+import { validateUsageContext, calculateUsageContextScore } from '@/services/usageContextClassifier';
 import { DealerDiscoveryForm, type DealerSearchParams } from '@/components/export/DealerDiscoveryForm';
 import { DealerCard, DealersEmptyState, type Dealer } from '@/components/export/DealerCard';
 import { DealersTable } from '@/components/export/DealersTable';
@@ -118,6 +120,20 @@ export default function ExportDealersPage() {
         .map(k => k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
       
       console.log(`[EXPORT] 📋 Keywords normalizadas (${requiredKeywords.length}):`, requiredKeywords.join(', '));
+      
+      // ✅ NOVO: NORMALIZAR CONTEXTO DE USO FINAL (CAMADA CRÍTICA)
+      let normalizedUsageContext: UsageContext | undefined;
+      if (params.usageContext && params.usageContext.include.length > 0) {
+        // Determinar idiomas dos países selecionados
+        const targetLanguages: ('pt' | 'en' | 'native')[] = ['pt', 'en'];
+        normalizedUsageContext = normalizeUsageContext(params.usageContext, targetLanguages);
+        console.log(`[EXPORT] 🎯 Contexto de uso final normalizado:`);
+        console.log(`  INCLUIR (${normalizedUsageContext.include.length}):`, normalizedUsageContext.include.join(', '));
+        console.log(`  EXCLUIR (${normalizedUsageContext.exclude.length}):`, normalizedUsageContext.exclude.join(', '));
+      } else {
+        console.error(`[EXPORT] 🚫 ERRO CRÍTICO: Contexto de uso final não fornecido! A busca não será executada.`);
+        throw new Error('Contexto de uso final é obrigatório. Defina pelo menos 1 termo que descreve PARA QUE o produto será usado.');
+      }
 
       // 4. BUSCAR EM TEMPO REAL (Apollo + Serper + LinkedIn) - MÚLTIPLAS VARIAÇÕES
       const allDealers: Dealer[] = [];
@@ -141,6 +157,8 @@ export default function ExportDealersPage() {
               keywords: allKeywords, // Combinado: HS + Custom - ✅ OBRIGATÓRIO para validação
               requiredKeywords: requiredKeywords, // ✅ Keywords normalizadas para validação rigorosa
               allowedCountryVariations: allCountryVariations, // ✅ Todas as variações válidas para validação cruzada
+              // ✅ NOVO: Contexto de uso final normalizado (CAMADA CRÍTICA)
+              usageContext: normalizedUsageContext, // ✅ OBRIGATÓRIO - busca não será executada sem isso
               minVolume: params.minVolume || null, // Volume mínimo (se fornecido)
               includeTypes: ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 'supplier', 'reseller', 'agent'], // ✅ TIPOS B2B OBRIGATÓRIOS
               excludeTypes: ['fitness studio', 'gym / fitness center', 'wellness center', 'personal training', 'yoga studio', 'spa', 'rehabilitation center', 'physiotherapy'], // ✅ TIPOS B2C BLOQUEADOS

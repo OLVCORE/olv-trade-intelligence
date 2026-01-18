@@ -469,7 +469,12 @@ async function searchGoogleAPI(keyword: string, country: string) {
 // CAMADA 4: WEB SCRAPING (Calcular Fit Score)
 // ============================================================================
 
-async function calculateFitScore(website: string, keywords: string[], requiredKeywords: string[] = []): Promise<number> {
+async function calculateFitScore(
+  website: string, 
+  keywords: string[], 
+  requiredKeywords: string[] = [],
+  usageContext?: { include: string[]; exclude?: string[] }
+): Promise<number> {
   try {
     const response = await fetch(website, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -488,7 +493,45 @@ async function calculateFitScore(website: string, keywords: string[], requiredKe
       'b2b', 'bulk', 'commercial', 'trade', 'export', 'import'
     ];
 
-    // ✅ CRÍTICO: Validar se contém keywords obrigatórias do usuário
+    // ✅ CRÍTICO 1: Validar contexto de uso final (CAMADA CRÍTICA)
+    if (usageContext && usageContext.include && usageContext.include.length > 0) {
+      const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normalizedText = normalize(text);
+      
+      // Verificar se contém pelo menos 1 termo de uso final obrigatório
+      const hasRequiredUsage = usageContext.include.some(term => {
+        const normalizedTerm = normalize(term);
+        return normalizedText.includes(normalizedTerm) ||
+               normalizedText.includes(` ${normalizedTerm} `) ||
+               normalizedText.startsWith(`${normalizedTerm} `) ||
+               normalizedText.endsWith(` ${normalizedTerm}`);
+      });
+      
+      if (!hasRequiredUsage) {
+        console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" não contém uso final obrigatório: ${usageContext.include.slice(0, 3).join(', ')}...`);
+        return 0;
+      }
+      
+      // Verificar se contém termo de uso final excluído
+      if (usageContext.exclude && usageContext.exclude.length > 0) {
+        const hasExcludedUsage = usageContext.exclude.some(term => {
+          const normalizedTerm = normalize(term);
+          return normalizedText.includes(normalizedTerm) ||
+                 normalizedText.includes(` ${normalizedTerm} `);
+        });
+        
+        if (hasExcludedUsage) {
+          console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" contém uso final excluído: ${usageContext.exclude.join(', ')}`);
+          return 0;
+        }
+      }
+    } else {
+      // Se não houver uso final, bloquear (regra obrigatória)
+      console.log(`[FIT-SCORE] 🚫 Fit Score 0: "${website}" - uso final não especificado`);
+      return 0;
+    }
+    
+    // ✅ CRÍTICO 2: Validar se contém keywords obrigatórias do usuário
     if (requiredKeywords.length > 0) {
       const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const normalizedKeywords = requiredKeywords.map(normalize);
@@ -530,17 +573,29 @@ async function calculateFitScore(website: string, keywords: string[], requiredKe
     // MÍNIMO 2 KEYWORDS B2B = Fit 60
     if (found.length < 2) return 0;
 
-    let score = 60 + ((found.length - 2) * 5); // +5 por keyword adicional
+    let score = 60; // Base
 
-    // BÔNUS: Wholesale/Distributor
+    // ✅ BÔNUS POR CRITÉRIO:
+    // +20: HS Code compatível (já validado acima)
+    // +25: Keyword específica (já validado acima)
+    // +30: Uso final validado (OBRIGATÓRIO - já validado acima)
+    score += 30; // Uso final validado
+    
+    // +5 por keyword adicional
+    score += ((found.length - 2) * 5);
+
+    // +15: Wholesale/Distributor (tipo B2B)
     if (text.includes('wholesale') || text.includes('distributor') || text.includes('dealer')) {
+      score += 15;
+    }
+
+    // +10: B2B/Commercial
+    if (text.includes('b2b') || text.includes('commercial') || text.includes('bulk')) {
       score += 10;
     }
 
-    // BÔNUS: B2B/Commercial
-    if (text.includes('b2b') || text.includes('commercial') || text.includes('bulk')) {
-      score += 5;
-    }
+    // +10: País correto (já validado acima)
+    score += 10;
 
     return Math.min(score, 95);
 
@@ -563,17 +618,36 @@ serve(async (req) => {
       hsCode, 
       country, 
       keywords = [], 
+      requiredKeywords = [], // ✅ Keywords normalizadas para validação rigorosa
+      allowedCountryVariations = [], // ✅ Variações de países válidos para validação cruzada
+      usageContext, // ✅ NOVO: Contexto de uso final (CAMADA CRÍTICA)
       minVolume,
-      includeTypes = ['distributor', 'dealer', 'importer', 'wholesaler'],
-      excludeTypes = ['gym', 'studio', 'school'],
-      includeRoles = []
+      includeTypes = ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 'supplier', 'reseller', 'agent'], // ✅ PADRÃO B2B
+      excludeTypes = ['fitness studio', 'gym / fitness center', 'wellness center', 'personal training', 'yoga studio', 'spa', 'rehabilitation center', 'physiotherapy'], // ✅ PADRÃO B2C BLOQUEADOS
+      includeRoles = ['procurement manager', 'purchasing director', 'import manager', 'buyer'] // ✅ DECISORES ALVO
     } = await req.json();
+    
+    // ✅ VALIDAÇÃO OBRIGATÓRIA: Uso final deve ser especificado
+    if (!usageContext || !usageContext.include || usageContext.include.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Contexto de uso final é obrigatório. Defina pelo menos 1 termo que descreve PARA QUE o produto será usado (ex: "equipamento pilates", "máquina construção", "componente aviação").',
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     console.log(`==============================================`);
     console.log(`[REALTIME] 🚀 BUSCA B2B FOCADA INICIADA`);
     console.log(`  HS Code: ${hsCode}`);
     console.log(`  País: ${country}`);
     console.log(`  Keywords customizadas: ${keywords?.join(', ') || 'Nenhuma'}`);
+    console.log(`  🎯 USO FINAL (INCLUIR): ${usageContext.include.join(', ')}`);
+    console.log(`  🚫 USO FINAL (EXCLUIR): ${usageContext.exclude?.join(', ') || 'Nenhum'}`);
     console.log(`  Tipos B2B (incluir): ${includeTypes.join(', ')}`);
     console.log(`  Tipos B2C (excluir): ${excludeTypes.join(', ')}`);
     console.log(`  Cargos alvo: ${includeRoles.join(', ') || 'Nenhum'}`);
@@ -695,10 +769,17 @@ serve(async (req) => {
       '.com/categoria/', '.com/categoria/', '.com/cat/',
     ];
     
-    // ✅ NOVO: PALAVRAS-CHAVE OBRIGATÓRIAS (deve conter pelo menos uma)
-    const requiredKeywords = keywords.length > 0 ? keywords.map(k => k.toLowerCase()) : [];
+    // ✅ NORMALIZAR KEYWORDS OBRIGATÓRIAS (normalizadas já vêm do frontend)
+    const normalizedRequiredKeywords = requiredKeywords.length > 0 
+      ? requiredKeywords 
+      : keywords.map(k => k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
     
-    // ✅ NOVO: TIPOS B2B OBRIGATÓRIOS (deve conter pelo menos um)
+    // ✅ NORMALIZAR VARIAÇÕES DE PAÍSES (já vêm do frontend)
+    const normalizedAllowedCountries = allowedCountryVariations.length > 0 
+      ? allowedCountryVariations 
+      : [country.toLowerCase()];
+    
+    // ✅ NORMALIZAR TIPOS B2B/B2C
     const requiredB2BTypes = includeTypes.map(t => t.toLowerCase());
     const excludedB2CTypes = excludeTypes.map(t => t.toLowerCase());
     
@@ -709,6 +790,7 @@ serve(async (req) => {
       const url = new URL(c.website.startsWith('http') ? c.website : `https://${c.website}`);
       const domain = url.hostname.toLowerCase();
       const domainBase = domain.replace(/^www\./, ''); // Remover www
+      const urlLower = url.toString().toLowerCase(); // ✅ CORRIGIR: Definir urlLower
       
       const name = (c.name || '').toLowerCase();
       const description = (c.description || '').toLowerCase();
@@ -772,7 +854,47 @@ serve(async (req) => {
         return false;
       }
       
-      // ✅ CRITÉRIO 6: VALIDAR KEYWORDS OBRIGATÓRIAS (deve conter pelo menos uma)
+      // ✅ CRITÉRIO 6: VALIDAR CONTEXTO DE USO FINAL (CAMADA CRÍTICA)
+      if (usageContext && usageContext.include && usageContext.include.length > 0) {
+        const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normalizedFullText = normalize(fullText);
+        
+        // Verificar se contém pelo menos 1 termo de uso final obrigatório
+        const hasRequiredUsage = usageContext.include.some(term => {
+          const normalizedTerm = normalize(term);
+          return normalizedFullText.includes(normalizedTerm) ||
+                 normalizedFullText.includes(` ${normalizedTerm} `) ||
+                 normalizedFullText.startsWith(`${normalizedTerm} `) ||
+                 normalizedFullText.endsWith(` ${normalizedTerm}`);
+        });
+        
+        if (!hasRequiredUsage) {
+          console.log(`[FILTER] 🚫 REJEITADO (não contém uso final obrigatório): ${c.name} | uso final: ${usageContext.include.slice(0, 3).join(', ')}...`);
+          return false;
+        }
+        
+        // Verificar se contém termo de uso final excluído
+        if (usageContext.exclude && usageContext.exclude.length > 0) {
+          const hasExcludedUsage = usageContext.exclude.some(term => {
+            const normalizedTerm = normalize(term);
+            return normalizedFullText.includes(normalizedTerm) ||
+                   normalizedFullText.includes(` ${normalizedTerm} `) ||
+                   normalizedFullText.startsWith(`${normalizedTerm} `) ||
+                   normalizedFullText.endsWith(` ${normalizedTerm}`);
+          });
+          
+          if (hasExcludedUsage) {
+            console.log(`[FILTER] 🚫 REJEITADO (contém uso final excluído): ${c.name} | excluído: ${usageContext.exclude.join(', ')}`);
+            return false;
+          }
+        }
+      } else {
+        // Se não houver uso final, bloquear (regra obrigatória)
+        console.log(`[FILTER] 🚫 REJEITADO (uso final não especificado): ${c.name}`);
+        return false;
+      }
+      
+      // ✅ CRITÉRIO 7: VALIDAR KEYWORDS OBRIGATÓRIAS (deve conter pelo menos uma)
       if (normalizedRequiredKeywords.length > 0) {
         const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedFullText = normalize(fullText);
@@ -795,7 +917,7 @@ serve(async (req) => {
         }
       }
       
-      // ✅ CRITÉRIO 7: VALIDAR PAÍS (deve estar na lista de países válidos)
+      // ✅ CRITÉRIO 8: VALIDAR PAÍS (deve estar na lista de países válidos)
       if (c.country && normalizedAllowedCountries.length > 0) {
         const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedCountry = normalize(c.country);
@@ -813,7 +935,7 @@ serve(async (req) => {
         }
       }
       
-      // ✅ CRITÉRIO 8: VALIDAR TIPOS B2B (deve ser tipo B2B, não B2C)
+      // ✅ CRITÉRIO 9: VALIDAR TIPOS B2B (deve ser tipo B2B, não B2C)
       if (excludedB2CTypes.length > 0) {
         const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const normalizedFullText = normalize(fullText);
@@ -828,7 +950,7 @@ serve(async (req) => {
         }
       }
       
-      // ✅ CRITÉRIO 9: VALIDAR TIPOS B2B OBRIGATÓRIOS (deve conter pelo menos 1 termo B2B)
+      // ✅ CRITÉRIO 10: VALIDAR TIPOS B2B OBRIGATÓRIOS (deve conter pelo menos 1 termo B2B)
       const b2bTerms = ['distributor', 'wholesaler', 'dealer', 'importer', 'trading company', 
                         'supplier', 'reseller', 'agent', 'export', 'import', 'b2b', 'wholesale',
                         'bulk', 'commercial', 'trade', 'distribuidor', 'mayorista', 'importador',
@@ -855,7 +977,7 @@ serve(async (req) => {
         }
       }
       
-      // ✅ CRITÉRIO 10: Bloquear sinais de e-commerce no texto
+      // ✅ CRITÉRIO 11: Bloquear sinais de e-commerce no texto
       const ecommerceSignals = ['add to cart', 'buy now', 'price', 'shipping', 'frete', 
                                  'parcelamento', 'checkout', 'carrinho', 'promo', 'oferta'];
       const hasEcommerceSignal = ecommerceSignals.some(signal => {
@@ -894,9 +1016,9 @@ serve(async (req) => {
       prioritized.slice(0, 30).map(async (company) => {
         let fitScore = 0;
         
-        // TENTAR WEB SCRAPING (com timeout 5s) - passar keywords do usuário E obrigatórias
+        // TENTAR WEB SCRAPING (com timeout 5s) - passar keywords do usuário, obrigatórias E uso final
         try {
-          fitScore = await calculateFitScore(company.website, searchKeywords, requiredKeywords);
+          fitScore = await calculateFitScore(company.website, searchKeywords, normalizedRequiredKeywords, usageContext);
         } catch (error) {
           // FALLBACK: Fit Score baseado na FONTE
           if (company.source === 'apollo') {
